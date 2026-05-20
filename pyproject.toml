@@ -57,3 +57,8 @@ dependencies = [
     "xxhash==3.7.0",
     "zstandard==0.25.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.0",
+]

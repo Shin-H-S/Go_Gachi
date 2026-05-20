@@ -49,3 +49,6 @@ uuid-utils==0.16.0
 uvicorn==0.47.0
 xxhash==3.7.0
 zstandard==0.25.0
+
+# --- dev 도구 (개발용, 런타임 불필요) ---
+pre-commit>=4.6.0
