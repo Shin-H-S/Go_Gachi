@@ -54,7 +54,6 @@ async def edit_image(
             n=1,
             size=_model_size_for(size),
             quality="medium",
-            response_format="b64_json",
         )
         return _decode_image_response(response)
 
