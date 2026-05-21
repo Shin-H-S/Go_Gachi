@@ -22,7 +22,7 @@ def create_app() -> FastAPI:
             모두 설정된 앱 인스턴스.
     """
     # 서버 시작 시 업로드/결과 폴더를 보장해 파일 저장 단계에서 실패하지 않게 합니다.
-    settings.ensure_directories()
+    settings.ensure_dirs()
 
     app = FastAPI(title=settings.PROJECT_NAME)
     # CORS: 프론트엔드가 다른 주소(포트)에서 호출해도 브라우저가 막지 않게 허용한다.

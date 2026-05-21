@@ -6,13 +6,13 @@ from uuid import uuid4
 from app.core.config import settings
 
 
-def new_request_id() -> str:
+def new_id() -> str:
     """요청 한 건을 식별할 고유 ID를 만든다(원본/결과 파일명을 이 ID로 맞춘다)."""
     # 요청 단위로 원본/결과 파일명을 맞추기 위한 고유 ID입니다.
     return uuid4().hex
 
 
-def extension_from_content_type(content_type: str | None) -> str:
+def extension(content_type: str | None) -> str:
     """MIME 타입을 파일 확장자로 바꾼다(알 수 없으면 .bin).
 
     Args:
@@ -38,9 +38,9 @@ def save_upload(file_bytes: bytes, content_type: str | None, request_id: str) ->
         저장된 파일 경로.
     """
     # 업로드 파일은 backend/uploads 아래에 저장하고, 실제 이미지는 .gitignore로 제외합니다.
-    settings.ensure_directories()
+    settings.ensure_dirs()
     path = (
-        settings.UPLOAD_DIR / f"{request_id}{extension_from_content_type(content_type)}"
+        settings.UPLOAD_DIR / f"{request_id}{extension(content_type)}"
     )
     path.write_bytes(file_bytes)
     return path
@@ -48,7 +48,7 @@ def save_upload(file_bytes: bytes, content_type: str | None, request_id: str) ->
 
 def output_path(request_id: str) -> Path:
     """결과 이미지를 저장할 경로(backend/outputs/<id>.png)를 만든다."""
-    settings.ensure_directories()
+    settings.ensure_dirs()
     return settings.OUTPUT_DIR / f"{request_id}.png"
 
 

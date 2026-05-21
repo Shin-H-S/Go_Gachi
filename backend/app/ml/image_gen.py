@@ -23,11 +23,11 @@ def _client() -> OpenAI:
     return OpenAI(api_key=settings.OPENAI_API_KEY)
 
 
-def _model_size_for(size: ImageSize) -> str:
+def _modelsize(size: ImageSize) -> str:
     """원하는 크기의 가로세로 비율에 가장 가까운, OpenAI 가 지원하는 크기 문자열을 고른다.
 
     OpenAI 는 정해진 몇 가지 크기만 받으므로 근접값으로 요청하고, 정확한 픽셀은
-    이후 fit_to_size() 에서 맞춘다.
+    이후 fit_size() 에서 맞춘다.
 
     Args:
         size: 최종으로 원하는 이미지 크기.
@@ -43,7 +43,7 @@ def _model_size_for(size: ImageSize) -> str:
     return "1024x1024"  # 정사각형에 가까운 경우
 
 
-def _decode_image_response(response: Any) -> bytes:
+def _decode(response: Any) -> bytes:
     """OpenAI 응답에서 base64 이미지 데이터를 꺼내 실제 바이트로 디코딩한다.
 
     Args:
@@ -88,7 +88,7 @@ async def edit_image(
             라우터에서 503 으로 변환된다.
     """
 
-    def _call_openai() -> bytes:
+    def _call() -> bytes:
         # 업로드 이미지를 기준으로 편집 생성합니다. 응답은 저장하기 쉬운 base64로 받습니다.
         try:
             response = _client().images.edit(
@@ -96,7 +96,7 @@ async def edit_image(
                 image=(filename, file_bytes, content_type or "image/png"),
                 prompt=prompt,
                 n=1,
-                size=_model_size_for(size),
+                size=_modelsize(size),
                 quality="medium",
             )
         # OpenAI 쪽 오류는 사용자 친화적 메시지를 가진 RuntimeError 로 바꿔서
@@ -116,6 +116,6 @@ async def edit_image(
             raise RuntimeError(
                 "이미지 생성에 실패했습니다. 잠시 후 다시 시도해주세요."
             ) from exc
-        return _decode_image_response(response)
+        return _decode(response)
 
-    return await to_thread.run_sync(_call_openai)
+    return await to_thread.run_sync(_call)
