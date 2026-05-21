@@ -7,6 +7,7 @@ OpenAI 라이브러리와 직접 대화하는 유일한 파일. 다른 코드는
 import base64
 from typing import Any
 
+import openai
 from anyio import to_thread
 from openai import OpenAI
 
@@ -82,18 +83,39 @@ async def edit_image(
         size: 최종 목표 크기(요청 크기 결정에 사용).
     Returns:
         생성된 이미지 바이트(PNG).
+    Raises:
+        RuntimeError: 키 미설정 또는 OpenAI 오류(한도 초과·인증 실패·네트워크 등).
+            라우터에서 503 으로 변환된다.
     """
 
     def _call_openai() -> bytes:
         # 업로드 이미지를 기준으로 편집 생성합니다. 응답은 저장하기 쉬운 base64로 받습니다.
-        response = _client().images.edit(
-            model=settings.OPENAI_IMAGE_MODEL,
-            image=(filename, file_bytes, content_type or "image/png"),
-            prompt=prompt,
-            n=1,
-            size=_model_size_for(size),
-            quality="medium",
-        )
+        try:
+            response = _client().images.edit(
+                model=settings.OPENAI_IMAGE_MODEL,
+                image=(filename, file_bytes, content_type or "image/png"),
+                prompt=prompt,
+                n=1,
+                size=_model_size_for(size),
+                quality="medium",
+            )
+        # OpenAI 쪽 오류는 사용자 친화적 메시지를 가진 RuntimeError 로 바꿔서
+        # 라우터가 503(서비스 일시 불가)으로 응답하게 한다.
+        except openai.RateLimitError as exc:
+            raise RuntimeError(
+                "이미지 생성 요청이 많습니다. 잠시 후 다시 시도해주세요."
+            ) from exc
+        except openai.AuthenticationError as exc:
+            raise RuntimeError("이미지 생성 서비스 인증에 실패했습니다.") from exc
+        except openai.APIConnectionError as exc:
+            raise RuntimeError(
+                "이미지 생성 서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요."
+            ) from exc
+        except openai.OpenAIError as exc:
+            # 위에서 안 잡힌 그 밖의 모든 OpenAI 오류(서버 오류 등)
+            raise RuntimeError(
+                "이미지 생성에 실패했습니다. 잠시 후 다시 시도해주세요."
+            ) from exc
         return _decode_image_response(response)
 
     return await to_thread.run_sync(_call_openai)
