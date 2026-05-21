@@ -7,7 +7,7 @@
 from app.models.schemas import AdGenerationInput, ImageSize
 
 
-def build_image_edit_prompt(ad_input: AdGenerationInput, size: ImageSize) -> str:
+def ad_prompt(ad_input: AdGenerationInput, size: ImageSize) -> str:
     """광고 입력값을 OpenAI 에 보낼 프롬프트 문자열로 조립한다.
 
     Args:

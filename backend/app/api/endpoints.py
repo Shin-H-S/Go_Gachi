@@ -15,7 +15,7 @@ from app.models.schemas import (
     HealthResponse,
     Placement,
 )
-from app.services.pipeline import generate_ad_asset
+from app.services.pipeline import create_ad
 
 # 이 라우터에 등록한 경로들은 main.py 에서 /api/v1 prefix 와 함께 앱에 붙는다.
 router = APIRouter()
@@ -98,7 +98,7 @@ async def generate(
             custom_height=custom_height,
         )
         # 실제 이미지 생성 흐름은 service 레이어에 위임해 라우터는 HTTP 처리만 맡습니다.
-        return await generate_ad_asset(image, ad_input)
+        return await create_ad(image, ad_input)
     # 아래 except 들은 내부에서 난 파이썬 예외를 프론트가 이해할 HTTP 상태코드로 번역한다.
     except ValueError as exc:
         # 잘못된 입력(파일 형식/용량, custom 크기 누락 등) → 400

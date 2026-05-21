@@ -1,7 +1,7 @@
 # backend/check_models.py
 from app.core.config import settings
 
-def check_all_models():
+def check_models():
     if not settings.openai_enabled:
         print("OPENAI_API_KEY가 설정되지 않았습니다. backend/.env를 확인하세요.")
         return
@@ -24,4 +24,4 @@ def check_all_models():
         print(f"오류 발생: {e}")
 
 if __name__ == "__main__":
-    check_all_models()
+    check_models()

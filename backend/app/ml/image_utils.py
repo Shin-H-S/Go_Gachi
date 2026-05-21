@@ -1,7 +1,7 @@
 """이미지 검증·크기 계산·리사이즈 도우미.
 
 '품질검사원 + 재단사' 역할. 들어온 사진이 유효한지 검사하고(validate_upload),
-게시 위치에 맞는 크기를 정하고(resolve_target_size), 결과물을 그 크기로 잘라(fit_to_size)
+게시 위치에 맞는 크기를 정하고(target_size), 결과물을 그 크기로 잘라(fit_size)
 파일로 저장(save_png)한다.
 """
 
@@ -26,7 +26,7 @@ PLACEMENT_SIZES: dict[Placement, ImageSize] = {
 }
 
 
-def resolve_target_size(
+def target_size(
     placement: Placement,
     custom_width: int | None = None,
     custom_height: int | None = None,
@@ -65,7 +65,7 @@ def validate_upload(content_type: str | None, file_bytes: bytes) -> None:
     if content_type not in settings.ALLOWED_IMAGE_CONTENT_TYPES:
         allowed = ", ".join(settings.ALLOWED_IMAGE_CONTENT_TYPES)
         raise ValueError(f"unsupported image type. allowed: {allowed}")
-    if len(file_bytes) > settings.max_upload_bytes:
+    if len(file_bytes) > settings.max_bytes:
         raise ValueError(f"image is larger than {settings.MAX_UPLOAD_MB}MB")
     try:
         with Image.open(BytesIO(file_bytes)) as image:
@@ -74,7 +74,7 @@ def validate_upload(content_type: str | None, file_bytes: bytes) -> None:
         raise ValueError("uploaded file is not a valid image") from exc
 
 
-def fit_to_size(image_bytes: bytes, size: ImageSize) -> Image.Image:
+def fit_size(image_bytes: bytes, size: ImageSize) -> Image.Image:
     """OpenAI 결과 이미지를 목표 크기에 맞게 중앙 기준으로 자르고 리사이즈한다.
 
     Args:

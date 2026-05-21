@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def split_cors_origins(cls, value: str | list[str]) -> list[str]:
+    def split_cors(cls, value: str | list[str]) -> list[str]:
         # .env에서 JSON 배열 또는 콤마 문자열 둘 다 편하게 쓸 수 있도록 허용합니다.
         if isinstance(value, str):
             if value.strip().startswith("["):
@@ -54,12 +54,12 @@ class Settings(BaseSettings):
 
     @field_validator("UPLOAD_DIR", "OUTPUT_DIR", mode="after")
     @classmethod
-    def resolve_storage_path(cls, value: Path) -> Path:
+    def resolve_path(cls, value: Path) -> Path:
         # 상대 경로로 입력되면 backend 폴더 기준 경로로 변환합니다.
         return value if value.is_absolute() else BASE_DIR / value
 
     @property
-    def max_upload_bytes(self) -> int:
+    def max_bytes(self) -> int:
         """업로드 최대 용량을 MB 설정값에서 바이트 단위로 환산해 돌려준다."""
         return self.MAX_UPLOAD_MB * 1024 * 1024
 
@@ -68,7 +68,7 @@ class Settings(BaseSettings):
         """OpenAI 키가 채워져 있으면 True (키 값 자체는 노출하지 않음)."""
         return bool(self.OPENAI_API_KEY)
 
-    def ensure_directories(self) -> None:
+    def ensure_dirs(self) -> None:
         """업로드/결과 저장 폴더가 없으면 만든다(서버 시작 시 호출)."""
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         self.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

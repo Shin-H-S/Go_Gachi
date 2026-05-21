@@ -10,7 +10,7 @@
 PROMPT_TEMPLATES: dict[str, str] = {}
 
 
-def build_image_prompt(
+def build_prompt(
     industry: str,
     store_name: str,
     mood: str | None = None,
