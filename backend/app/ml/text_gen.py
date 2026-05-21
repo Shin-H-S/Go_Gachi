@@ -1,47 +1,37 @@
-"""광고 문구 생성.
+"""Prompt construction for ad image editing."""
 
-⚠️ 실제 프롬프트/문구 생성은 '프롬프트 담당'의 영역이다.
-백엔드는 끼울 자리(인터페이스)만 두고, 비용 방지를 위해 베이스라인에선 더미 응답을 돌려준다.
-추후 OpenAI 연동 시 이 함수 내부만 교체하면 된다.
-"""
+from app.models.schemas import AdGenerationInput, ImageSize
 
 
-async def generate_ad_copy(
-    store_name: str,
-    industry: str,
-    ad_purpose: str | None = None,
-    mood: str | None = None,
-    output_type: str | None = None,
-    price: str | None = None,
-    contact: str | None = None,
-) -> dict:
-    """광고 문구와 해시태그를 생성한다. (현재는 비용 방지용 더미)
-
-    Args:
-        store_name: 매장명.
-        industry: 업종.
-        ad_purpose: 광고 목적(선택).
-        mood: 분위기(선택).
-        output_type: 출력 용도(선택).
-        price: 가격(선택).
-        contact: 연락처(선택).
-    Returns:
-        {"ad_copy": 광고문구(str), "hashtags": 해시태그(list[str])} 형태의 dict.
-    """
-    # TODO(프롬프트 담당 + OpenAI 연동): 실제 GPT 호출로 교체
+def build_image_edit_prompt(ad_input: AdGenerationInput, size: ImageSize) -> str:
+    # 현재는 규칙 기반 프롬프트를 만들고, 이후 카피 생성 모델을 붙여도 이 함수만 교체하면 됩니다.
     details = [
-        f"업종: {industry}",
-        f"목적: {ad_purpose or '일반 광고'}",
-        f"분위기: {mood or '기본'}",
-        f"용도: {output_type or '일반'}",
+        f"Industry: {ad_input.industry}",
+        f"Mood: {ad_input.mood}",
+        f"Ad type: {ad_input.ad_type}",
+        f"Objective: {ad_input.objective}",
+        f"Placement: {ad_input.placement.value}",
+        f"Final canvas: {size.width}x{size.height}",
     ]
-    if price:
-        details.append(f"가격: {price}")
-    if contact:
-        details.append(f"문의: {contact}")
-
-    copy = f"{store_name} 광고 문구 더미 - " + " / ".join(details)
-    return {
-        "ad_copy": copy,
-        "hashtags": [f"#{industry}", f"#{store_name}", "#광고"],
+    optional_details = {
+        "Brand name": ad_input.brand_name,
+        "Target audience": ad_input.target_audience,
+        "Key message": ad_input.key_message,
+        "Offer": ad_input.offer,
     }
+    details.extend(
+        f"{key}: {value}" for key, value in optional_details.items() if value
+    )
+
+    return "\n".join(
+        [
+            "Edit and recompose the uploaded source image into a polished Korean small-business advertisement.",
+            "Keep the recognizable subject or product from the original image, but improve composition, lighting, background, and visual hierarchy.",
+            "Create enough clean negative space for future copy overlays. Do not add readable text, logos, QR codes, watermarks, or fake UI.",
+            "Make the result suitable for the requested industry, mood, ad type, business objective, and publishing placement.",
+            "Use a commercial, trustworthy, high-quality style rather than a generic stock-photo look.",
+            "",
+            "Creative brief:",
+            *details,
+        ]
+    )

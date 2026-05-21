@@ -1,45 +1,69 @@
-"""앱 환경설정 (간단 버전).
+"""Application settings loaded from backend/.env."""
 
-베이스라인에선 외부 의존성 없이 경로/CORS만 둔다.
-.env 로딩·OpenAI 키·DB 접속정보는 다음 단계에서 추가한다.
-"""
-
-import os
+import json
 from pathlib import Path
+from typing import Optional
 
-from dotenv import load_dotenv
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# backend/ 폴더 (이 파일 기준 3단계 위: core -> app -> backend)
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
-# backend/.env 에서 환경변수 로드 (비밀값은 .env 에만, 코드엔 안 박는다)
-load_dotenv(BASE_DIR / ".env")
-
-UPLOAD_DIR = BASE_DIR / "uploads"  # 업로드된 원본 사진
-OUTPUT_DIR = BASE_DIR / "outputs"  # 생성된 결과 이미지
-
-# 프론트엔드 주소(CORS). 아직 미정이라 우선 전체 허용으로 시작.
-CORS_ORIGINS = ["*"]
-
-# OpenAI 키 (나중에 사용). 지금은 더미라 없어도 됨.
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-
-# --- MySQL 접속 정보 (.env 에서 로드, docker-compose 와 공유) ---
-DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
-DB_PORT = os.getenv("DB_PORT", "3307")  # movie_mysql(3306) 충돌 피해 3307 사용
-DB_USER = os.getenv("DB_USER", "root")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "")  # 비밀번호는 .env 에서만 (코드/깃 노출 금지)
-DB_NAME = os.getenv("DB_NAME", "go_gachi")
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
+BASE_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE_PATH = BASE_DIR / ".env"
 
 
-def ensure_dirs() -> None:
-    """업로드/결과 폴더가 없으면 생성한다.
+class Settings(BaseSettings):
+    # API와 모델, 저장소 설정은 .env에서 덮어쓸 수 있게 한 곳에 모읍니다.
+    PROJECT_NAME: str = "Go Gachi Ads"
+    ENVIRONMENT: str = "local"
+    API_PREFIX: str = "/api/v1"
 
-    Args:
-        없음.
-    Returns:
-        None.
-    """
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    OPENAI_API_KEY: str = ""
+    OPENAI_IMAGE_MODEL: str = "gpt-image-1-mini"
+    OPENAI_TEXT_MODEL: str = "gpt-4.1-mini"
+
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+    UPLOAD_DIR: Path = BASE_DIR / "uploads"
+    OUTPUT_DIR: Path = BASE_DIR / "outputs"
+    MAX_UPLOAD_MB: int = 12
+    ALLOWED_IMAGE_CONTENT_TYPES: list[str] = ["image/jpeg", "image/png", "image/webp"]
+
+    LANGSMITH_TRACING: Optional[bool] = False
+    LANGSMITH_API_KEY: Optional[str] = None
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def split_cors_origins(cls, value: str | list[str]) -> list[str]:
+        # .env에서 JSON 배열 또는 콤마 문자열 둘 다 편하게 쓸 수 있도록 허용합니다.
+        if isinstance(value, str):
+            if value.strip().startswith("["):
+                return json.loads(value)
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @field_validator("UPLOAD_DIR", "OUTPUT_DIR", mode="after")
+    @classmethod
+    def resolve_storage_path(cls, value: Path) -> Path:
+        # 상대 경로로 입력되면 backend 폴더 기준 경로로 변환합니다.
+        return value if value.is_absolute() else BASE_DIR / value
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.MAX_UPLOAD_MB * 1024 * 1024
+
+    @property
+    def openai_enabled(self) -> bool:
+        return bool(self.OPENAI_API_KEY)
+
+    def ensure_directories(self) -> None:
+        self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        self.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE_PATH,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+settings = Settings()
