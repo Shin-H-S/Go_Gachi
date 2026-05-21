@@ -145,6 +145,12 @@ pnpm-debug.log*
 /dataset/
 /outputs/
 
+# 백엔드 업로드/결과 폴더: 폴더 구조(.gitkeep)는 유지하되 내용물(이미지)은 커밋 금지
+/backend/uploads/*
+!/backend/uploads/.gitkeep
+/backend/outputs/*
+!/backend/outputs/.gitkeep
+
 # Jupyter Notebook 캐시
 .ipynb_checkpoints
 
