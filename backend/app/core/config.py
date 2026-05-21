@@ -1,4 +1,9 @@
-"""Application settings loaded from backend/.env."""
+"""앱 전역 설정.
+
+backend/.env 파일의 값을 읽어 하나의 `settings` 객체로 만든다.
+코드 전체에서 `from app.core.config import settings` 로 가져다 쓴다.
+비밀값(OPENAI_API_KEY 등)은 .env 에만 두고 코드/깃에는 박지 않는다.
+"""
 
 import json
 from pathlib import Path
@@ -7,11 +12,17 @@ from typing import Optional
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# backend/ 폴더 경로 (이 파일 기준 2단계 위: core -> app -> backend)
 BASE_DIR = Path(__file__).resolve().parents[2]
 ENV_FILE_PATH = BASE_DIR / ".env"
 
 
 class Settings(BaseSettings):
+    """환경설정 묶음. 각 항목은 .env 의 같은 이름 값으로 덮어쓸 수 있다.
+
+    아래 기본값은 .env 에 해당 키가 없을 때 쓰이는 값이다.
+    """
+
     # API와 모델, 저장소 설정은 .env에서 덮어쓸 수 있게 한 곳에 모읍니다.
     PROJECT_NAME: str = "Go Gachi Ads"
     ENVIRONMENT: str = "local"
@@ -49,13 +60,16 @@ class Settings(BaseSettings):
 
     @property
     def max_upload_bytes(self) -> int:
+        """업로드 최대 용량을 MB 설정값에서 바이트 단위로 환산해 돌려준다."""
         return self.MAX_UPLOAD_MB * 1024 * 1024
 
     @property
     def openai_enabled(self) -> bool:
+        """OpenAI 키가 채워져 있으면 True (키 값 자체는 노출하지 않음)."""
         return bool(self.OPENAI_API_KEY)
 
     def ensure_directories(self) -> None:
+        """업로드/결과 저장 폴더가 없으면 만든다(서버 시작 시 호출)."""
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         self.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
