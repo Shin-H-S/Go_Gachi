@@ -22,7 +22,9 @@ def extension_from_content_type(content_type: str | None) -> str:
 def save_upload(file_bytes: bytes, content_type: str | None, request_id: str) -> Path:
     # 업로드 파일은 backend/uploads 아래에 저장하고, 실제 이미지는 .gitignore로 제외합니다.
     settings.ensure_directories()
-    path = settings.UPLOAD_DIR / f"{request_id}{extension_from_content_type(content_type)}"
+    path = (
+        settings.UPLOAD_DIR / f"{request_id}{extension_from_content_type(content_type)}"
+    )
     path.write_bytes(file_bytes)
     return path
 

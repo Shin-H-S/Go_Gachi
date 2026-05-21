@@ -4,9 +4,13 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from pydantic import ValidationError
 
 from app.core.config import settings
-from app.models.schemas import AdGenerationInput, GeneratedAsset, HealthResponse, Placement
+from app.models.schemas import (
+    AdGenerationInput,
+    GeneratedAsset,
+    HealthResponse,
+    Placement,
+)
 from app.services.pipeline import generate_ad_asset
-
 
 router = APIRouter()
 
@@ -21,7 +25,9 @@ async def health() -> HealthResponse:
     )
 
 
-@router.post("/generate", response_model=GeneratedAsset, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/generate", response_model=GeneratedAsset, status_code=status.HTTP_201_CREATED
+)
 async def generate(
     image: UploadFile = File(...),
     industry: str = Form(...),
@@ -54,8 +60,14 @@ async def generate(
         # 실제 이미지 생성 흐름은 service 레이어에 위임해 라우터는 HTTP 처리만 맡습니다.
         return await generate_ad_asset(image, ad_input)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
     except ValidationError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
+        ) from exc
     except RuntimeError as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc

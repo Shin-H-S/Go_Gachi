@@ -19,7 +19,9 @@ def build_image_edit_prompt(ad_input: AdGenerationInput, size: ImageSize) -> str
         "Key message": ad_input.key_message,
         "Offer": ad_input.offer,
     }
-    details.extend(f"{key}: {value}" for key, value in optional_details.items() if value)
+    details.extend(
+        f"{key}: {value}" for key, value in optional_details.items() if value
+    )
 
     return "\n".join(
         [
