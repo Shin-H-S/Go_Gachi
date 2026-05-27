@@ -15,8 +15,10 @@ ehthumbs_vista.db
 $RECYCLE.BIN/
 
 # VS Code / JetBrains(PyCharm) 관련 캐시 및 설정
-.vscode/
+.vscode/*
+!.vscode/
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea/
 *.suo
 *.ntvs*
@@ -29,18 +31,29 @@ tempCodeRunnerFile.py
 # 2. SECURITY & ENVIRONMENTS (보안 및 환경 변수) - 절대 커밋 금지 🚨
 # ====================================================================
 .env
+.env.*
+**/.env
+**/.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .envrc
 secrets.json
+*secret*.json
+*service-account*.json
+*credentials*.json
+application_default_credentials.json
 *.pem
 *.key
 *.pfx
+.openai-key.tmp
+*.token
+*.secret
 
 # 단, 환경변수 가이드 라인 파일은 추적 허용
 !.env.example
+!**/.env.example
 
 # ====================================================================
 # 3. BACKEND & AI CORE (Python, FastAPI, UV, Celery, Redis)
@@ -58,7 +71,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
-.python-version
+!.python-version
 
 # 패키징 / 빌드 아티팩트
 .Python
@@ -95,18 +108,26 @@ htmlcov/
 celerybeat-schedule
 celerybeat.pid
 *.log
+logs/
 *.rdb
 *.aof
 *.pid
 db.sqlite3
 db.sqlite3-journal
+*.sqlite
+*.sqlite3
+*.db
 
 # ====================================================================
-# 4. FRONTEND (Node.js, Next.js) - 추가 및 최적화 🌟
+# 4. FRONTEND (Streamlit / optional Node.js tooling)
 # ====================================================================
 # 의존성 라이브러리 폴더
 node_modules/
 /frontend/node_modules/
+/frontend/.venv/
+/frontend/.streamlit/
+/frontend/.env
+!/frontend/.env.example
 
 # Next.js 빌드 및 프로덕션 결과물
 .next/

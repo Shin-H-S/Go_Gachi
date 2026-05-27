@@ -27,6 +27,12 @@ streamlit run frontend/app.py
 
 ## Backend Connection
 
+프론트엔드는 배포된 백엔드 Cloud Run URL을 `BACKEND_URL`로 받아 호출합니다.
+
+```env
+BACKEND_URL=https://YOUR_BACKEND_CLOUD_RUN_URL
+```
+
 - `GET /api/config`: 광고 프리셋 목록 조회
 - `POST /api/generate`: `imageDataUrl`, `presetId`, `feedback`을 전달해 생성 요청
 

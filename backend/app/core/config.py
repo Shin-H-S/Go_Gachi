@@ -1,83 +1,84 @@
-"""앱 전역 설정.
+"""Cloud Run 런타임 설정과 환경변수 로딩."""
 
-backend/.env 파일의 값을 읽어 하나의 `settings` 객체로 만든다.
-코드 전체에서 `from app.core.config import settings` 로 가져다 쓴다.
-비밀값(OPENAI_API_KEY 등)은 .env 에만 두고 코드/깃에는 박지 않는다.
-"""
-
-import json
+from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Literal
 
-from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel
 
-# backend/ 폴더 경로 (이 파일 기준 2단계 위: core -> app -> backend)
-BASE_DIR = Path(__file__).resolve().parents[2]
-ENV_FILE_PATH = BASE_DIR / ".env"
+ROOT_DIR = Path(__file__).resolve().parents[3]
+CONFIG_DIR = ROOT_DIR / "config"
 
 
-class Settings(BaseSettings):
-    """환경설정 묶음. 각 항목은 .env 의 같은 이름 값으로 덮어쓸 수 있다.
+def load_env() -> None:
+    """필요 시 루트 .env를 환경변수로 적재한다.
 
-    아래 기본값은 .env 에 해당 키가 없을 때 쓰이는 값이다.
+    운영에서는 Cloud Run 환경변수를 사용하지만, 테스트나 임시 검증에서는 같은 설정 객체를
+    재사용할 수 있게 둔다.
     """
+    env_path = ROOT_DIR / ".env"
+    if not env_path.exists():
+        return
 
-    # API와 모델, 저장소 설정은 .env에서 덮어쓸 수 있게 한 곳에 모읍니다.
-    PROJECT_NAME: str = "Go Gachi Ads"
-    ENVIRONMENT: str = "local"
-    API_PREFIX: str = "/api/v1"
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        # 빈 줄, 주석, KEY=VALUE 형식이 아닌 줄은 무시한다.
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
 
-    OPENAI_API_KEY: str = ""
-    OPENAI_IMAGE_MODEL: str = "gpt-image-1-mini"
-    OPENAI_TEXT_MODEL: str = "gpt-4.1-mini"
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
 
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+        import os
 
-    UPLOAD_DIR: Path = BASE_DIR / "uploads"
-    OUTPUT_DIR: Path = BASE_DIR / "outputs"
-    MAX_UPLOAD_MB: int = 12
-    ALLOWED_IMAGE_CONTENT_TYPES: list[str] = ["image/jpeg", "image/png", "image/webp"]
+        # 이미 주입된 환경변수는 Cloud Run 설정이 우선이므로 덮어쓰지 않는다.
+        if key in os.environ:
+            continue
 
-    LANGSMITH_TRACING: Optional[bool] = False
-    LANGSMITH_API_KEY: Optional[str] = None
+        if (value.startswith('"') and value.endswith('"')) or (
+            value.startswith("'") and value.endswith("'")
+        ):
+            value = value[1:-1]
 
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def split_cors(cls, value: str | list[str]) -> list[str]:
-        # .env에서 JSON 배열 또는 콤마 문자열 둘 다 편하게 쓸 수 있도록 허용합니다.
-        if isinstance(value, str):
-            if value.strip().startswith("["):
-                return json.loads(value)
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
-        return value
+        os.environ[key] = value
 
-    @field_validator("UPLOAD_DIR", "OUTPUT_DIR", mode="after")
-    @classmethod
-    def resolve_path(cls, value: Path) -> Path:
-        # 상대 경로로 입력되면 backend 폴더 기준 경로로 변환합니다.
-        return value if value.is_absolute() else BASE_DIR / value
 
-    @property
-    def max_bytes(self) -> int:
-        """업로드 최대 용량을 MB 설정값에서 바이트 단위로 환산해 돌려준다."""
-        return self.MAX_UPLOAD_MB * 1024 * 1024
+class Settings(BaseModel):
+    """앱 전체에서 참조하는 런타임 설정값."""
 
-    @property
-    def openai_enabled(self) -> bool:
-        """OpenAI 키가 채워져 있으면 True (키 값 자체는 노출하지 않음)."""
-        return bool(self.OPENAI_API_KEY)
+    app_env: str = "local"
+    port: int = 8080
+    image_provider: Literal["mock", "openai"] = "mock"
+    openai_api_key: str = ""
+    openai_text_model: str = "gpt-5"
+    openai_image_model: str = "gpt-image-2"
+    openai_image_quality: str = "medium"
+    max_upload_bytes: int = 50 * 1024 * 1024
 
-    def ensure_dirs(self) -> None:
-        """업로드/결과 저장 폴더가 없으면 만든다(서버 시작 시 호출)."""
-        self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        self.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    model_config = SettingsConfigDict(
-        env_file=ENV_FILE_PATH,
-        env_file_encoding="utf-8",
-        extra="ignore",
+@lru_cache
+def get_settings() -> Settings:
+    """환경변수를 Settings 객체로 변환한다.
+
+    lru_cache로 요청마다 환경변수를 다시 읽지 않게 한다.
+    """
+    load_env()
+
+    import os
+
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    # provider를 명시하지 않아도 키가 있으면 openai, 없으면 mock으로 동작한다.
+    provider = os.getenv("IMAGE_PROVIDER") or ("openai" if api_key else "mock")
+
+    return Settings(
+        port=int(os.getenv("PORT", "8080")),
+        app_env=os.getenv("APP_ENV", "local"),
+        image_provider=provider,
+        openai_api_key=api_key,
+        openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5"),
+        openai_image_model=os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2"),
+        openai_image_quality=os.getenv("OPENAI_IMAGE_QUALITY", "medium"),
     )
-
-
-settings = Settings()
