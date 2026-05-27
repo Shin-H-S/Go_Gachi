@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend
 
-## Getting Started
+Streamlit 기반 프론트엔드 작업 공간입니다. 이 저장소에서는 로컬 실행을 기준으로 하지 않고, 배포된 백엔드 Cloud Run URL을 호출하는 구조로 개발합니다.
 
-First, run the development server:
+## Suggested Structure
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+frontend/
+  app/
+    app.py              # Streamlit entrypoint
+    api.py              # FastAPI backend client
+    state.py            # session state helpers
+    components/         # reusable UI blocks
+  assets/               # sample images, UI assets
+  tests/                # frontend-side tests
+  .env.example
+  requirements.txt
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Backend API
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Set `BACKEND_URL` to the deployed backend URL.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+BACKEND_URL=https://YOUR_BACKEND_CLOUD_RUN_URL
+```
 
-## Learn More
+- `GET /api/config`: preset 목록 조회
+- `POST /api/generate`: 이미지 data URL, presetId, feedback 전송
 
-To learn more about Next.js, take a look at the following resources:
+Generate request example:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```json
+{
+  "imageDataUrl": "data:image/png;base64,...",
+  "presetId": "instagram_square",
+  "feedback": "조금 더 밝고 따뜻하게"
+}
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Generate response example:
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```json
+{
+  "imageDataUrl": "data:image/png;base64,...",
+  "provider": "openai",
+  "preset": {
+    "id": "instagram_square",
+    "label": "Instagram Feed"
+  },
+  "note": null,
+  "prompt": "..."
+}
+```

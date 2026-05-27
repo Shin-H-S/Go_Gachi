@@ -1,0 +1,15 @@
+.env
+.env.*
+.venv
+.gcloud
+__pycache__
+.pytest_cache
+.ruff_cache
+.git
+.gitignore
+*.log
+.openai-key.tmp
+docs
+tests
+.github
+.vscode

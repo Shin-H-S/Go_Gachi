@@ -1,0 +1,74 @@
+"""Cloud Run에서 실행되는 FastAPI 진입점."""
+
+from fastapi import FastAPI, HTTPException
+
+from backend.app.core.config import get_settings
+from backend.app.core.presets import default_preset, get_presets
+from backend.app.schemas import ConfigResponse, GenerateRequest, GenerateResponse
+from backend.app.services.image_edit import edit_image
+
+app = FastAPI(title="Cafe Ad Maker V1", version="0.1.0")
+
+
+@app.get("/")
+async def root() -> dict[str, str]:
+    # Cloud Run 기본 URL로 접속했을 때 서비스가 살아있는지 빠르게 확인한다.
+    return {"service": "Cafe Ad Maker V1", "status": "ok"}
+
+
+@app.get("/api/health")
+async def health() -> dict[str, str]:
+    # 로드밸런서/스모크 테스트용 최소 헬스체크. 외부 API는 호출하지 않는다.
+    return {"status": "ok"}
+
+
+@app.get("/api/ready")
+async def ready() -> dict[str, str | int]:
+    # 런타임 설정과 프리셋 로딩 상태를 함께 확인해 배포 준비 여부를 판단한다.
+    settings = get_settings()
+    presets = get_presets()
+    return {
+        "status": "ready",
+        "env": settings.app_env,
+        "provider": settings.image_provider,
+        "presets": len(presets),
+    }
+
+
+@app.get("/api/config", response_model=ConfigResponse, response_model_by_alias=True)
+async def config() -> ConfigResponse:
+    # 프론트는 이 응답으로 사용 가능한 광고 규격과 현재 provider를 구성한다.
+    settings = get_settings()
+    return ConfigResponse(
+        presets=list(get_presets().values()),
+        provider=settings.image_provider,
+        maxUploadBytes=settings.max_upload_bytes,
+    )
+
+
+@app.post("/api/generate", response_model=GenerateResponse, response_model_by_alias=True)
+async def generate(request: GenerateRequest) -> GenerateResponse:
+    # presetId가 없거나 잘못되면 첫 번째 프리셋을 기본값으로 사용한다.
+    settings = get_settings()
+    presets = get_presets()
+    preset = presets.get(request.preset_id or "") or default_preset()
+
+    try:
+        # 이미지 검증, mock/openai 분기, 외부 API 호출은 service 계층에 위임한다.
+        result = await edit_image(
+            image_data_url=request.image_data_url,
+            preset=preset,
+            feedback=request.feedback,
+            settings=settings,
+        )
+    except ValueError as exc:
+        # 사용자 입력 또는 이미지 API 응답 문제는 프론트가 처리할 수 있게 400으로 통일한다.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return GenerateResponse(
+        imageDataUrl=result["image_data_url"],
+        provider=result["provider"] or settings.image_provider,
+        preset=preset,
+        note=result["note"],
+        prompt=result["prompt"],
+    )
