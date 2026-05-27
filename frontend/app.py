@@ -309,11 +309,19 @@ def draw_gradient(image: Image.Image, start_hex: str, end_hex: str) -> None:
 
     for y in range(height):
         ratio = y / max(height - 1, 1)
-        color = tuple(round(start[channel] * (1 - ratio) + end[channel] * ratio) for channel in range(3))
+        color = tuple(
+            round(start[channel] * (1 - ratio) + end[channel] * ratio)
+            for channel in range(3)
+        )
         draw.line([(0, y), (width, y)], fill=color)
 
 
-def rounded_paste(base: Image.Image, overlay: Image.Image, box: tuple[int, int], radius: int) -> None:
+def rounded_paste(
+    base: Image.Image,
+    overlay: Image.Image,
+    box: tuple[int, int],
+    radius: int,
+) -> None:
     overlay = overlay.convert("RGBA")
     mask = Image.new("L", overlay.size, 0)
     mask_draw = ImageDraw.Draw(mask)
@@ -390,7 +398,11 @@ def create_mock_banner(image_bytes: bytes, prompt: str, format_label: str) -> by
 
     shadow = Image.new("RGBA", (pw + 60, ph + 60), (0, 0, 0, 0))
     shadow_draw = ImageDraw.Draw(shadow)
-    shadow_draw.rounded_rectangle((30, 30, pw + 30, ph + 30), radius=int(34 * scale), fill=(35, 42, 39, 46))
+    shadow_draw.rounded_rectangle(
+        (30, 30, pw + 30, ph + 30),
+        radius=int(34 * scale),
+        fill=(35, 42, 39, 46),
+    )
     shadow = shadow.filter(ImageFilter.GaussianBlur(int(18 * scale)))
     banner.paste(shadow, (px - 30, py - 30), shadow)
 
@@ -457,7 +469,9 @@ def data_url_to_bytes(data_url: str) -> bytes:
 
     header, encoded = data_url.split(",", 1)
     if ";base64" not in header:
-        raise ValueError("백엔드 응답 imageDataUrl은 base64 데이터 URL이어야 합니다.")
+        raise ValueError(
+            "백엔드 응답 imageDataUrl은 base64 데이터 URL이어야 합니다."
+        )
 
     return base64.b64decode(encoded)
 
@@ -534,7 +548,12 @@ with left_col:
     st.markdown('<p class="section-label">프롬프트</p>', unsafe_allow_html=True)
     prompt = st.text_area(
         "프롬프트",
-        placeholder="예:\n제품을 크게 중앙에 배치해줘\n따뜻한 색감으로 만들어줘\n미니멀하고 프리미엄한 배경으로",
+        placeholder=(
+            "예:\n"
+            "제품을 크게 중앙에 배치해줘\n"
+            "따뜻한 색감으로 만들어줘\n"
+            "미니멀하고 프리미엄한 배경으로"
+        ),
         height=150,
         label_visibility="collapsed",
     )
@@ -565,7 +584,11 @@ with left_col:
         st.info("되돌릴 이전 결과가 아직 없습니다.")
     if redo_clicked:
         st.info("다시 실행할 다음 결과가 아직 없습니다.")
-    if "result_bytes" not in st.session_state and "save_clicked" in locals() and save_clicked:
+    if (
+        "result_bytes" not in st.session_state
+        and "save_clicked" in locals()
+        and save_clicked
+    ):
         st.info("저장할 결과 이미지를 먼저 만들어주세요.")
 
 is_generating = bool(generate and uploaded_file and prompt.strip())
@@ -624,7 +647,11 @@ with right_col:
             """,
             unsafe_allow_html=True,
         )
-        st.image(uploaded_file, caption="업로드한 사진 미리보기", use_container_width=True)
+        st.image(
+            uploaded_file,
+            caption="업로드한 사진 미리보기",
+            use_container_width=True,
+        )
     elif "result_bytes" in st.session_state:
         st.markdown(
             f"""
@@ -635,7 +662,11 @@ with right_col:
             """,
             unsafe_allow_html=True,
         )
-        st.image(st.session_state["result_bytes"], caption="생성된 홍보 이미지", use_container_width=True)
+        st.image(
+            st.session_state["result_bytes"],
+            caption="생성된 홍보 이미지",
+            use_container_width=True,
+        )
         st.download_button(
             "이미지 다운로드",
             data=st.session_state["result_bytes"],
@@ -652,7 +683,8 @@ with right_col:
                     <span>{FORMAT_OPTIONS[format_label]["label"]}</span>
                 </div>
                 <div class="empty-guide">
-                    단순한 배경에서, 광고에 사용할 각도로 촬영한 이미지를 올려주세요.
+                    단순한 배경에서, 광고에 사용할 각도로 촬영한
+                    이미지를 올려주세요.
                 </div>
             </div>
             """,
@@ -679,7 +711,10 @@ if generate:
             st.rerun()
         except httpx.HTTPStatusError as exc:
             detail = exc.response.text
-            st.error(f"백엔드 생성 요청에 실패했습니다. ({exc.response.status_code}) {detail}")
+            st.error(
+                f"백엔드 생성 요청에 실패했습니다. "
+                f"({exc.response.status_code}) {detail}"
+            )
         except httpx.HTTPError as exc:
             st.error(f"백엔드에 연결할 수 없습니다: {exc}")
         except Exception as exc:
