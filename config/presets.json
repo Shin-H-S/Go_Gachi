@@ -1,0 +1,29 @@
+[
+  {
+    "id": "instagram_square",
+    "label": "Instagram Feed",
+    "detail": "1080 x 1080",
+    "width": 1080,
+    "height": 1080,
+    "api_size": "1024x1024",
+    "prompt_hint": "Create a square Instagram feed image with the cafe menu item centered and visually appetizing."
+  },
+  {
+    "id": "baemin_notice",
+    "label": "Baemin Notice",
+    "detail": "1280 x 560",
+    "width": 1280,
+    "height": 560,
+    "api_size": "1536x1024",
+    "prompt_hint": "Create a wide banner crop suitable for a delivery app owner notice, with the item clearly visible and no typography."
+  },
+  {
+    "id": "daangn_post",
+    "label": "Danggeun Post",
+    "detail": "1200 x 900",
+    "width": 1200,
+    "height": 900,
+    "api_size": "1536x1024",
+    "prompt_hint": "Create a warm local-neighborhood cafe post image with natural light and the menu item as the clear subject."
+  }
+]
