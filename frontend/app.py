@@ -9,7 +9,6 @@ import streamlit as st
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
-
 load_dotenv(Path(__file__).with_name(".env"))
 BACKEND_URL = os.getenv("BACKEND_URL", "").rstrip("/")
 
