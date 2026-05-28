@@ -6,8 +6,13 @@ from backend.app.services.image_edit import parse_image
 def test_presets() -> None:
     presets = get_presets()
 
-    assert "instagram_square" in presets
+    # preset id는 API 요청에 쓰이는 값이라 프론트와 동일하게 유지한다.
+    assert set(presets) == {"instagram_square", "baemin_notice", "daangn_post"}
+    assert all(preset_id.isascii() for preset_id in presets)
     assert presets["instagram_square"].width == 1080
+    assert presets["instagram_square"].label == "인스타그램"
+    assert presets["baemin_notice"].label == "배달의 민족"
+    assert presets["daangn_post"].label == "당근"
 
 
 def test_prompt() -> None:
