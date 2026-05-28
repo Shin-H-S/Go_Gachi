@@ -1,6 +1,6 @@
 # Go_Gachi
 
-소상공인을 위한 광고 이미지 제작 서비스입니다. 이 저장소는 **GCP/Cloud Run 실행 기준**으로 관리합니다. 앱 서버를 로컬에서 실행하지 않고, 배포된 GCP 서버에서 동작을 확인합니다.
+소상공인을 위한 광고 이미지 제작 서비스입니다. 이 저장소는 GCP/Cloud Run 배포가 가능하도록 구성되어 있으며, 팀 개발과 검증에는 같은 코드베이스를 로컬에서도 활용할 수 있습니다.
 
 ## Structure
 
@@ -10,7 +10,7 @@
 backend/        # FastAPI backend
 config/         # image preset config
 docs/           # architecture and GCP operation docs
-frontend/       # Streamlit frontend starter structure
+frontend/       # Streamlit frontend
 infra/          # Cloud Run Dockerfile
 scripts/        # GCP deploy/smoke scripts
 tests/          # backend tests used by CI
@@ -30,7 +30,7 @@ Cloud Run runtime entrypoint:
 uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8080}
 ```
 
-Runtime environment is injected by Cloud Run / Cloud Build, not by a local `.env`.
+운영 런타임 환경변수는 Cloud Run / Cloud Build에서 주입합니다. 로컬 검증 시에는 `.env` 예시를 참고할 수 있습니다.
 
 Required runtime variables:
 

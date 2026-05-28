@@ -1,6 +1,6 @@
 # Development Workflow
 
-이 프로젝트는 로컬 앱 실행을 지원하지 않고, GCP/Cloud Run 서버 실행을 기준으로 개발합니다.
+이 프로젝트는 GCP/Cloud Run 배포를 우선 지원하도록 구성합니다. 다만 팀 개발, 테스트, 프론트 확인에는 같은 코드베이스를 로컬에서도 활용할 수 있습니다.
 
 ## Team Workflow
 
@@ -8,8 +8,8 @@
 2. 코드 수정
 3. PR 생성
 4. GitHub Actions CI 확인
-5. Cloud Run 배포
-6. 배포 URL로 smoke test 실행
+5. 필요 시 Cloud Run 배포
+6. 배포 URL 또는 로컬 검증 URL로 smoke test 실행
 
 ## CI Validation
 
@@ -22,9 +22,9 @@ uv run ruff check .
 uv run pytest
 ```
 
-## GCP Runtime Validation
+## Runtime Validation
 
-배포 후 Cloud Run URL에 대해 확인합니다.
+Cloud Run 배포 후에는 서비스 URL에 대해 확인합니다.
 
 ```powershell
 .\scripts\gcp-smoke.ps1 -Url https://YOUR_SERVICE_URL
@@ -38,7 +38,7 @@ uv run pytest
 
 ## Environment
 
-런타임 환경변수는 Cloud Run에 주입합니다. `OPENAI_API_KEY`는 Secret Manager를 사용합니다.
+운영 런타임 환경변수는 Cloud Run에 주입합니다. `OPENAI_API_KEY`는 Secret Manager를 사용합니다.
 
 ```env
 APP_ENV=production
@@ -48,4 +48,4 @@ OPENAI_IMAGE_MODEL=gpt-image-2
 OPENAI_IMAGE_QUALITY=medium
 ```
 
-로컬 `.env`는 서버 실행 용도로 사용하지 않습니다.
+로컬 `.env`는 임시 검증용으로만 사용하고, 운영 값은 Cloud Run 환경변수와 Secret Manager에서 관리합니다.

@@ -1,6 +1,6 @@
 # GCP Operation
 
-이 프로젝트는 Cloud Run 운영을 기본 실행 대상으로 둡니다. 앱 서버는 로컬에서 실행하지 않고, 배포 후 테스트는 Cloud Run URL에 대해 수행합니다.
+이 문서는 Go_Gachi를 Cloud Run에 올려 운영하거나 배포 검증할 때 필요한 절차를 정리합니다. 로컬 검증과 별개로, 운영 값은 GCP 환경변수와 Secret Manager에서 관리합니다.
 
 ## One-time Setup
 
