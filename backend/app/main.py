@@ -1,5 +1,6 @@
 """Cloud Run에서 실행되는 FastAPI 진입점."""
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -11,6 +12,11 @@ from backend.app.core.presets import default_preset, get_presets
 from backend.app.db.database import async_init_db
 from backend.app.schemas import ConfigResponse, GenerateRequest, GenerateResponse
 from backend.app.services.image_edit import edit_image
+
+logger = logging.getLogger(__name__)
+IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
+    "이미지 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
+)
 
 
 @asynccontextmanager
@@ -88,8 +94,15 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
             settings=settings,
         )
     except ValueError as exc:
-        # 사용자 입력 또는 이미지 API 응답 문제는 프론트가 처리할 수 있게 400으로 통일한다.
+        # 사용자 입력 문제는 프론트가 처리할 수 있게 400으로 돌려준다.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        # 서버 설정/외부 이미지 API 문제는 내부 로그에만 원인을 남기고 사용자 메시지는 일반화한다.
+        logger.exception("image generation failed")
+        raise HTTPException(
+            status_code=503,
+            detail=IMAGE_GENERATION_UNAVAILABLE_MESSAGE,
+        ) from exc
 
     return GenerateResponse(
         imageDataUrl=result["image_data_url"],
