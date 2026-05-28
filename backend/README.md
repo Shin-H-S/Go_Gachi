@@ -1,73 +1,75 @@
-# Go_Gachi 백엔드 (FastAPI)
+# Go_Gachi Backend
 
-소상공인 광고 생성 서비스의 백엔드. 사진 + 광고 정보를 받아 OpenAI(gpt-image-1-mini)로
-광고 이미지 1장을 생성하고, 결과 이미지를 파일로 저장해 URL로 돌려준다.
+소상공인 광고 이미지 제작 서비스의 FastAPI 백엔드입니다.
+현재 API는 사용자가 업로드한 이미지 data URL, 프리셋 ID, 추가 요청 문구를 받아 광고용 이미지로 편집하는 MVP 흐름을 기준으로 합니다.
 
-## 사전 요구사항
+## Runtime
 
-- **Python 3.11+** & **uv** (패키지 관리)
-- **OpenAI API Key** (이미지 생성용)
+- Python `3.11.14`
+- 패키지 관리: `uv`
+- 기본 실행 앱: `backend.app.main:app`
 
-## 셋업 (처음 한 번)
+GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 같은 앱을 로컬 환경에서도 실행할 수 있게 구성합니다.
 
-```bash
-cd backend
+## Main API
 
-# 1) 환경변수 파일 만들기 (양식 복사 후 본인 값 채우기)
-#    Windows PowerShell:
-Copy-Item .env.example .env
-#    macOS/Linux:
-#    cp .env.example .env
-#  → .env 열어서 OPENAI_API_KEY 를 본인 키로 채운다 (sk- 로 시작)
-
-# 2) 파이썬 패키지 설치
-uv sync          # 또는: pip install -r requirements.txt
-```
-
-## 실행
-
-```bash
-cd backend
-uvicorn main:app --reload
-```
-
-확인:
-- 서버 상태: http://127.0.0.1:8000/api/v1/health
-- API 문서(테스트 가능): http://127.0.0.1:8000/docs
-
-## API
-
-| 메서드 | 경로 | 설명 |
+| Method | Path | Description |
 | --- | --- | --- |
-| GET | `/api/v1/health` | 서버 상태 + OpenAI 키 설정 여부 |
-| POST | `/api/v1/generate` | 사진 + 광고 정보 → 광고 이미지 1장 생성 |
+| GET | `/` | 서비스 기본 상태 |
+| GET | `/api/health` | 외부 의존성 없는 헬스체크 |
+| GET | `/api/ready` | 설정과 프리셋 로딩 상태 확인 |
+| GET | `/api/config` | 프론트 초기 설정용 프리셋 목록 |
+| POST | `/api/generate` | 이미지 편집 생성 요청 |
 
-`/generate` 입력(multipart/form-data): `image`(파일), `industry`, `mood`, `ad_type`,
-`objective`, `placement`(기본 `instagram_feed`) 등. 결과는 `image_url`로 받은 경로를
-붙여 미리보기 한다. 생성된 이미지는 `/outputs/<파일명>.png`로 정적 제공된다.
+## Generate Request
 
-## 디렉토리 구조
+현재 스키마는 JSON 요청만 사용합니다.
+업종, 분위기, 광고 유형, 목적 등 세분화된 프롬프트 변수는 이후 API 버전업에서 추가할 예정입니다.
 
+```json
+{
+  "imageDataUrl": "data:image/png;base64,...",
+  "presetId": "instagram_square",
+  "feedback": "밝고 따뜻한 카페 광고 느낌으로 만들어줘"
+}
 ```
+
+- `imageDataUrl`: PNG, JPG, WEBP data URL
+- `presetId`: `GET /api/config`에서 받은 프리셋 ID. 생략하면 기본 프리셋 사용
+- `feedback`: 사용자 추가 요청 문구
+
+알 수 없는 `presetId`는 연동 오류를 빨리 발견할 수 있도록 `400`으로 응답합니다.
+
+## Generate Response
+
+```json
+{
+  "imageDataUrl": "data:image/png;base64,...",
+  "provider": "openai",
+  "preset": {
+    "id": "instagram_square",
+    "label": "Instagram Feed"
+  },
+  "note": null,
+  "prompt": "..."
+}
+```
+
+## Key Files
+
+```text
 backend/
-├── main.py                 앱 시작점 (create_app: 라우터/CORS/정적 경로)
-├── .env / .env.example     환경변수 (.env 는 git 제외)
-├── uploads/ outputs/       원본/결과 이미지 (git 제외)
-└── app/
-    ├── core/config.py        환경설정 (pydantic-settings, .env 로드)
-    ├── api/endpoints.py      라우트: /health, /generate
-    ├── models/schemas.py     요청/응답 형태 (Pydantic)
-    ├── services/pipeline.py  생성 흐름 전체 조율
-    ├── ml/text_gen.py        프롬프트(지시문) 생성
-    ├── ml/image_gen.py       OpenAI 이미지 생성 호출
-    ├── ml/image_utils.py     이미지 검증·사이즈 계산·리사이즈
-    ├── storage/files.py      파일 저장/URL 생성
-    └── db/                   (placeholder) DB는 추후 재도입 예정
+  app/main.py                 FastAPI 앱과 API 라우트
+  app/schemas.py              현재 요청/응답 스키마
+  app/core/config.py          환경변수 기반 런타임 설정
+  app/core/presets.py         config/presets.json 로딩
+  app/core/prompts.py         이미지 편집 프롬프트 조립
+  app/services/image_edit.py  이미지 검증, 캐시, OpenAI 호출 흐름
+  app/db/                     생성 기록, 캐시, 사용량 추적 DB 계층
 ```
 
-## 주의
+## Notes
 
-- **`.env` 는 절대 git 에 올리지 않는다** (API 키 노출 금지). 이미 `.gitignore` 처리됨.
-- 새 패키지 설치 시: `uv add <패키지>` → 팀원도 `uv sync` 로 동일 환경.
-- DB는 현재 MVP 범위 밖이라 제거됨. 히스토리/수정요청 기능을 붙일 때 재도입 예정
-  (이전 구현은 git 커밋 `b57d91a`에 보존).
+- 실제 API 키는 저장소에 커밋하지 않습니다.
+- GCP 배포 시 `OPENAI_API_KEY`는 Secret Manager를 통해 주입합니다.
+- 기본 DB는 SQLite지만, 운영 저장소가 필요하면 Cloud SQL/PostgreSQL 전환을 고려합니다.

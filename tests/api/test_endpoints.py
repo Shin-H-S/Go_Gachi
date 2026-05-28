@@ -159,6 +159,21 @@ def test_generate_rejects_invalid_image_data_url() -> None:
     assert "이미지" in response.json()["detail"]
 
 
+def test_generate_rejects_unknown_preset_id() -> None:
+    """잘못된 presetId는 기본값으로 숨기지 않고 400으로 알려준다."""
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "unknown_preset",
+            "feedback": "",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "presetId" in response.json()["detail"]
+
+
 def test_generate_returns_503_when_openai_key_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

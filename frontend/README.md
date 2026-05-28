@@ -13,16 +13,14 @@ frontend/
   assets/               # 샘플 이미지, 아이콘 등 정적 리소스
   tests/                # 프론트엔드 테스트 코드
   .env.example          # 배포된 백엔드 URL 예시
-  requirements.txt      # Streamlit 개발 시작용 의존성
 ```
 
 ## Run
 
-레포 루트에서 프론트 의존성을 설치한 뒤 실행합니다.
+프론트 의존성은 루트 `pyproject.toml`의 `frontend` 그룹에서 관리합니다.
 
 ```bash
-pip install -r requirements-frontend.txt
-streamlit run frontend/app.py
+uv run --group frontend streamlit run frontend/app.py
 ```
 
 ## Backend Connection

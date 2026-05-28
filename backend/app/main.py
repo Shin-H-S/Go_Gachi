@@ -72,10 +72,18 @@ async def config() -> ConfigResponse:
 
 @app.post("/api/generate", response_model=GenerateResponse, response_model_by_alias=True)
 async def generate(request: GenerateRequest) -> GenerateResponse:
-    # presetId가 없거나 잘못되면 첫 번째 프리셋을 기본값으로 사용한다.
+    # presetId가 없으면 기본 프리셋을 쓰고, 잘못된 값은 연동 오류를 빨리 찾도록 400으로 돌려준다.
     settings = get_settings()
     presets = get_presets()
-    preset = presets.get(request.preset_id or "") or default_preset()
+    if request.preset_id:
+        preset = presets.get(request.preset_id)
+        if preset is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"지원하지 않는 presetId입니다: {request.preset_id}",
+            )
+    else:
+        preset = default_preset()
 
     try:
         # 이미지 검증, mock/openai 분기, 외부 API 호출은 service 계층에 위임한다.
