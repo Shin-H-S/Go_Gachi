@@ -46,6 +46,10 @@ def load_env() -> None:
         os.environ[key] = value
 
 
+DEFAULT_DATA_DIR = ROOT_DIR / "backend" / "data"
+DEFAULT_OUTPUT_DIR = ROOT_DIR / "backend" / "outputs"
+
+
 class Settings(BaseModel):
     """앱 전체에서 참조하는 런타임 설정값."""
 
@@ -53,10 +57,23 @@ class Settings(BaseModel):
     port: int = 8080
     image_provider: Literal["mock", "openai"] = "mock"
     openai_api_key: str = ""
+    openai_admin_key: str = ""
     openai_text_model: str = "gpt-5"
     openai_image_model: str = "gpt-image-2"
     openai_image_quality: str = "medium"
     max_upload_bytes: int = 50 * 1024 * 1024
+
+    # DB 라우팅용 설정. 운영 이전 시 DATABASE_URL 한 줄만 교체하면 PostgreSQL로 간다.
+    database_url: str = f"sqlite:///{(DEFAULT_DATA_DIR / 'app.db').as_posix()}"
+    # data/output 경로는 보통 기본값으로 충분하지만, 테스트·Docker·Cloud Run에서 임시 폴더로
+    # 리다이렉트할 수 있게 env override를 남겨둔다.
+    data_dir: Path = DEFAULT_DATA_DIR
+    output_dir: Path = DEFAULT_OUTPUT_DIR
+
+    # 비용 추적: gpt-image류 1콜 ≈ $0.01. 데모 기간 안전 한도 $30, 경고 $25.
+    openai_image_edit_estimated_cost_usd: float = 0.01
+    openai_budget_limit_usd: float = 30.0
+    openai_budget_alert_usd: float = 25.0
 
 
 @lru_cache
@@ -73,12 +90,29 @@ def get_settings() -> Settings:
     # provider를 명시하지 않아도 키가 있으면 openai, 없으면 mock으로 동작한다.
     provider = os.getenv("IMAGE_PROVIDER") or ("openai" if api_key else "mock")
 
+    data_dir = Path(os.getenv("DATA_DIR", str(DEFAULT_DATA_DIR)))
+    output_dir = Path(os.getenv("OUTPUT_DIR", str(DEFAULT_OUTPUT_DIR)))
+    # DB URL 기본값은 data_dir/app.db. 환경변수로 명시하면 Supabase/PostgreSQL로 그대로 전환.
+    database_url = os.getenv(
+        "DATABASE_URL",
+        f"sqlite:///{(data_dir / 'app.db').as_posix()}",
+    )
+
     return Settings(
         port=int(os.getenv("PORT", "8080")),
         app_env=os.getenv("APP_ENV", "local"),
         image_provider=provider,
         openai_api_key=api_key,
+        openai_admin_key=os.getenv("OPENAI_ADMIN_KEY", ""),
         openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5"),
         openai_image_model=os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2"),
         openai_image_quality=os.getenv("OPENAI_IMAGE_QUALITY", "medium"),
+        database_url=database_url,
+        data_dir=data_dir,
+        output_dir=output_dir,
+        openai_image_edit_estimated_cost_usd=float(
+            os.getenv("OPENAI_IMAGE_EDIT_ESTIMATED_COST_USD", "0.01")
+        ),
+        openai_budget_limit_usd=float(os.getenv("OPENAI_BUDGET_LIMIT_USD", "30.0")),
+        openai_budget_alert_usd=float(os.getenv("OPENAI_BUDGET_ALERT_USD", "25.0")),
     )

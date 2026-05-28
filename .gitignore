@@ -171,6 +171,9 @@ pnpm-debug.log*
 !/backend/uploads/.gitkeep
 /backend/outputs/*
 !/backend/outputs/.gitkeep
+# 백엔드 SQLite DB 폴더: app.db는 커밋 금지(폴더 구조만 유지)
+/backend/data/*
+!/backend/data/.gitkeep
 
 # Jupyter Notebook 캐시
 .ipynb_checkpoints

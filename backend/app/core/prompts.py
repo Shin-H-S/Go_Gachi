@@ -2,6 +2,10 @@
 
 from backend.app.core.presets import Preset
 
+# 프롬프트 본문/구조가 바뀌면 이 라벨도 올려 캐시 무효화한다. env가 아니라 코드 상수로
+# 두는 이유: 프롬프트 변경과 항상 같은 커밋에 들어가야 어긋남이 없어서.
+PROMPT_VERSION = "2026-05-28-v1"
+
 
 def build_prompt(preset: Preset, feedback: str = "") -> str:
     """프리셋과 사용자 피드백을 OpenAI 이미지 편집 지시문으로 만든다."""
