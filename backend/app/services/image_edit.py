@@ -23,6 +23,17 @@ DATA_URL_PATTERN = re.compile(
 )
 
 
+def _detect_image_mime(content: bytes) -> str | None:
+    """파일 시그니처로 실제 이미지 MIME을 판별한다."""
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if content.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if content.startswith(b"RIFF") and content[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
 @dataclass(frozen=True)
 class UploadedImage:
     """OpenAI multipart 요청에 필요한 업로드 이미지 정보."""
@@ -53,6 +64,12 @@ def parse_image(data_url: str, max_upload_bytes: int) -> UploadedImage:
     if not content or len(content) > max_upload_bytes:
         raise ValueError("이미지는 50MB 이하만 업로드할 수 있습니다.")
 
+    detected_mime = _detect_image_mime(content)
+    if detected_mime is None:
+        raise ValueError("이미지 파일 형식을 확인할 수 없습니다.")
+    if detected_mime != mime_type:
+        raise ValueError("이미지 MIME 타입과 실제 파일 형식이 일치하지 않습니다.")
+
     extension = "jpg" if mime_type == "image/jpeg" else mime_type.split("/")[-1]
     return UploadedImage(mime_type=mime_type, content=content, extension=extension)
 
@@ -81,40 +98,44 @@ async def _call_openai_edit(
     Returns:
         결과 PNG의 base64 문자열(헤더 없음).
     """
-    async with httpx.AsyncClient(timeout=120) as client:
-        # OpenAI Images Edit API는 이미지 파일을 multipart/form-data로 받는다.
-        response = await client.post(
-            "https://api.openai.com/v1/images/edits",
-            headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-            data={
-                "model": settings.openai_image_model,
-                "prompt": prompt,
-                "size": preset.api_size,
-                "quality": settings.openai_image_quality,
-                "output_format": "png",
-            },
-            files={
-                "image": (
-                    f"menu.{uploaded.extension}",
-                    uploaded.content,
-                    uploaded.mime_type,
-                )
-            },
-        )
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            # OpenAI Images Edit API는 이미지 파일을 multipart/form-data로 받는다.
+            response = await client.post(
+                "https://api.openai.com/v1/images/edits",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                data={
+                    "model": settings.openai_image_model,
+                    "prompt": prompt,
+                    "size": preset.api_size,
+                    "quality": settings.openai_image_quality,
+                    "output_format": "png",
+                },
+                files={
+                    "image": (
+                        f"menu.{uploaded.extension}",
+                        uploaded.content,
+                        uploaded.mime_type,
+                    )
+                },
+            )
+    except httpx.HTTPError as exc:
+        # 네트워크 실패·타임아웃·DNS 등은 사용자 잘못이 아니라 외부 의존성 문제 → RuntimeError.
+        raise RuntimeError("이미지 API에 연결하지 못했습니다.") from exc
 
     try:
         # 오류 응답도 JSON으로 오는 경우가 많아 먼저 payload로 통일한다.
         payload = response.json()
     except ValueError as exc:
-        raise ValueError("이미지 API 응답을 해석하지 못했습니다.") from exc
+        raise RuntimeError("이미지 API 응답을 해석하지 못했습니다.") from exc
 
     if response.status_code >= 400:
         message = payload.get("error", {}).get("message", "이미지 생성에 실패했습니다.")
-        raise ValueError(message)
+        raise RuntimeError(message)
 
     b64_json = payload.get("data", [{}])[0].get("b64_json")
     if not b64_json:
-        raise ValueError("이미지 API 응답에 결과 이미지가 없습니다.")
+        raise RuntimeError("이미지 API 응답에 결과 이미지가 없습니다.")
     return b64_json
 
 
@@ -144,7 +165,7 @@ async def edit_image(
         }
 
     if not settings.openai_api_key:
-        raise ValueError("OPENAI_API_KEY가 설정되지 않았습니다.")
+        raise RuntimeError("OPENAI_API_KEY가 설정되지 않았습니다.")
 
     prompt = build_prompt(preset, feedback)
     image_hash = crud.image_sha256(uploaded.content)

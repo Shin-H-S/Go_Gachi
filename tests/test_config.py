@@ -26,3 +26,29 @@ def test_parse_image_rejects_invalid_base64() -> None:
         assert "base64" in str(exc)
     else:
         raise AssertionError("parse_image should reject invalid base64")
+
+
+def test_parse_image_rejects_non_image_payload() -> None:
+    data_url = "data:image/png;base64,aGVsbG8="
+
+    try:
+        parse_image(data_url, 1024)
+    except ValueError as exc:
+        assert "이미지 파일 형식" in str(exc)
+    else:
+        raise AssertionError("parse_image should reject non-image bytes")
+
+
+def test_parse_image_rejects_mismatched_mime_type() -> None:
+    jpg_declared_png_bytes = (
+        "data:image/jpeg;base64,"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhg"
+        "GAWjR9awAAAABJRU5ErkJggg=="
+    )
+
+    try:
+        parse_image(jpg_declared_png_bytes, 1024)
+    except ValueError as exc:
+        assert "MIME 타입" in str(exc)
+    else:
+        raise AssertionError("parse_image should reject mismatched MIME type")
