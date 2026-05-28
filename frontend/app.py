@@ -19,7 +19,7 @@ FORMAT_OPTIONS = {
         "size": (1080, 1080),
     },
     "배민 광고": {
-        "value": "baemin_ad",
+        "value": "baemin_notice",
         "label": "1280 x 560",
         "size": (1280, 560),
     },
