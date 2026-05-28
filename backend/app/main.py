@@ -1,13 +1,31 @@
 """Cloud Run에서 실행되는 FastAPI 진입점."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 
+from backend.app.api.internal import router as internal_router
 from backend.app.core.config import get_settings
 from backend.app.core.presets import default_preset, get_presets
+from backend.app.db.database import async_init_db
 from backend.app.schemas import ConfigResponse, GenerateRequest, GenerateResponse
 from backend.app.services.image_edit import edit_image
 
-app = FastAPI(title="Cafe Ad Maker V1", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
+    """앱 시작 시 비동기로 DB 테이블을 준비한다."""
+    await async_init_db()
+    yield
+
+
+app = FastAPI(title="Cafe Ad Maker V1", version="0.1.0", lifespan=lifespan)
+
+# production에서는 내부 모니터링 라우터를 아예 등록하지 않는다. 로컬/dev에선 그대로 열림.
+# 운영에서도 사용량을 봐야 한다면 별도 토큰 인증 라우터로 교체하면 됨.
+if get_settings().app_env != "production":
+    app.include_router(internal_router)
 
 
 @app.get("/")
