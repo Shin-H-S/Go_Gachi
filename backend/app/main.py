@@ -109,5 +109,6 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
         provider=result["provider"] or settings.image_provider,
         preset=preset,
         note=result["note"],
-        prompt=result["prompt"],
+        # production에서는 내부 프롬프트 노출을 막고, local/dev에서는 디버깅용으로 유지한다.
+        prompt=result["prompt"] if settings.app_env != "production" else None,
     )
