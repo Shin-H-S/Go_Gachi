@@ -19,11 +19,13 @@ import pytest
 _TEST_DIR = Path(tempfile.mkdtemp(prefix="go-gachi-tests-"))
 _TEST_DIR.mkdir(parents=True, exist_ok=True)
 (_TEST_DIR / "outputs").mkdir(parents=True, exist_ok=True)
+(_TEST_DIR / "uploads").mkdir(parents=True, exist_ok=True)
 
 # 테스트는 항상 임시 DB/폴더만 사용한다. 기존 환경변수에 실제 DB가 있어도 덮어쓴다.
 os.environ["DATABASE_URL"] = f"sqlite:///{(_TEST_DIR / 'app.db').as_posix()}"
 os.environ["DATA_DIR"] = str(_TEST_DIR)
 os.environ["OUTPUT_DIR"] = str(_TEST_DIR / "outputs")
+os.environ["UPLOAD_DIR"] = str(_TEST_DIR / "uploads")
 os.environ["IMAGE_PROVIDER"] = "mock"
 # 실 API 키가 흘러들어가 실제 호출이 발생하지 않도록 항상 비운다.
 os.environ["OPENAI_API_KEY"] = ""

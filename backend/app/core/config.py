@@ -48,6 +48,7 @@ def load_env() -> None:
 
 DEFAULT_DATA_DIR = ROOT_DIR / "backend" / "data"
 DEFAULT_OUTPUT_DIR = ROOT_DIR / "backend" / "outputs"
+DEFAULT_UPLOAD_DIR = ROOT_DIR / "backend" / "uploads"
 
 
 class Settings(BaseModel):
@@ -65,10 +66,11 @@ class Settings(BaseModel):
 
     # DB 라우팅용 설정. 운영 이전 시 DATABASE_URL 한 줄만 교체하면 PostgreSQL로 간다.
     database_url: str = f"sqlite:///{(DEFAULT_DATA_DIR / 'app.db').as_posix()}"
-    # data/output 경로는 보통 기본값으로 충분하지만, 테스트·Docker·Cloud Run에서 임시 폴더로
-    # 리다이렉트할 수 있게 env override를 남겨둔다.
+    # data/output/upload 경로는 보통 기본값으로 충분하지만, 테스트·Docker·Cloud Run에서 임시
+    # 폴더로 리다이렉트할 수 있게 env override를 남겨둔다.
     data_dir: Path = DEFAULT_DATA_DIR
     output_dir: Path = DEFAULT_OUTPUT_DIR
+    upload_dir: Path = DEFAULT_UPLOAD_DIR
 
     # 비용 추적: gpt-image류 1콜 ≈ $0.01. 데모 기간 안전 한도 $30, 경고 $25.
     openai_image_edit_estimated_cost_usd: float = 0.01
@@ -92,6 +94,7 @@ def get_settings() -> Settings:
 
     data_dir = Path(os.getenv("DATA_DIR", str(DEFAULT_DATA_DIR)))
     output_dir = Path(os.getenv("OUTPUT_DIR", str(DEFAULT_OUTPUT_DIR)))
+    upload_dir = Path(os.getenv("UPLOAD_DIR", str(DEFAULT_UPLOAD_DIR)))
     # DB URL 기본값은 data_dir/app.db. 환경변수로 명시하면 Supabase/PostgreSQL로 그대로 전환.
     database_url = os.getenv(
         "DATABASE_URL",
@@ -110,6 +113,7 @@ def get_settings() -> Settings:
         database_url=database_url,
         data_dir=data_dir,
         output_dir=output_dir,
+        upload_dir=upload_dir,
         openai_image_edit_estimated_cost_usd=float(
             os.getenv("OPENAI_IMAGE_EDIT_ESTIMATED_COST_USD", "0.01")
         ),

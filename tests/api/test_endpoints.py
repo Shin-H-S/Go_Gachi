@@ -5,7 +5,10 @@ monkeypatch로 _call_openai_edit를 가짜 응답으로 바꿔 확인한다.
 """
 
 import asyncio
+import base64
+import re
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -187,18 +190,38 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
     # DB 상태 검증: success 1건 + cached 1건, usage 2건 (cached=True 1건)
     async def _db_state() -> tuple[list[str], int, int]:
         async with async_session_scope() as db:
-            status_result = await db.execute(select(Generation.status).order_by(Generation.id))
+            status_result = await db.execute(
+                select(
+                    Generation.status,
+                    Generation.original_path,
+                    Generation.output_path,
+                ).order_by(Generation.id)
+            )
             cached_usage_result = await db.execute(
                 select(func.count()).select_from(ApiUsage).where(ApiUsage.cached.is_(True))
             )
             total_usage_result = await db.execute(select(func.count()).select_from(ApiUsage))
             return (
-                list(status_result.scalars().all()),
+                list(status_result.all()),
                 int(cached_usage_result.scalar_one()),
                 int(total_usage_result.scalar_one()),
             )
 
-    statuses, cached_usage_count, total_usage_count = asyncio.run(_db_state())
-    assert statuses == ["success", "cached"]
+    generation_rows, cached_usage_count, total_usage_count = asyncio.run(_db_state())
+    assert [row.status for row in generation_rows] == ["success", "cached"]
+    assert generation_rows[0].original_path is not None
+    assert generation_rows[0].output_path is not None
+    assert generation_rows[1].original_path == generation_rows[0].original_path
+    assert Path(generation_rows[0].original_path).exists()
+    assert Path(generation_rows[0].output_path).exists()
+    assert re.fullmatch(
+        r"\d{8}_\d{6}_[0-9a-f]{6}\.png",
+        Path(generation_rows[0].output_path).name,
+    )
+    assert re.fullmatch(
+        r"\d{8}_\d{6}_[0-9a-f]{6}\.png",
+        Path(generation_rows[0].original_path).with_suffix(".png").name,
+    )
+    assert Path(generation_rows[0].original_path).read_bytes() == base64.b64decode(TINY_PNG_B64)
     assert cached_usage_count == 1
     assert total_usage_count == 2

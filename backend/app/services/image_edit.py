@@ -6,6 +6,7 @@ import binascii
 import re
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import httpx
@@ -29,6 +30,11 @@ class UploadedImage:
     mime_type: str
     content: bytes
     extension: str
+
+
+def _new_request_id() -> str:
+    """파일 탐색기에서 시간순 정렬·가독성을 위해 `YYYYMMDD_HHMMSS_<6hex>` 형식으로 발급한다."""
+    return f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
 
 def parse_image(data_url: str, max_upload_bytes: int) -> UploadedImage:
@@ -179,7 +185,7 @@ async def edit_image(
         if await asyncio.to_thread(cached_path.exists):
             # 파일 읽기 성공 → 그 다음에야 cached 기록·사용량을 남긴다(부분 실패 방지).
             image_data_url = await _file_to_data_url(cached_path)
-            request_id = uuid.uuid4().hex
+            request_id = _new_request_id()
             async with async_session_scope() as db:
                 await crud.create_cached_generation(
                     db,
@@ -212,9 +218,13 @@ async def edit_image(
         # 파일이 사라졌으면 캐시 미스로 떨어져 OpenAI 호출 분기로 이어진다.
 
     # 2) 캐시 미스: pending 행 먼저 만든 뒤 OpenAI 호출. 실패해도 흔적 남기기 위함.
-    request_id = uuid.uuid4().hex
+    request_id = _new_request_id()
+    await asyncio.to_thread(settings.upload_dir.mkdir, parents=True, exist_ok=True)
     await asyncio.to_thread(settings.output_dir.mkdir, parents=True, exist_ok=True)
+    # 원본은 uploads/, 결과는 outputs/에 같은 request_id로 짝지어 저장한다.
+    original_path = settings.upload_dir / f"{request_id}.{uploaded.extension}"
     output_path = settings.output_dir / f"{request_id}.png"
+    await asyncio.to_thread(original_path.write_bytes, uploaded.content)
 
     async with async_session_scope() as db:
         await crud.create_pending_generation(
@@ -225,7 +235,7 @@ async def edit_image(
             instruction_hash=instruction_hash,
             prompt_version=prompt_version,
             model=model,
-            original_path=None,
+            original_path=str(original_path),
             prompt=prompt,
         )
 
