@@ -18,8 +18,8 @@
     "prompt_hint": "Create a wide banner crop suitable for a delivery app owner notice, with the item clearly visible and no typography."
   },
   {
-    "id": "당근",
-    "label": "Danggeun Post",
+    "id": "daangn_post",
+    "label": "당근",
     "detail": "1200 x 900",
     "width": 1200,
     "height": 900,
