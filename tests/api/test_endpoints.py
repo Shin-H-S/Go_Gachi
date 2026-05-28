@@ -240,6 +240,56 @@ def test_generate_returns_503_when_network_fails(
     assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
 
 
+def test_generate_hides_prompt_in_production(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """production 응답에서는 내부 프롬프트를 노출하지 않는다."""
+    fake_b64 = TINY_PNG_B64
+
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        return fake_b64
+
+    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    real_settings = force_openai_mode(monkeypatch)
+    monkeypatch.setattr(real_settings, "app_env", "production")
+
+    response = client.post(
+        "/api/generate",
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["provider"] == "openai"
+    assert body["prompt"] is None
+
+
+def test_generate_exposes_prompt_in_local(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """local 환경에서는 디버깅을 위해 프롬프트가 응답에 그대로 들어있어야 한다."""
+    fake_b64 = TINY_PNG_B64
+
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        return fake_b64
+
+    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    real_settings = force_openai_mode(monkeypatch)
+    # 기본 app_env는 "local". production 조건을 잘못 뒤집어도 이 테스트가 잡는다.
+    assert real_settings.app_env != "production"
+
+    response = client.post(
+        "/api/generate",
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["provider"] == "openai"
+    assert body["prompt"] is not None
+    assert "cafe" in body["prompt"].lower()
+
+
 def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> None:
     """같은 입력으로 두 번 호출하면 두 번째는 캐시 hit(`cached=True`)이 되어야 한다."""
     # OpenAI 실호출은 막고, 결정적인 PNG b64를 반환하도록 _call_openai_edit를 가짜로 교체.
