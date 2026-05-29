@@ -41,6 +41,9 @@ BACKEND_URL=https://YOUR_BACKEND_CLOUD_RUN_URL
 현재 백엔드 MVP에서 우선 연동할 API는 아래와 같습니다.
 
 - `GET /api/config`: 광고 프리셋 목록 조회
-- `POST /api/generate`: `imageDataUrl`, `presetId`, `feedback`을 전달해 생성 요청
+- `POST /api/generate`: `imageDataUrl`, `presetId`, `feedback`, `targetWidth`, `targetHeight`를 전달해 생성 요청
+
+`targetWidth`와 `targetHeight`는 사용자가 선택한 상세 광고 유형의 최종 다운로드 크기입니다.
+백엔드는 생성 결과를 이 크기의 PNG로 맞춰 반환합니다.
 
 `BACKEND_URL`이 없으면 프론트 화면 확인을 위해 mock 결과 이미지를 표시합니다.

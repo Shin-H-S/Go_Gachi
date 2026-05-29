@@ -7,9 +7,11 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 
 import httpx
+from PIL import Image, ImageOps
 
 from backend.app.core.config import Settings
 from backend.app.core.presets import Preset
@@ -43,9 +45,41 @@ class UploadedImage:
     extension: str
 
 
+@dataclass(frozen=True)
+class TargetSize:
+    """사용자가 최종으로 내려받을 이미지의 정확한 픽셀 크기."""
+
+    width: int
+    height: int
+
+
 def _new_request_id() -> str:
     """파일 탐색기에서 시간순 정렬·가독성을 위해 `YYYYMMDD_HHMMSS_<6hex>` 형식으로 발급한다."""
     return f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+
+
+def _target_size_or_preset(
+    *,
+    preset: Preset,
+    target_width: int | None,
+    target_height: int | None,
+) -> TargetSize:
+    """요청 출력 크기가 없으면 프리셋 기본 크기를 사용한다."""
+    if target_width is None or target_height is None:
+        return TargetSize(width=preset.width, height=preset.height)
+    return TargetSize(width=target_width, height=target_height)
+
+
+def _feedback_with_target_size(feedback: str, target_size: TargetSize) -> str:
+    """프롬프트와 캐시 키에 최종 출력 크기를 함께 반영한다."""
+    size_instruction = (
+        f"Target output canvas: {target_size.width}x{target_size.height}px. "
+        "Compose for this final aspect ratio."
+    )
+    clean_feedback = (feedback or "").strip()
+    if clean_feedback:
+        return f"{size_instruction}\n{clean_feedback}"
+    return size_instruction
 
 
 def parse_image(data_url: str, max_upload_bytes: int) -> UploadedImage:
@@ -72,6 +106,26 @@ def parse_image(data_url: str, max_upload_bytes: int) -> UploadedImage:
 
     extension = "jpg" if mime_type == "image/jpeg" else mime_type.split("/")[-1]
     return UploadedImage(mime_type=mime_type, content=content, extension=extension)
+
+
+def render_target_png(content: bytes, target_size: TargetSize) -> bytes:
+    """이미지 바이트를 선택한 상세 사이즈의 PNG로 정확히 맞춘다.
+
+    OpenAI가 지원하는 생성 크기와 실제 광고 게시 규격은 다를 수 있으므로,
+    모델 결과를 받은 뒤 중앙 기준 cover 방식으로 최종 픽셀 크기를 고정한다.
+    """
+    with Image.open(BytesIO(content)) as source:
+        image = ImageOps.exif_transpose(source).convert("RGB")
+        fitted = ImageOps.fit(
+            image,
+            (target_size.width, target_size.height),
+            method=Image.Resampling.LANCZOS,
+            centering=(0.5, 0.5),
+        )
+
+    output = BytesIO()
+    fitted.save(output, format="PNG", optimize=True)
+    return output.getvalue()
 
 
 async def _file_to_data_url(path: Path) -> str:
@@ -144,6 +198,8 @@ async def edit_image(
     image_data_url: str,
     preset: Preset,
     feedback: str,
+    target_width: int | None = None,
+    target_height: int | None = None,
     settings: Settings,
 ) -> dict[str, str | None]:
     """설정된 provider에 따라 mock 반환 또는 OpenAI 이미지 편집을 수행한다.
@@ -154,22 +210,30 @@ async def edit_image(
     """
     # provider와 무관하게 먼저 입력 이미지를 검증해 프론트 오류를 빠르게 돌려준다.
     uploaded = parse_image(image_data_url, settings.max_upload_bytes)
+    target_size = _target_size_or_preset(
+        preset=preset,
+        target_width=target_width,
+        target_height=target_height,
+    )
+    generation_feedback = _feedback_with_target_size(feedback, target_size)
 
     if settings.image_provider == "mock":
         # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
+        target_png = render_target_png(uploaded.content, target_size)
+        encoded = base64.b64encode(target_png).decode("ascii")
         return {
-            "image_data_url": image_data_url,
+            "image_data_url": f"data:image/png;base64,{encoded}",
             "provider": "mock",
-            "note": "OPENAI_API_KEY가 없어 원본 이미지로 로컬 흐름만 확인했습니다.",
+            "note": "OPENAI_API_KEY가 없어 선택한 규격으로 로컬 흐름만 확인했습니다.",
             "prompt": None,
         }
 
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY가 설정되지 않았습니다.")
 
-    prompt = build_prompt(preset, feedback)
+    prompt = build_prompt(preset, generation_feedback)
     image_hash = crud.image_sha256(uploaded.content)
-    instruction_hash = crud.instruction_sha256(feedback)
+    instruction_hash = crud.instruction_sha256(generation_feedback)
     model = settings.openai_image_model
     prompt_version = PROMPT_VERSION
 
@@ -268,7 +332,8 @@ async def edit_image(
             settings=settings,
         )
         decoded = base64.b64decode(b64_json)
-        await asyncio.to_thread(output_path.write_bytes, decoded)
+        target_png = await asyncio.to_thread(render_target_png, decoded, target_size)
+        await asyncio.to_thread(output_path.write_bytes, target_png)
     except Exception as exc:
         # OpenAI 호출/응답 디코딩/파일 저장 중 하나라도 실패하면 failed로 남긴다.
         async with async_session_scope() as db:
@@ -306,7 +371,7 @@ async def edit_image(
 
     # 프론트가 별도 파일 저장 없이 바로 미리보기할 수 있도록 data URL로 반환한다.
     return {
-        "image_data_url": f"data:image/png;base64,{b64_json}",
+        "image_data_url": f"data:image/png;base64,{base64.b64encode(target_png).decode('ascii')}",
         "provider": "openai",
         "note": None,
         "prompt": prompt,
