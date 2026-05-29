@@ -14,7 +14,7 @@ import httpx
 from PIL import Image, ImageOps
 
 from backend.app.core.config import Settings
-from backend.app.core.presets import Preset
+from backend.app.core.presets import Preset, PresetDetail
 from backend.app.core.prompts import PROMPT_VERSION, build_prompt
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
@@ -70,16 +70,23 @@ def _target_size_or_preset(
     return TargetSize(width=target_width, height=target_height)
 
 
-def _feedback_with_target_size(feedback: str, target_size: TargetSize) -> str:
+def _feedback_with_context(
+    feedback: str,
+    target_size: TargetSize,
+    detail: PresetDetail | None,
+) -> str:
     """프롬프트와 캐시 키에 최종 출력 크기를 함께 반영한다."""
-    size_instruction = (
+    context_parts = [
         f"Target output canvas: {target_size.width}x{target_size.height}px. "
         "Compose for this final aspect ratio."
-    )
+    ]
+    if detail:
+        context_parts.append(f"Selected detail type: {detail.id} ({detail.label}).")
+
     clean_feedback = (feedback or "").strip()
     if clean_feedback:
-        return f"{size_instruction}\n{clean_feedback}"
-    return size_instruction
+        context_parts.append(clean_feedback)
+    return "\n".join(context_parts)
 
 
 def parse_image(data_url: str, max_upload_bytes: int) -> UploadedImage:
@@ -198,6 +205,7 @@ async def edit_image(
     image_data_url: str,
     preset: Preset,
     feedback: str,
+    detail: PresetDetail | None = None,
     target_width: int | None = None,
     target_height: int | None = None,
     settings: Settings,
@@ -215,7 +223,7 @@ async def edit_image(
         target_width=target_width,
         target_height=target_height,
     )
-    generation_feedback = _feedback_with_target_size(feedback, target_size)
+    generation_feedback = _feedback_with_context(feedback, target_size, detail)
 
     if settings.image_provider == "mock":
         # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
@@ -231,7 +239,7 @@ async def edit_image(
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY가 설정되지 않았습니다.")
 
-    prompt = build_prompt(preset, generation_feedback)
+    prompt = build_prompt(preset, generation_feedback, detail)
     image_hash = crud.image_sha256(uploaded.content)
     instruction_hash = crud.instruction_sha256(generation_feedback)
     model = settings.openai_image_model

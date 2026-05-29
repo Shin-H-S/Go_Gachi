@@ -30,6 +30,7 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 {
   "imageDataUrl": "data:image/png;base64,...",
   "presetId": "instagram_square",
+  "detailType": "story_image",
   "feedback": "광고 유형: 스토리 이미지\n밝고 따뜻한 카페 광고 느낌으로 만들어줘",
   "targetWidth": 1080,
   "targetHeight": 1920
@@ -38,6 +39,7 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 
 - `imageDataUrl`: PNG, JPG, WEBP data URL
 - `presetId`: `GET /api/config`에서 받은 프리셋 ID. 생략하면 기본 프리셋 사용
+- `detailType`: 프리셋 안의 상세 광고 유형 ID. 채널·상세 유형별 전용 프롬프트를 고르는 데 사용
 - `feedback`: 사용자 추가 요청 문구
 - `targetWidth`, `targetHeight`: 사용자가 선택한 상세 광고 규격의 최종 출력 픽셀 크기.
   둘 중 하나만 보낼 수 없으며, 생략하면 프리셋 기본 크기를 사용합니다.

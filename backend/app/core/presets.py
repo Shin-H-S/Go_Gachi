@@ -3,9 +3,19 @@
 import json
 from functools import lru_cache
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.app.core.config import CONFIG_DIR
+
+
+class PresetDetail(BaseModel):
+    """채널 안에서 사용자가 선택하는 상세 광고 유형."""
+
+    id: str
+    label: str
+    width: int
+    height: int
+    prompt_hint: str = ""
 
 
 class Preset(BaseModel):
@@ -18,6 +28,14 @@ class Preset(BaseModel):
     height: int
     api_size: str
     prompt_hint: str
+    channel_prompt: str = ""
+    details: list[PresetDetail] = Field(default_factory=list)
+
+    def find_detail(self, detail_id: str | None) -> PresetDetail | None:
+        """detailType으로 상세 광고 유형을 찾는다."""
+        if not detail_id:
+            return None
+        return next((detail for detail in self.details if detail.id == detail_id), None)
 
 
 @lru_cache

@@ -15,39 +15,27 @@ BACKEND_URL = os.getenv("BACKEND_URL", "").rstrip("/")
 CONFIG_PRESETS_PATH = Path(__file__).resolve().parents[1] / "config" / "presets.json"
 
 
-DETAIL_OPTIONS_BY_PRESET_ID = {
-    "instagram_square": [
-        {"label": "정사각형 피드", "size": (1080, 1080)},
-        {"label": "세로형 피드", "size": (1080, 1350)},
-        {"label": "스토리 이미지", "size": (1080, 1920)},
-    ],
-    "baemin_notice": [
-        {"label": "단색 배경 이미지", "size": (1280, 960)},
-        {"label": "공간 배경 이미지", "size": (1280, 960)},
-    ],
-    "daangn_post": [
-        {"label": "메뉴 이미지", "size": (1080, 1080)},
-        {"label": "가게 콘텐츠보드", "size": (1080, 1080)},
-        {"label": "사장님 공지 이미지", "size": (1080, 1080)},
-        {"label": "홍보 이미지", "size": (1280, 960)},
-        {"label": "할인/이벤트 이미지", "size": (1280, 960)},
-    ],
-}
-
-
 def load_format_options() -> dict[str, dict[str, object]]:
     raw_presets = json.loads(CONFIG_PRESETS_PATH.read_text(encoding="utf-8"))
     options = {}
 
     for preset in raw_presets:
-        preset_id = str(preset["id"])
         fallback_detail = {
+            "id": "default",
             "label": str(preset["label"]),
             "size": (int(preset["width"]), int(preset["height"])),
         }
+        details = [
+            {
+                "id": str(detail["id"]),
+                "label": str(detail["label"]),
+                "size": (int(detail["width"]), int(detail["height"])),
+            }
+            for detail in preset.get("details", [])
+        ]
         options[str(preset["label"])] = {
-            "value": preset_id,
-            "details": DETAIL_OPTIONS_BY_PRESET_ID.get(preset_id, [fallback_detail]),
+            "value": str(preset["id"]),
+            "details": details or [fallback_detail],
         }
 
     return options
@@ -704,6 +692,14 @@ def get_detail_size(format_label: str, detail_label: str) -> tuple[int, int]:
     return get_detail_options(format_label)[0]["size"]
 
 
+def get_detail_id(format_label: str, detail_label: str) -> str:
+    for detail in get_detail_options(format_label):
+        if detail["label"] == detail_label:
+            return str(detail["id"])
+
+    return str(get_detail_options(format_label)[0]["id"])
+
+
 def format_size_label(size: tuple[int, int]) -> str:
     return f"{size[0]} x {size[1]}"
 
@@ -883,6 +879,7 @@ def request_backend(uploaded_file, prompt: str, format_label: str, detail_label:
     payload = {
         "imageDataUrl": file_to_data_url(uploaded_file),
         "presetId": FORMAT_OPTIONS[format_label]["value"],
+        "detailType": get_detail_id(format_label, detail_label),
         "feedback": build_feedback(prompt, detail_label),
         "targetWidth": target_size[0],
         "targetHeight": target_size[1],

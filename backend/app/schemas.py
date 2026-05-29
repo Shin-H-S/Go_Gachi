@@ -18,6 +18,7 @@ class GenerateRequest(BaseModel):
 
     image_data_url: str = Field(alias="imageDataUrl")
     preset_id: str | None = Field(default=None, alias="presetId")
+    detail_type: str | None = Field(default=None, alias="detailType")
     feedback: str = ""
     target_width: int | None = Field(default=None, alias="targetWidth", ge=1, le=4096)
     target_height: int | None = Field(default=None, alias="targetHeight", ge=1, le=4096)
