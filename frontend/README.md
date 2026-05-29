@@ -1,9 +1,9 @@
-# Streamlit Upload UI
+# Frontend
 
 카페 메뉴 광고 이미지 제작용 Streamlit 프론트엔드입니다.
 이미지 업로드, 광고 채널 선택, 프롬프트 입력, 생성 중 로딩 UI, 결과 미리보기를 제공합니다.
 
-## Structure
+## Folder Structure
 
 ```text
 frontend/
@@ -17,11 +17,18 @@ frontend/
 
 ## Run
 
-프론트 의존성은 루트 `pyproject.toml`의 `frontend` 그룹에서 관리합니다.
+레포 루트에서 프론트 의존성을 설치한 뒤 실행합니다.
+작업 전 또는 의존성이 바뀐 뒤에는 먼저 `uv sync --group frontend`를 실행합니다.
 
 ```bash
-uv run --group frontend streamlit run frontend/app.py
+uv sync --group frontend
+uv run streamlit run frontend/app.py
 ```
+
+## Preset Rule
+
+광고 채널과 규격은 레포 루트의 `config/presets.json`을 기준으로 맞춥니다.
+프론트에서 백엔드로 보내는 `presetId`는 `config/presets.json`의 `id`와 반드시 일치해야 합니다.
 
 ## Backend Connection
 
@@ -30,6 +37,8 @@ uv run --group frontend streamlit run frontend/app.py
 ```env
 BACKEND_URL=https://YOUR_BACKEND_CLOUD_RUN_URL
 ```
+
+현재 백엔드 MVP에서 우선 연동할 API는 아래와 같습니다.
 
 - `GET /api/config`: 광고 프리셋 목록 조회
 - `POST /api/generate`: `imageDataUrl`, `presetId`, `feedback`을 전달해 생성 요청
