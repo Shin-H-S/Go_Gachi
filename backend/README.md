@@ -48,12 +48,15 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
   "provider": "openai",
   "preset": {
     "id": "instagram_square",
-    "label": "Instagram Feed"
+    "label": "인스타그램"
   },
   "note": null,
-  "prompt": "..."
+  "prompt": null
 }
 ```
+
+- `prompt`: `APP_ENV=production`에서는 내부 프롬프트 보호를 위해 `null`로 응답합니다.
+  `local`/`dev` 환경에서는 디버깅을 위해 생성에 사용한 프롬프트가 포함될 수 있습니다.
 
 ## Key Files
 
