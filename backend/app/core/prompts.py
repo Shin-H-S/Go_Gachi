@@ -1,13 +1,17 @@
 """이미지 편집 프롬프트 조립."""
 
-from backend.app.core.presets import Preset
+from backend.app.core.presets import Preset, PresetDetail
 
 # 프롬프트 본문/구조가 바뀌면 이 라벨도 올려 캐시 무효화한다. env가 아니라 코드 상수로
 # 두는 이유: 프롬프트 변경과 항상 같은 커밋에 들어가야 어긋남이 없어서.
-PROMPT_VERSION = "2026-05-28-v1"
+PROMPT_VERSION = "2026-05-29-v2-channel-detail"
 
 
-def build_prompt(preset: Preset, feedback: str = "") -> str:
+def build_prompt(
+    preset: Preset,
+    feedback: str = "",
+    detail: PresetDetail | None = None,
+) -> str:
     """프리셋과 사용자 피드백을 OpenAI 이미지 편집 지시문으로 만든다."""
     # 사용자가 긴 피드백을 보내도 프롬프트가 과도하게 커지지 않도록 제한한다.
     extra = (feedback or "").strip()[:1200]
@@ -18,6 +22,8 @@ def build_prompt(preset: Preset, feedback: str = "") -> str:
             "for a small local cafe."
         ),
         preset.prompt_hint,
+        preset.channel_prompt,
+        detail.prompt_hint if detail else "",
         (
             "Preserve the actual menu item identity, shape, ingredients, and serving size. "
             "Do not invent a different product."
@@ -36,6 +42,8 @@ def build_prompt(preset: Preset, feedback: str = "") -> str:
             "near the edges."
         ),
     ]
+
+    parts = [part for part in parts if part]
 
     if extra:
         # 프론트에서 받은 수정 요청은 마지막에 붙여 기본 안전 지시를 덮지 않게 한다.

@@ -13,15 +13,22 @@ def test_presets() -> None:
     assert presets["instagram_square"].label == "인스타그램"
     assert presets["baemin_notice"].label == "배달의 민족"
     assert presets["daangn_post"].label == "당근"
+    assert presets["instagram_square"].channel_prompt
+    assert presets["instagram_square"].find_detail("story_image") is not None
+    assert presets["baemin_notice"].find_detail("solid_background") is not None
+    assert presets["daangn_post"].find_detail("promotion_image") is not None
 
 
 def test_prompt() -> None:
     preset = get_presets()["instagram_square"]
-    prompt = build_prompt(preset, "make it brighter")
+    detail = preset.find_detail("story_image")
+    prompt = build_prompt(preset, "make it brighter", detail)
 
     assert "Do not add" in prompt
     assert "text" in prompt.lower()
     assert "make it brighter" in prompt
+    assert "Instagram-ready" in prompt
+    assert "Instagram Story" in prompt
 
 
 def test_parse_image_rejects_invalid_base64() -> None:

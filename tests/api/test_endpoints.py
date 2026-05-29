@@ -189,6 +189,22 @@ def test_generate_rejects_unknown_preset_id() -> None:
     assert "presetId" in response.json()["detail"]
 
 
+def test_generate_rejects_unknown_detail_type() -> None:
+    """프리셋에 없는 detailType은 400으로 알려준다."""
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram_square",
+            "detailType": "unknown_detail",
+            "feedback": "",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "detailType" in response.json()["detail"]
+
+
 def test_generate_rejects_incomplete_target_size() -> None:
     """상세 출력 크기는 width/height를 함께 보내야 한다."""
     response = client.post(
@@ -311,6 +327,7 @@ def test_generate_openai_result_matches_target_size(
         json={
             "imageDataUrl": TINY_PNG_DATA_URL,
             "presetId": "instagram_square",
+            "detailType": "story_image",
             "feedback": "밝게",
             "targetWidth": 1080,
             "targetHeight": 1920,
@@ -322,6 +339,8 @@ def test_generate_openai_result_matches_target_size(
     assert body["provider"] == "openai"
     assert image_size_from_data_url(body["imageDataUrl"]) == (1080, 1920)
     assert "1080x1920" in body["prompt"]
+    assert "story_image" in body["prompt"]
+    assert "Instagram Story" in body["prompt"]
 
 
 def test_generate_exposes_prompt_in_local(

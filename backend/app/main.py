@@ -83,11 +83,19 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
     else:
         preset = default_preset()
 
+    detail = preset.find_detail(request.detail_type)
+    if request.detail_type and detail is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"지원하지 않는 detailType입니다: {request.detail_type}",
+        )
+
     try:
         # 이미지 검증, mock/openai 분기, 외부 API 호출은 service 계층에 위임한다.
         result = await edit_image(
             image_data_url=request.image_data_url,
             preset=preset,
+            detail=detail,
             feedback=request.feedback,
             target_width=request.target_width,
             target_height=request.target_height,
