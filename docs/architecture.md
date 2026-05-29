@@ -4,10 +4,10 @@
 
 1. 사용자는 Streamlit 프론트엔드(`frontend/app.py`)에 접속합니다.
 2. 사용자가 카페 메뉴 사진을 업로드하고 광고 채널과 추가 요청 문구를 입력합니다.
-3. 프론트엔드는 업로드 이미지를 base64 data URL로 변환하고, 선택된 preset id와 feedback을 `/api/generate`로 보냅니다.
+3. 프론트엔드는 업로드 이미지를 base64 data URL로 변환하고, 선택된 preset id, feedback, 상세 출력 크기(`targetWidth`, `targetHeight`)를 `/api/generate`로 보냅니다.
 4. FastAPI 백엔드는 `/api/config`에서 제공하는 프리셋 기준으로 요청을 검증합니다.
 5. FastAPI는 서버 환경변수에서만 OpenAI API 키를 읽고, 이미지 검증·캐시 조회·OpenAI 이미지 편집 호출을 처리합니다.
-6. 백엔드는 생성 결과를 `imageDataUrl`로 반환하고, 프론트엔드는 결과 미리보기와 다운로드를 제공합니다.
+6. 백엔드는 생성 결과를 선택 상세 크기의 PNG로 후처리해 `imageDataUrl`로 반환하고, 프론트엔드는 결과 미리보기와 다운로드를 제공합니다.
 
 `BACKEND_URL`이 없는 프론트 실행 환경에서는 화면 확인용 mock 이미지를 생성합니다. 실제 백엔드 연동 시에는 `BACKEND_URL`로 FastAPI 서버 URL을 주입합니다.
 

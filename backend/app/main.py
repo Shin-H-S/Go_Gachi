@@ -91,6 +91,8 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
             image_data_url=request.image_data_url,
             preset=preset,
             feedback=request.feedback,
+            target_width=request.target_width,
+            target_height=request.target_height,
             settings=settings,
         )
     except ValueError as exc:

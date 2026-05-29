@@ -879,10 +879,13 @@ def request_backend(uploaded_file, prompt: str, format_label: str, detail_label:
     if not BACKEND_URL:
         raise RuntimeError("BACKEND_URL이 설정되어 있지 않습니다.")
 
+    target_size = get_detail_size(format_label, detail_label)
     payload = {
         "imageDataUrl": file_to_data_url(uploaded_file),
         "presetId": FORMAT_OPTIONS[format_label]["value"],
         "feedback": build_feedback(prompt, detail_label),
+        "targetWidth": target_size[0],
+        "targetHeight": target_size[1],
     }
 
     response = httpx.post(f"{BACKEND_URL}/api/generate", json=payload, timeout=90)
