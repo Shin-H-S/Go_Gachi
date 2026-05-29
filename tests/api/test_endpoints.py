@@ -8,11 +8,13 @@ import asyncio
 import base64
 import re
 from collections.abc import Iterator
+from io import BytesIO
 from pathlib import Path
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy import func, select
 
 from backend.app.api import internal
@@ -32,6 +34,13 @@ TINY_PNG_B64 = (
 TINY_PNG_DATA_URL = f"data:image/png;base64,{TINY_PNG_B64}"
 
 client = TestClient(app)
+
+
+def image_size_from_data_url(data_url: str) -> tuple[int, int]:
+    """응답 data URL의 실제 PNG 픽셀 크기를 확인한다."""
+    _, encoded = data_url.split(",", 1)
+    with Image.open(BytesIO(base64.b64decode(encoded))) as image:
+        return image.size
 
 
 def force_openai_mode(
@@ -123,18 +132,24 @@ def test_internal_usage_includes_actual_cost_when_admin_key_set(
 
 
 def test_generate_mock_mode_succeeds_without_db_record() -> None:
-    """mock 모드는 DB·캐시 모두 건너뛰고 원본 이미지를 그대로 돌려준다."""
+    """mock 모드는 DB·캐시를 건너뛰되 선택한 상세 크기로 이미지를 돌려준다."""
     assert get_settings().image_provider == "mock"
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": None,
+            "feedback": "",
+            "targetWidth": 1200,
+            "targetHeight": 900,
+        },
     )
     body = response.json()
 
     assert response.status_code == 200
     assert body["provider"] == "mock"
-    assert body["imageDataUrl"] == TINY_PNG_DATA_URL
+    assert image_size_from_data_url(body["imageDataUrl"]) == (1200, 900)
 
     # mock은 DB에 흔적을 남기지 않는다.
     async def _counts() -> tuple[int, int]:
@@ -172,6 +187,21 @@ def test_generate_rejects_unknown_preset_id() -> None:
 
     assert response.status_code == 400
     assert "presetId" in response.json()["detail"]
+
+
+def test_generate_rejects_incomplete_target_size() -> None:
+    """상세 출력 크기는 width/height를 함께 보내야 한다."""
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": None,
+            "feedback": "",
+            "targetWidth": 1200,
+        },
+    )
+
+    assert response.status_code == 422
 
 
 def test_generate_returns_503_when_openai_key_missing(
@@ -262,6 +292,36 @@ def test_generate_hides_prompt_in_production(
     assert response.status_code == 200
     assert body["provider"] == "openai"
     assert body["prompt"] is None
+
+
+def test_generate_openai_result_matches_target_size(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenAI 결과도 최종 응답 전에 선택 상세 크기로 후처리한다."""
+    fake_b64 = TINY_PNG_B64
+
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        return fake_b64
+
+    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram_square",
+            "feedback": "밝게",
+            "targetWidth": 1080,
+            "targetHeight": 1920,
+        },
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["provider"] == "openai"
+    assert image_size_from_data_url(body["imageDataUrl"]) == (1080, 1920)
+    assert "1080x1920" in body["prompt"]
 
 
 def test_generate_exposes_prompt_in_local(
