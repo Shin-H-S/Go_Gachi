@@ -30,7 +30,10 @@ def _connect_args(database_url: str) -> dict[str, object]:
     """DB 종류별 연결 옵션."""
     if database_url.startswith("sqlite"):
         return {"check_same_thread": False}
-    return {}
+    # Postgres(Supabase Transaction pooler, 포트 6543)는 트랜잭션마다 서버 연결을
+    # 갈아끼우므로 asyncpg의 prepared statement 캐시를 끈다. 켜두면 다른 연결에
+    # 등록된 statement를 참조해 "prepared statement does not exist" 에러가 난다.
+    return {"statement_cache_size": 0, "prepared_statement_cache_size": 0}
 
 
 # 엔진은 앱 전체에서 1개만 재사용. pool_pre_ping=True로 죽은 연결을 자동 폐기한다.
