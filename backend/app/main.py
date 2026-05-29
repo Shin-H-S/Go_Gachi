@@ -9,7 +9,6 @@ from fastapi import FastAPI, HTTPException
 from backend.app.api.internal import router as internal_router
 from backend.app.core.config import get_settings
 from backend.app.core.presets import default_preset, get_presets
-from backend.app.db.database import async_init_db
 from backend.app.schemas import ConfigResponse, GenerateRequest, GenerateResponse
 from backend.app.services.image_edit import edit_image
 
@@ -21,8 +20,7 @@ IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
-    """앱 시작 시 비동기로 DB 테이블을 준비한다."""
-    await async_init_db()
+    """앱 시작·종료 훅. 스키마는 Alembic 마이그레이션이 관리하므로 여기서 생성하지 않는다."""
     yield
 
 
