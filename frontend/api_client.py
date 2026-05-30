@@ -1,24 +1,35 @@
 import base64
-import os
-from pathlib import Path
 
 import httpx
-from dotenv import load_dotenv
 
 try:
-    from frontend.config import FORMAT_OPTIONS, get_detail_id, get_detail_size
+    from frontend.config import (
+        BACKEND_URL,
+        DEFAULT_BACKEND_URL,
+        FORMAT_OPTIONS,
+        FRONTEND_USE_MOCK,
+        get_detail_id,
+        get_detail_size,
+    )
 except ModuleNotFoundError:
-    from config import FORMAT_OPTIONS, get_detail_id, get_detail_size
+    from config import (
+        BACKEND_URL,
+        DEFAULT_BACKEND_URL,
+        FORMAT_OPTIONS,
+        FRONTEND_USE_MOCK,
+        get_detail_id,
+        get_detail_size,
+    )
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_BACKEND_URL = "http://127.0.0.1:8080"
-
-# 공통 설정은 레포 최상단 .env에서 읽고, 프론트 전용 .env가 있으면 그 값으로 덮어쓴다.
-load_dotenv(ROOT_DIR / ".env")
-load_dotenv(Path(__file__).with_name(".env"), override=True)
-
-BACKEND_URL = os.getenv("BACKEND_URL", DEFAULT_BACKEND_URL).rstrip("/")
-FRONTEND_USE_MOCK = os.getenv("FRONTEND_USE_MOCK", "").lower() in {"1", "true", "yes"}
+__all__ = [
+    "BACKEND_URL",
+    "DEFAULT_BACKEND_URL",
+    "FRONTEND_USE_MOCK",
+    "build_feedback",
+    "data_url_to_bytes",
+    "file_to_data_url",
+    "request_backend",
+]
 
 
 def file_to_data_url(uploaded_file) -> str:

@@ -12,6 +12,8 @@
 프론트엔드는 기본적으로 `BACKEND_URL=http://127.0.0.1:8080`을 사용해 같은 서버의
 FastAPI를 호출합니다. 백엔드 연결 실패 시에는 목업으로 대체하지 않고 에러를 표시합니다.
 화면 확인용 목업은 `FRONTEND_USE_MOCK=true`를 명시한 경우에만 사용합니다.
+프론트 프리셋은 `FRONTEND_CONFIG_SOURCE=auto` 기준으로 백엔드 `/api/config`를 먼저
+읽고, 백엔드가 준비되지 않은 경우 로컬 `config/presets.json`으로 fallback합니다.
 
 채널별·상세 유형별 전용 프롬프트는 `config/presets.json`에서 관리하고, 백엔드의 `backend/app/core/prompts.py`에서 최종 프롬프트로 조립합니다.
 
