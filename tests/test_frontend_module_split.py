@@ -92,3 +92,6 @@ def test_app_delegates_split_module_responsibilities() -> None:
     )
     assert "FRONTEND_USE_MOCK" in app_source
     assert "NETWORK_ERROR" in app_source
+    assert "build_result_context" in defined_functions
+    assert "sync_result_state" in defined_functions
+    assert "result_context" in app_source
