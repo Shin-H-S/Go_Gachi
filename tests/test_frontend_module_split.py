@@ -11,10 +11,17 @@ FRONTEND_APP = ROOT_DIR / "frontend" / "app.py"
 
 
 def test_frontend_config_exposes_preset_helpers() -> None:
-    from frontend.config import CHANNEL_SLUGS, FORMAT_OPTIONS, format_size_label, get_detail_size
+    from frontend.config import (
+        CHANNEL_SLUGS,
+        FORMAT_OPTIONS,
+        format_size_label,
+        get_detail_id,
+        get_detail_size,
+    )
 
     assert FORMAT_OPTIONS["인스타그램"]["value"] == "instagram_square"
     assert CHANNEL_SLUGS["인스타그램"] == "instagram_square"
+    assert get_detail_id("인스타그램", "정사각형 피드") == "square_feed"
     assert get_detail_size("인스타그램", "정사각형 피드") == (1080, 1080)
     assert format_size_label((1080, 1080)) == "1080 x 1080"
 
@@ -54,7 +61,8 @@ def test_api_client_converts_uploads_and_feedback() -> None:
 
 
 def test_app_delegates_split_module_responsibilities() -> None:
-    tree = ast.parse(FRONTEND_APP.read_text(encoding="utf-8"))
+    app_source = FRONTEND_APP.read_text(encoding="utf-8")
+    tree = ast.parse(app_source)
     imported_modules = {
         node.module
         for node in ast.walk(tree)
@@ -82,3 +90,5 @@ def test_app_delegates_split_module_responsibilities() -> None:
             "make_preview_canvas",
         }
     )
+    assert "FRONTEND_USE_MOCK" in app_source
+    assert "NETWORK_ERROR" in app_source

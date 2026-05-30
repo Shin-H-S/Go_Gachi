@@ -9,7 +9,9 @@
 5. FastAPI는 서버 환경변수에서만 OpenAI API 키를 읽고, 이미지 검증·캐시 조회·OpenAI 이미지 편집 호출을 처리합니다.
 6. 백엔드는 생성 결과를 선택 상세 크기의 PNG로 후처리해 `imageDataUrl`로 반환하고, 프론트엔드는 결과 미리보기와 다운로드를 제공합니다.
 
-`BACKEND_URL`이 없는 프론트 실행 환경에서는 화면 확인용 mock 이미지를 생성합니다. 실제 백엔드 연동 시에는 `BACKEND_URL`로 FastAPI 서버 URL을 주입합니다.
+프론트엔드는 기본적으로 `BACKEND_URL=http://127.0.0.1:8080`을 사용해 같은 서버의
+FastAPI를 호출합니다. 백엔드 연결 실패 시에는 목업으로 대체하지 않고 에러를 표시합니다.
+화면 확인용 목업은 `FRONTEND_USE_MOCK=true`를 명시한 경우에만 사용합니다.
 
 채널별·상세 유형별 전용 프롬프트는 `config/presets.json`에서 관리하고, 백엔드의 `backend/app/core/prompts.py`에서 최종 프롬프트로 조립합니다.
 

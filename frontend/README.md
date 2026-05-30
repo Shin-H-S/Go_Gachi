@@ -32,11 +32,14 @@ uv run streamlit run frontend/app.py
 
 ## Backend Connection
 
-프론트엔드는 배포된 백엔드 Cloud Run URL을 `BACKEND_URL`로 받아 호출합니다.
+프론트엔드는 레포 최상단 `.env`를 먼저 읽고, `frontend/.env`가 있으면 프론트 전용
+설정으로 덮어씁니다. 기본 백엔드 주소는 같은 서버에서 실행 중인 FastAPI입니다.
 
 ```env
-BACKEND_URL=https://YOUR_BACKEND_CLOUD_RUN_URL
+BACKEND_URL=http://127.0.0.1:8080
 ```
+
+배포된 백엔드나 별도 서버를 바라봐야 하면 `BACKEND_URL`만 해당 주소로 바꿉니다.
 
 현재 백엔드 MVP에서 우선 연동할 API는 아래와 같습니다.
 
@@ -47,4 +50,9 @@ BACKEND_URL=https://YOUR_BACKEND_CLOUD_RUN_URL
 `targetWidth`와 `targetHeight`는 사용자가 선택한 상세 광고 유형의 최종 다운로드 크기입니다.
 백엔드는 생성 결과를 이 크기의 PNG로 맞춰 반환합니다.
 
-`BACKEND_URL`이 없으면 프론트 화면 확인을 위해 mock 결과 이미지를 표시합니다.
+백엔드 연결 실패 시에는 목업으로 대체하지 않고 에러 메시지를 표시합니다.
+프론트 화면만 확인할 때는 아래처럼 명시적으로 목업을 켭니다.
+
+```env
+FRONTEND_USE_MOCK=true
+```

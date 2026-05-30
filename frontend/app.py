@@ -3,7 +3,7 @@ from html import escape
 
 import httpx
 import streamlit as st
-from api_client import BACKEND_URL, build_feedback, request_backend
+from api_client import BACKEND_URL, FRONTEND_USE_MOCK, build_feedback, request_backend
 from image_utils import bytes_to_data_url, create_mock_banner, make_preview_canvas
 from styles import add_css
 from upload_utils import get_primary_uploaded_file
@@ -328,26 +328,26 @@ if generate:
     else:
         try:
             time.sleep(1.2)
-            if BACKEND_URL:
-                result_bytes = request_backend(
-                    uploaded_file,
-                    prompt.strip(),
-                    format_label,
-                    detail_label,
-                )
-            else:
+            if FRONTEND_USE_MOCK:
                 result_bytes = create_mock_banner(
                     image_bytes=uploaded_file.getvalue(),
                     prompt=build_feedback(prompt.strip(), detail_label),
                     format_label=format_label,
                     detail_label=detail_label,
                 )
+            else:
+                result_bytes = request_backend(
+                    uploaded_file,
+                    prompt.strip(),
+                    format_label,
+                    detail_label,
+                )
             st.session_state["result_bytes"] = result_bytes
             st.rerun()
         except httpx.HTTPStatusError as exc:
             detail = exc.response.text
-            st.error(f"백엔드 생성 요청에 실패했습니다. ({exc.response.status_code}) {detail}")
+            st.error(f"백엔드 생성 요청 실패 [HTTP {exc.response.status_code}]: {detail}")
         except httpx.HTTPError as exc:
-            st.error(f"백엔드에 연결할 수 없습니다: {exc}")
+            st.error(f"백엔드 연결 실패 [NETWORK_ERROR] {BACKEND_URL}: {type(exc).__name__}: {exc}")
         except Exception as exc:
             st.error(f"이미지 생성 중 오류가 발생했습니다: {exc}")
