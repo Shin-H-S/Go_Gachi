@@ -55,32 +55,39 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
                 f"{base64.b64encode(b'source-image').decode('ascii')}"
             ),
             "presetId": "instagram_square",
+            "detailType": "square_feed",
             "feedback": "광고 유형: 정사각형 피드\n제품을 크게 보여줘",
+            "targetWidth": 1080,
+            "targetHeight": 1080,
         },
         "timeout": 90,
     }
 
 
-def test_request_backend_requires_backend_url_before_network(
+def test_request_backend_uses_default_local_backend_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def fail_post(*args, **kwargs) -> None:  # noqa: ANN002, ANN003
-        raise AssertionError("request_backend should not call httpx.post without BACKEND_URL")
+    captured_request = {}
+
+    def fake_post(url: str, json: dict[str, object], timeout: int) -> FakeResponse:  # noqa: ARG001
+        captured_request["url"] = url
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
 
     uploaded_file = SimpleNamespace(
         type="image/png",
         getvalue=lambda: b"source-image",
     )
-    monkeypatch.setattr(api_client, "BACKEND_URL", "")
-    monkeypatch.setattr(api_client.httpx, "post", fail_post)
+    monkeypatch.setattr(api_client, "BACKEND_URL", api_client.DEFAULT_BACKEND_URL)
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
 
-    with pytest.raises(RuntimeError, match="BACKEND_URL"):
-        api_client.request_backend(
-            uploaded_file,
-            "제품을 크게 보여줘",
-            "인스타그램",
-            "정사각형 피드",
-        )
+    api_client.request_backend(
+        uploaded_file,
+        "제품을 크게 보여줘",
+        "인스타그램",
+        "정사각형 피드",
+    )
+
+    assert captured_request["url"] == "http://127.0.0.1:8080/api/generate"
 
 
 def test_request_backend_rejects_missing_image_data_url(

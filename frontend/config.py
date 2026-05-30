@@ -5,26 +5,6 @@ CONFIG_PRESETS_PATH = Path(__file__).resolve().parents[1] / "config" / "presets.
 CHANNEL_ASSET_DIR = Path(__file__).resolve().parent / "assets"
 
 
-DETAIL_OPTIONS_BY_PRESET_ID = {
-    "instagram_square": [
-        {"label": "정사각형 피드", "size": (1080, 1080)},
-        {"label": "세로형 피드", "size": (1080, 1350)},
-        {"label": "스토리 이미지", "size": (1080, 1920)},
-    ],
-    "baemin_notice": [
-        {"label": "단색 배경 이미지", "size": (1280, 960)},
-        {"label": "공간 배경 이미지", "size": (1280, 960)},
-    ],
-    "daangn_post": [
-        {"label": "메뉴 이미지", "size": (1080, 1080)},
-        {"label": "가게 콘텐츠보드", "size": (1080, 1080)},
-        {"label": "사장님 공지 이미지", "size": (1080, 1080)},
-        {"label": "홍보 이미지", "size": (1280, 960)},
-        {"label": "할인/이벤트 이미지", "size": (1280, 960)},
-    ],
-}
-
-
 def load_format_options() -> dict[str, dict[str, object]]:
     raw_presets = json.loads(CONFIG_PRESETS_PATH.read_text(encoding="utf-8"))
     options = {}
@@ -32,12 +12,22 @@ def load_format_options() -> dict[str, dict[str, object]]:
     for preset in raw_presets:
         preset_id = str(preset["id"])
         fallback_detail = {
+            "id": "default",
             "label": str(preset["label"]),
             "size": (int(preset["width"]), int(preset["height"])),
         }
+        details = [
+            {
+                "id": str(detail["id"]),
+                "label": str(detail["label"]),
+                "size": (int(detail["width"]), int(detail["height"])),
+            }
+            for detail in preset.get("details", [])
+        ]
         options[str(preset["label"])] = {
             "value": preset_id,
-            "details": DETAIL_OPTIONS_BY_PRESET_ID.get(preset_id, [fallback_detail]),
+            # 상세 유형은 백엔드와 같은 presets.json을 기준으로 맞춘다.
+            "details": details or [fallback_detail],
         }
 
     return options
@@ -61,6 +51,14 @@ def get_detail_size(format_label: str, detail_label: str) -> tuple[int, int]:
             return detail["size"]
 
     return get_detail_options(format_label)[0]["size"]
+
+
+def get_detail_id(format_label: str, detail_label: str) -> str:
+    for detail in get_detail_options(format_label):
+        if detail["label"] == detail_label:
+            return str(detail["id"])
+
+    return str(get_detail_options(format_label)[0]["id"])
 
 
 def format_size_label(size: tuple[int, int]) -> str:

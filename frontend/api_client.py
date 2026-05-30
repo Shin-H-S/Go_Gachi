@@ -6,12 +6,19 @@ import httpx
 from dotenv import load_dotenv
 
 try:
-    from frontend.config import FORMAT_OPTIONS
+    from frontend.config import FORMAT_OPTIONS, get_detail_id, get_detail_size
 except ModuleNotFoundError:
-    from config import FORMAT_OPTIONS
+    from config import FORMAT_OPTIONS, get_detail_id, get_detail_size
 
-load_dotenv(Path(__file__).with_name(".env"))
-BACKEND_URL = os.getenv("BACKEND_URL", "").rstrip("/")
+ROOT_DIR = Path(__file__).resolve().parents[1]
+DEFAULT_BACKEND_URL = "http://127.0.0.1:8080"
+
+# 공통 설정은 레포 최상단 .env에서 읽고, 프론트 전용 .env가 있으면 그 값으로 덮어쓴다.
+load_dotenv(ROOT_DIR / ".env")
+load_dotenv(Path(__file__).with_name(".env"), override=True)
+
+BACKEND_URL = os.getenv("BACKEND_URL", DEFAULT_BACKEND_URL).rstrip("/")
+FRONTEND_USE_MOCK = os.getenv("FRONTEND_USE_MOCK", "").lower() in {"1", "true", "yes"}
 
 
 def file_to_data_url(uploaded_file) -> str:
@@ -36,13 +43,14 @@ def build_feedback(prompt: str, detail_label: str) -> str:
 
 
 def request_backend(uploaded_file, prompt: str, format_label: str, detail_label: str) -> bytes:
-    if not BACKEND_URL:
-        raise RuntimeError("BACKEND_URL이 설정되어 있지 않습니다.")
-
+    target_size = get_detail_size(format_label, detail_label)
     payload = {
         "imageDataUrl": file_to_data_url(uploaded_file),
         "presetId": FORMAT_OPTIONS[format_label]["value"],
+        "detailType": get_detail_id(format_label, detail_label),
         "feedback": build_feedback(prompt, detail_label),
+        "targetWidth": target_size[0],
+        "targetHeight": target_size[1],
     }
 
     response = httpx.post(f"{BACKEND_URL}/api/generate", json=payload, timeout=90)
