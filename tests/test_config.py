@@ -1,5 +1,5 @@
 from backend.app.core.presets import get_presets
-from backend.app.core.prompts import build_prompt
+from backend.app.core.prompts import PROMPT_VERSION, build_prompt
 from backend.app.services.image_edit import parse_image
 
 
@@ -17,6 +17,18 @@ def test_presets() -> None:
     assert presets["instagram_square"].find_detail("story_image") is not None
     assert presets["baemin_notice"].find_detail("solid_background") is not None
     assert presets["daangn_post"].find_detail("promotion_image") is not None
+
+
+def test_channel_detail_prompt_presets_are_specific() -> None:
+    presets = get_presets()
+
+    assert "thumbnail readability" in presets["baemin_notice"].channel_prompt
+    assert "nearby shop owner" in presets["daangn_post"].channel_prompt
+    assert "story stickers or text" in (
+        presets["instagram_square"].find_detail("story_image").prompt_hint
+    )
+    assert "seasonal offer" in presets["daangn_post"].find_detail("discount_event").prompt_hint
+    assert PROMPT_VERSION == "2026-05-30-v3-channel-detail-presets"
 
 
 def test_prompt() -> None:

@@ -6,29 +6,29 @@
     "width": 1080,
     "height": 1080,
     "api_size": "1024x1024",
-    "prompt_hint": "Create a square Instagram feed image with the cafe menu item centered and visually appetizing.",
-    "channel_prompt": "Create an Instagram-ready cafe menu image with a trendy, polished visual style. Keep the product instantly recognizable in a fast-scrolling feed, with clean negative space for later text overlay.",
+    "prompt_hint": "Create an Instagram-ready cafe menu image that feels polished, appetizing, and social-feed friendly. Keep the uploaded menu item as the hero subject and avoid changing what the product is.",
+    "channel_prompt": "Create an Instagram-ready cafe advertisement image with a trendy but realistic visual style. Prioritize scroll-stopping product clarity, warm cafe lighting, tasteful styling, and clean negative space for later text overlay without adding any text.",
     "details": [
       {
         "id": "square_feed",
         "label": "정사각형 피드",
         "width": 1080,
         "height": 1080,
-        "prompt_hint": "Compose for a square Instagram feed post. Place the menu item as the clear hero subject in the center with balanced margins and warm cafe styling."
+        "prompt_hint": "Compose for a square Instagram feed post. Keep the menu item large and centered with balanced margins, crisp texture, warm natural light, and subtle cafe props that do not distract from the product."
       },
       {
         "id": "portrait_feed",
         "label": "세로형 피드",
         "width": 1080,
         "height": 1350,
-        "prompt_hint": "Compose for a vertical Instagram feed post. Use the taller canvas to show the product clearly while leaving calm space above or around it for later copy."
+        "prompt_hint": "Compose for a vertical Instagram feed post. Use the taller frame to show the product clearly in the lower or middle area, preserve appetizing detail, and leave calm space above or around it for later promotional copy."
       },
       {
         "id": "story_image",
         "label": "스토리 이미지",
         "width": 1080,
         "height": 1920,
-        "prompt_hint": "Compose for an Instagram Story. Keep the product stable near the lower center and leave generous clean space in the upper area for later story text."
+        "prompt_hint": "Compose for an Instagram Story. Keep the product stable near the lower center, make the cup or plate immediately recognizable, and leave generous uncluttered space in the upper area for later story stickers or text."
       }
     ]
   },
@@ -39,22 +39,22 @@
     "width": 1280,
     "height": 560,
     "api_size": "1536x1024",
-    "prompt_hint": "Create a wide banner crop suitable for a delivery app owner notice, with the item clearly visible and no typography.",
-    "channel_prompt": "Create a delivery-app-ready menu image that makes the food easy to identify at thumbnail size. Prioritize clarity, appetizing texture, accurate product shape, and a clean commercial food presentation.",
+    "prompt_hint": "Create a delivery-app-ready cafe menu image suitable for Baemin listing and owner notice contexts. Make the item easy to identify quickly, with accurate shape, color, portion size, and no typography.",
+    "channel_prompt": "Create a delivery-app-ready commercial food image for Baemin. Prioritize thumbnail readability, appetizing texture, clean background separation, accurate product identity, and bright trustworthy presentation for ordering decisions.",
     "details": [
       {
         "id": "solid_background",
         "label": "단색 배경 이미지",
         "width": 1280,
         "height": 960,
-        "prompt_hint": "Use a clean solid-color background. Make the menu item sharp, bright, and appetizing with minimal props so it reads clearly in a delivery app list."
+        "prompt_hint": "Use a clean solid-color background with gentle shadow and commercial product lighting. Keep props minimal, make the item sharp and bright, and ensure the product silhouette reads clearly in a delivery app thumbnail."
       },
       {
         "id": "space_background",
         "label": "공간 배경 이미지",
         "width": 1280,
         "height": 960,
-        "prompt_hint": "Use a tidy cafe-space background with subtle depth. Keep the product in the foreground and readable as a delivery app thumbnail."
+        "prompt_hint": "Use a tidy real cafe-space background with shallow depth of field. Keep the product in the foreground, separate it clearly from the background, and maintain delivery-app thumbnail readability."
       }
     ]
   },
@@ -65,43 +65,43 @@
     "width": 1200,
     "height": 900,
     "api_size": "1536x1024",
-    "prompt_hint": "Create a warm local-neighborhood cafe post image with natural light and the menu item as the clear subject.",
-    "channel_prompt": "Create a friendly local-neighborhood cafe image for Danggeun. Make it feel approachable, warm, and trustworthy, as if a nearby shop owner is sharing a genuine update with local residents.",
+    "prompt_hint": "Create a warm local-neighborhood cafe post image with natural light, friendly realism, and the uploaded menu item as the clear subject.",
+    "channel_prompt": "Create a Danggeun-ready local cafe image that feels approachable, warm, and trustworthy. It should look like a nearby shop owner sharing a genuine update with local residents, not like a glossy national brand advertisement.",
     "details": [
       {
         "id": "menu_image",
         "label": "메뉴 이미지",
         "width": 1080,
         "height": 1080,
-        "prompt_hint": "Create a simple local menu image. Focus on the product, natural color, and a clean cafe mood without making the scene feel overly staged."
+        "prompt_hint": "Create a simple local menu image for Danggeun. Focus on accurate product color, natural texture, clean composition, and a friendly cafe mood without making the scene feel overly staged."
       },
       {
         "id": "store_content_board",
         "label": "가게 콘텐츠보드",
         "width": 1080,
         "height": 1080,
-        "prompt_hint": "Create a warm shop-content-board image. Show the product in a natural cafe setting with enough surrounding context to feel like a real local store update."
+        "prompt_hint": "Create a warm shop-content-board image. Show the product in a natural cafe setting with enough table or store context to feel like a real local update from the shop."
       },
       {
         "id": "owner_notice",
         "label": "사장님 공지 이미지",
         "width": 1080,
         "height": 1080,
-        "prompt_hint": "Create a calm owner-notice style image. Keep the product visible and leave clean space where an announcement could later be placed."
+        "prompt_hint": "Create a calm owner-notice style image. Keep the product visible but leave a clear uncluttered area where a later announcement can be placed, while maintaining a sincere local shop tone."
       },
       {
         "id": "promotion_image",
         "label": "홍보 이미지",
         "width": 1280,
         "height": 960,
-        "prompt_hint": "Create a friendly promotional image for local residents. Make the menu item inviting and the overall mood warm, bright, and easy to approach."
+        "prompt_hint": "Create a friendly promotional image for local residents. Make the menu item inviting, bright, and easy to approach, with a practical neighborhood-shop feeling rather than an exaggerated luxury mood."
       },
       {
         "id": "discount_event",
         "label": "할인/이벤트 이미지",
         "width": 1280,
         "height": 960,
-        "prompt_hint": "Create a lively event-ready image. Keep the product central and appealing, with open space for later discount or event copy."
+        "prompt_hint": "Create a lively event-ready image for a local discount or seasonal offer. Keep the product central and appealing, add subtle celebratory energy through color and composition, and preserve open space for later event copy."
       }
     ]
   }
