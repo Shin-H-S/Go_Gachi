@@ -36,6 +36,16 @@ Cloud Run 배포 후에는 서비스 URL에 대해 확인합니다.
 - `/api/ready`
 - `/api/config`
 
+## Database Migration
+
+공유 개발 DB나 운영 DB는 앱 시작 시 테이블을 자동 생성하지 않습니다. DB 스키마는 Alembic으로 관리합니다.
+
+```powershell
+uv run alembic upgrade head
+```
+
+`async_init_db()`는 테스트와 임시 SQLite 검증용 보조 함수입니다. 팀 공용 DB나 배포 DB에는 위 마이그레이션 명령을 기준으로 맞춥니다.
+
 ## Environment
 
 운영 런타임 환경변수는 Cloud Run에 주입합니다. `OPENAI_API_KEY`는 Secret Manager를 사용합니다.

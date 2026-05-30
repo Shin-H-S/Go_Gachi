@@ -10,7 +10,7 @@ from backend.app.core.config import get_settings
 
 
 class Base(DeclarativeBase):
-    """모든 ORM 모델의 베이스. 메타데이터를 모아 init_db가 한 번에 테이블을 만든다."""
+    """모든 ORM 모델의 베이스. Alembic이 이 메타데이터로 마이그레이션을 만든다."""
 
 
 def _async_database_url(database_url: str) -> str:
@@ -54,11 +54,14 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 async def async_init_db() -> None:
-    """등록된 모든 테이블을 생성한다(이미 있으면 건너뜀). 앱 시작 시 한 번 호출."""
+    """테스트·임시 개발 DB에 테이블을 직접 만든다.
+
+    운영/공유 DB 스키마는 이 함수를 쓰지 않고 `alembic upgrade head`로 관리한다.
+    """
     # 모델 import를 함수 안에서: database를 import할 때 models를 끌고 오면 순환참조 위험.
     from backend.app.db import models  # noqa: F401
 
-    # SQLite의 경우 DB 파일이 들어갈 폴더가 없으면 만들어둔다.
+    # 테스트 SQLite처럼 파일 DB를 쓸 때 폴더가 없으면 먼저 만들어둔다.
     settings = get_settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
 

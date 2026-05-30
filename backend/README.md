@@ -65,6 +65,12 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
   `local`/`dev` 환경에서는 디버깅을 위해 생성에 사용한 프롬프트가 포함될 수 있습니다.
 - 응답 `imageDataUrl`의 PNG는 `targetWidth` x `targetHeight` 크기로 후처리되어 반환됩니다.
 
+## Database / Migrations
+
+- 운영·공유 DB 스키마는 Alembic으로 관리합니다.
+- 새 DB를 연결하거나 마이그레이션이 추가되면 백엔드 실행 전에 `uv run alembic upgrade head`를 적용합니다.
+- `backend.app.db.database.async_init_db()`는 테스트와 임시 개발 DB 보조용입니다. 앱 시작 시 운영 테이블을 자동 생성하는 용도로 사용하지 않습니다.
+
 ## Key Files
 
 ```text
