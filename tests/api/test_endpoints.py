@@ -286,6 +286,42 @@ def test_generate_returns_503_when_network_fails(
     assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
 
 
+def test_generate_returns_503_when_openai_result_is_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenAI 성공 응답이라도 data가 비어 있으면 500이 아니라 503으로 정리한다."""
+
+    class _EmptyDataResponse:
+        status_code = 200
+
+        def json(self) -> dict[str, list[dict[str, str]]]:
+            return {"data": []}
+
+    class _EmptyDataClient:
+        def __init__(self, *args, **kwargs):  # noqa: ARG002, ANN003
+            pass
+
+        async def __aenter__(self):  # noqa: ANN202
+            return self
+
+        async def __aexit__(self, *args):  # noqa: ANN003, ANN202
+            return None
+
+        async def post(self, *args, **kwargs):  # noqa: ANN003, ARG002, ANN202
+            return _EmptyDataResponse()
+
+    monkeypatch.setattr(image_edit.httpx, "AsyncClient", _EmptyDataClient)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
+
+
 def test_generate_hides_prompt_in_production(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

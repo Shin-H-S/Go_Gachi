@@ -142,6 +142,26 @@ async def _file_to_data_url(path: Path) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
+def _extract_b64_json(payload: object) -> str:
+    """OpenAI 이미지 응답에서 결과 base64를 안전하게 꺼낸다."""
+    if not isinstance(payload, dict):
+        raise RuntimeError("이미지 API 응답 형식이 올바르지 않습니다.")
+
+    data = payload.get("data")
+    if not isinstance(data, list) or not data:
+        raise RuntimeError("이미지 API 응답에 결과 이미지가 없습니다.")
+
+    first_item = data[0]
+    if not isinstance(first_item, dict):
+        raise RuntimeError("이미지 API 응답 형식이 올바르지 않습니다.")
+
+    b64_json = first_item.get("b64_json")
+    if not isinstance(b64_json, str) or not b64_json.strip():
+        raise RuntimeError("이미지 API 응답에 결과 이미지가 없습니다.")
+
+    return b64_json
+
+
 async def _call_openai_edit(
     *,
     uploaded: UploadedImage,
@@ -191,13 +211,14 @@ async def _call_openai_edit(
         raise RuntimeError("이미지 API 응답을 해석하지 못했습니다.") from exc
 
     if response.status_code >= 400:
-        message = payload.get("error", {}).get("message", "이미지 생성에 실패했습니다.")
+        message = "이미지 생성에 실패했습니다."
+        if isinstance(payload, dict):
+            error = payload.get("error")
+            if isinstance(error, dict):
+                message = str(error.get("message") or message)
         raise RuntimeError(message)
 
-    b64_json = payload.get("data", [{}])[0].get("b64_json")
-    if not b64_json:
-        raise RuntimeError("이미지 API 응답에 결과 이미지가 없습니다.")
-    return b64_json
+    return _extract_b64_json(payload)
 
 
 async def edit_image(
