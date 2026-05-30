@@ -1,8 +1,12 @@
 """API 요청/응답 스키마."""
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend.app.core.presets import Preset
+
+ResizeMode = Literal["cover", "contain"]
 
 
 class ConfigResponse(BaseModel):
@@ -22,6 +26,7 @@ class GenerateRequest(BaseModel):
     feedback: str = ""
     target_width: int | None = Field(default=None, alias="targetWidth", ge=1, le=4096)
     target_height: int | None = Field(default=None, alias="targetHeight", ge=1, le=4096)
+    resize_mode: ResizeMode = Field(default="cover", alias="resizeMode")
 
     @model_validator(mode="after")
     def validate_target_size(self) -> "GenerateRequest":

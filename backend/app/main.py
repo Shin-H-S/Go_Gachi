@@ -99,6 +99,7 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
             feedback=request.feedback,
             target_width=request.target_width,
             target_height=request.target_height,
+            resize_mode=request.resize_mode,
             settings=settings,
         )
     except ValueError as exc:

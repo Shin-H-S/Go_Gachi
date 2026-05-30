@@ -220,6 +220,42 @@ def test_generate_rejects_incomplete_target_size() -> None:
     assert response.status_code == 422
 
 
+def test_generate_rejects_unknown_resize_mode() -> None:
+    """지원하지 않는 resizeMode는 요청 스키마 단계에서 거절한다."""
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram_square",
+            "resizeMode": "stretch",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_render_target_png_contain_preserves_full_image() -> None:
+    """contain 모드는 원본 전체를 중앙에 보존하고 최종 크기는 정확히 맞춘다."""
+    source = Image.new("RGB", (4, 8), "#ffffff")
+    for y in range(8):
+        source.putpixel((0, y), (255, 0, 0))
+        source.putpixel((3, y), (0, 128, 0))
+
+    source_buffer = BytesIO()
+    source.save(source_buffer, format="PNG")
+
+    rendered = image_edit.render_target_png(
+        source_buffer.getvalue(),
+        image_edit.TargetSize(width=8, height=8),
+        "contain",
+    )
+
+    with Image.open(BytesIO(rendered)) as image:
+        assert image.size == (8, 8)
+        assert image.getpixel((2, 0)) == (255, 0, 0)
+        assert image.getpixel((5, 0)) == (0, 128, 0)
+
+
 def test_generate_returns_503_when_openai_key_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
