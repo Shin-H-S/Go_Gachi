@@ -58,4 +58,5 @@ OPENAI_IMAGE_MODEL=gpt-image-2
 OPENAI_IMAGE_QUALITY=medium
 ```
 
-로컬 `.env`는 임시 검증용으로만 사용하고, 운영 값은 Cloud Run 환경변수와 Secret Manager에서 관리합니다.
+로컬 `.env`는 레포 최상단 파일을 프론트/백엔드 공통 기준으로 사용합니다.
+운영 값은 Cloud Run 환경변수와 Secret Manager에서 관리합니다.
