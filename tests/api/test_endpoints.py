@@ -358,6 +358,47 @@ def test_generate_returns_503_when_openai_result_is_empty(
     assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
 
 
+def test_generate_returns_503_when_openai_result_base64_is_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenAI 결과 base64가 깨져 있으면 500이 아니라 503으로 정리한다."""
+
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        return "not-valid-base64!"
+
+    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
+
+
+def test_generate_returns_503_when_openai_result_is_not_image(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenAI 결과가 base64여도 이미지가 아니면 500이 아니라 503으로 정리한다."""
+    fake_b64 = base64.b64encode(b"not-an-image").decode("ascii")
+
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        return fake_b64
+
+    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
+
+
 def test_generate_hides_prompt_in_production(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

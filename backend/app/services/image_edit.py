@@ -395,7 +395,8 @@ async def edit_image(
             prompt=prompt,
             settings=settings,
         )
-        decoded = base64.b64decode(b64_json)
+        # OpenAI가 응답은 했지만 결과 이미지 base64가 깨졌다면 외부 응답 처리 실패로 본다.
+        decoded = base64.b64decode(b64_json, validate=True)
         target_png = await asyncio.to_thread(
             render_target_png,
             decoded,
@@ -419,7 +420,9 @@ async def edit_image(
                 estimated_cost=0.0,
                 cached=False,
             )
-        raise
+        if isinstance(exc, RuntimeError):
+            raise
+        raise RuntimeError("이미지 API 응답 이미지를 처리하지 못했습니다.") from exc
 
     # 3) 성공: 파일로 저장 → DB success로 갱신 → 사용량 기록.
     async with async_session_scope() as db:
