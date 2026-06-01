@@ -77,6 +77,13 @@ class Settings(BaseModel):
     openai_budget_limit_usd: float = 30.0
     openai_budget_alert_usd: float = 25.0
 
+    # 인증(Supabase Auth)용 설정. 비어 있으면 백엔드 인증 검증을 끈다(현 단계 호환).
+    # - supabase_url / supabase_anon_key: 프론트가 로그인할 때 사용(참고용으로 백엔드도 보관).
+    # - supabase_jwt_secret: 백엔드가 프론트에서 받은 JWT를 검증할 때 쓰는 비밀키.
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_jwt_secret: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -119,4 +126,7 @@ def get_settings() -> Settings:
         ),
         openai_budget_limit_usd=float(os.getenv("OPENAI_BUDGET_LIMIT_USD", "30.0")),
         openai_budget_alert_usd=float(os.getenv("OPENAI_BUDGET_ALERT_USD", "25.0")),
+        supabase_url=os.getenv("SUPABASE_URL", ""),
+        supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
+        supabase_jwt_secret=os.getenv("SUPABASE_JWT_SECRET", ""),
     )
