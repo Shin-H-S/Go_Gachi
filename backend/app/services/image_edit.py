@@ -209,12 +209,14 @@ async def edit_image(
     target_width: int | None = None,
     target_height: int | None = None,
     settings: Settings,
+    user_id: str | None = None,
 ) -> dict[str, str | None]:
     """설정된 provider에 따라 mock 반환 또는 OpenAI 이미지 편집을 수행한다.
 
     openai 모드에서는 동일 입력(이미지+프리셋+feedback+모델+프롬프트 버전)이면
     DB 캐시를 재사용하고, 실패해도 DB에 흔적을 남긴다. mock 모드는 DB·캐시 모두
-    건너뛰어 로컬 플로우만 검증한다.
+    건너뛰어 로컬 플로우만 검증한다. user_id가 있으면 생성 기록에 소유자로 남긴다
+    (비로그인이면 None, 캐시 조회 키에는 영향을 주지 않는다).
     """
     # provider와 무관하게 먼저 입력 이미지를 검증해 프론트 오류를 빠르게 돌려준다.
     uploaded = parse_image(image_data_url, settings.max_upload_bytes)
@@ -292,6 +294,7 @@ async def edit_image(
                     output_path=cached_snapshot["output_path"],
                     image_url=cached_snapshot["image_url"],
                     prompt=cached_snapshot["prompt"],
+                    user_id=user_id,
                 )
                 await crud.record_usage(
                     db,
@@ -330,6 +333,7 @@ async def edit_image(
             model=model,
             original_path=str(original_path),
             prompt=prompt,
+            user_id=user_id,
         )
 
     try:

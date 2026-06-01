@@ -2,7 +2,17 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Index, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.db.database import Base
@@ -32,6 +42,9 @@ class Generation(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # 요청 1건을 식별하는 UUID. 라우터·로그·응답에서 모두 같은 값을 쓴다.
     request_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # 이 생성을 요청한 로그인 사용자의 Supabase UUID(JWT sub). 비로그인/익명이면 None.
+    # "내 작업 기록" 조회·유저별 통계를 위한 소유권 표시이며, 캐시 키에는 포함하지 않는다.
+    user_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     # 업로드 사진 바이트의 SHA256. 캐시 키의 핵심.
     image_hash: Mapped[str] = mapped_column(String(64), index=True)
     # develop의 프리셋 ID (예: "instagram_feed_square"). 이전 placement 칼럼을 대체.
@@ -51,6 +64,32 @@ class Generation(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     # 상태 전이 시점 추적용. mark_*_success/failed가 호출될 때 자동 갱신.
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class Profile(Base):
+    """로그인 사용자 1명의 앱 권한 정보 (Supabase auth.users와 별도로 우리가 관리).
+
+    id에는 Supabase 로그인 토큰(JWT)의 ``sub`` 값(유저 UUID)을 문자열로 저장한다.
+    auth.users에 하드 FK를 걸지 않아 스키마는 Alembic 한 곳에서 일관되게 관리한다.
+    프로필 행은 첫 로그인 시 백엔드가 자동으로 만든다(없으면 role='user').
+    """
+
+    __tablename__ = "profiles"
+    __table_args__ = (
+        # role은 'user'/'admin'만 허용. 오타·임의 값으로 권한 체계가 조용히 깨지는 것을 DB가 막는다.
+        CheckConstraint("role IN ('user', 'admin')", name="ck_profiles_role"),
+    )
+
+    # Supabase 유저 UUID(JWT sub). 우리 테이블의 기본키로 그대로 사용한다.
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str | None] = mapped_column(String(320), index=True, nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # 'user' 또는 'admin'. 기본은 'user'이고 관리자 승격은 값만 바꾸면 된다.
+    role: Mapped[str] = mapped_column(String(20), default="user", server_default="user", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )

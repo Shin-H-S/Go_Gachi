@@ -4,9 +4,11 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 
+from backend.app.api.auth import router as auth_router
 from backend.app.api.internal import router as internal_router
+from backend.app.core.auth import AuthUser, get_optional_user
 from backend.app.core.config import get_settings
 from backend.app.core.presets import default_preset, get_presets
 from backend.app.schemas import ConfigResponse, GenerateRequest, GenerateResponse
@@ -25,6 +27,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
 
 
 app = FastAPI(title="Cafe Ad Maker V1", version="0.1.0", lifespan=lifespan)
+
+# 인증 라우트(/api/auth/me 등)는 환경과 무관하게 항상 등록한다.
+app.include_router(auth_router)
 
 # production에서는 내부 모니터링 라우터를 아예 등록하지 않는다. 로컬/dev에선 그대로 열림.
 # 운영에서도 사용량을 봐야 한다면 별도 토큰 인증 라우터로 교체하면 됨.
@@ -69,7 +74,10 @@ async def config() -> ConfigResponse:
 
 
 @app.post("/api/generate", response_model=GenerateResponse, response_model_by_alias=True)
-async def generate(request: GenerateRequest) -> GenerateResponse:
+async def generate(
+    request: GenerateRequest,
+    user: AuthUser | None = Depends(get_optional_user),
+) -> GenerateResponse:
     # presetId가 없으면 기본 프리셋을 쓰고, 잘못된 값은 연동 오류를 빨리 찾도록 400으로 돌려준다.
     settings = get_settings()
     presets = get_presets()
@@ -100,6 +108,8 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
             target_width=request.target_width,
             target_height=request.target_height,
             settings=settings,
+            # 로그인했으면 생성 기록에 소유자로 남긴다(비로그인이면 None).
+            user_id=user.id if user else None,
         )
     except ValueError as exc:
         # 사용자 입력 문제는 프론트가 처리할 수 있게 400으로 돌려준다.
