@@ -5,8 +5,9 @@
 
   - DATABASE_URL → 임시 폴더의 SQLite 파일
   - DATA_DIR / OUTPUT_DIR → 임시 폴더
+  - APP_ENV=local
   - IMAGE_PROVIDER=mock (특정 테스트는 monkeypatch로 openai로 바꿔 사용)
-  - OPENAI_API_KEY 비움(실키가 .env에 있어도 테스트에 새지 않게)
+  - OPENAI_API_KEY 비움(실제 키가 .env에 있어도 테스트에 새지 않게)
 """
 
 import os
@@ -26,6 +27,7 @@ os.environ["DATABASE_URL"] = f"sqlite:///{(_TEST_DIR / 'app.db').as_posix()}"
 os.environ["DATA_DIR"] = str(_TEST_DIR)
 os.environ["OUTPUT_DIR"] = str(_TEST_DIR / "outputs")
 os.environ["UPLOAD_DIR"] = str(_TEST_DIR / "uploads")
+os.environ["APP_ENV"] = "local"
 os.environ["IMAGE_PROVIDER"] = "mock"
 # 실 API 키가 흘러들어가 실제 호출이 발생하지 않도록 항상 비운다.
 os.environ["OPENAI_API_KEY"] = ""

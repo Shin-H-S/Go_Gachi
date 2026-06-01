@@ -30,7 +30,8 @@ Cloud Run runtime entrypoint:
 uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8080}
 ```
 
-운영 런타임 환경변수는 Cloud Run / Cloud Build에서 주입합니다. 로컬 검증 시에는 `.env` 예시를 참고할 수 있습니다.
+운영 런타임 환경변수는 Cloud Run / Cloud Build에서 주입합니다. 로컬 검증 시에는
+레포 최상단 `.env`를 프론트/백엔드 공통 기준으로 사용합니다.
 
 Required runtime variables:
 

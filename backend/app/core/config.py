@@ -10,15 +10,12 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 CONFIG_DIR = ROOT_DIR / "config"
 
 
-def load_env() -> None:
-    """필요 시 루트 .env를 환경변수로 적재한다.
-
-    운영에서는 Cloud Run 환경변수를 사용하지만, 테스트나 임시 검증에서는 같은 설정 객체를
-    재사용할 수 있게 둔다.
-    """
-    env_path = ROOT_DIR / ".env"
+def _load_env_file(env_path: Path) -> None:
+    """단일 .env 파일을 현재 프로세스 환경변수로 적재한다."""
     if not env_path.exists():
         return
+
+    import os
 
     for raw_line in env_path.read_text(encoding="utf-8").splitlines():
         # 빈 줄, 주석, KEY=VALUE 형식이 아닌 줄은 무시한다.
@@ -32,9 +29,7 @@ def load_env() -> None:
         if not key:
             continue
 
-        import os
-
-        # 이미 주입된 환경변수는 Cloud Run 설정이 우선이므로 덮어쓰지 않는다.
+        # 이미 주입된 환경변수는 Cloud Run/루트 .env 설정이 우선이므로 덮어쓰지 않는다.
         if key in os.environ:
             continue
 
@@ -44,6 +39,15 @@ def load_env() -> None:
             value = value[1:-1]
 
         os.environ[key] = value
+
+
+def load_env() -> None:
+    """공통 .env를 환경변수로 적재한다.
+
+    운영에서는 Cloud Run 환경변수를 사용한다. 로컬 검증에서는 레포 최상단 `.env`만
+    프론트/백엔드 공통 기준으로 읽는다.
+    """
+    _load_env_file(ROOT_DIR / ".env")
 
 
 DEFAULT_DATA_DIR = ROOT_DIR / "backend" / "data"

@@ -107,6 +107,7 @@ async def generate(
             feedback=request.feedback,
             target_width=request.target_width,
             target_height=request.target_height,
+            resize_mode=request.resize_mode,
             settings=settings,
             # 로그인했으면 생성 기록에 소유자로 남긴다(비로그인이면 None).
             user_id=user.id if user else None,

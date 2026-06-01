@@ -1,12 +1,58 @@
 import json
+import os
 from pathlib import Path
 
+import httpx
+from dotenv import load_dotenv
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
 CONFIG_PRESETS_PATH = Path(__file__).resolve().parents[1] / "config" / "presets.json"
 CHANNEL_ASSET_DIR = Path(__file__).resolve().parent / "assets"
+DEFAULT_BACKEND_URL = "http://127.0.0.1:8080"
+
+# 공통 설정은 레포 최상단 .env에서 읽고, 프론트 전용 .env가 있으면 그 값으로 덮어쓴다.
+load_dotenv(ROOT_DIR / ".env")
+load_dotenv(Path(__file__).with_name(".env"), override=True)
+
+BACKEND_URL = os.getenv("BACKEND_URL", DEFAULT_BACKEND_URL).rstrip("/")
+FRONTEND_USE_MOCK = os.getenv("FRONTEND_USE_MOCK", "").lower() in {"1", "true", "yes"}
+FRONTEND_CONFIG_SOURCE = os.getenv("FRONTEND_CONFIG_SOURCE", "auto").lower()
 
 
-def load_format_options() -> dict[str, dict[str, object]]:
-    raw_presets = json.loads(CONFIG_PRESETS_PATH.read_text(encoding="utf-8"))
+def _load_local_presets() -> list[dict[str, object]]:
+    """백엔드가 없을 때 사용할 로컬 프리셋 파일을 읽는다."""
+    return json.loads(CONFIG_PRESETS_PATH.read_text(encoding="utf-8"))
+
+
+def _load_backend_presets() -> list[dict[str, object]]:
+    """백엔드 /api/config에서 프론트 표시용 프리셋을 읽는다."""
+    response = httpx.get(f"{BACKEND_URL}/api/config", timeout=2)
+    response.raise_for_status()
+    payload = response.json()
+    presets = payload.get("presets") if isinstance(payload, dict) else None
+    if not isinstance(presets, list):
+        raise ValueError("백엔드 config 응답에 presets가 없습니다.")
+    return presets
+
+
+def load_presets() -> list[dict[str, object]]:
+    """설정 소스 우선순위에 따라 프리셋 목록을 가져온다."""
+    if FRONTEND_CONFIG_SOURCE == "local" or FRONTEND_USE_MOCK:
+        return _load_local_presets()
+
+    if FRONTEND_CONFIG_SOURCE == "backend":
+        return _load_backend_presets()
+
+    try:
+        return _load_backend_presets()
+    except (httpx.HTTPError, ValueError, TypeError):
+        # 백엔드가 아직 떠 있지 않은 개발 상황에서는 로컬 파일로 화면을 구성한다.
+        return _load_local_presets()
+
+
+def _format_options_from_presets(
+    raw_presets: list[dict[str, object]],
+) -> dict[str, dict[str, object]]:
     options = {}
 
     for preset in raw_presets:
@@ -31,6 +77,10 @@ def load_format_options() -> dict[str, dict[str, object]]:
         }
 
     return options
+
+
+def load_format_options() -> dict[str, dict[str, object]]:
+    return _format_options_from_presets(load_presets())
 
 
 FORMAT_OPTIONS = load_format_options()
