@@ -3,11 +3,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-FRONTEND_APP = ROOT_DIR / "frontend" / "app.py"
+FRONTEND_WORK_PAGE = ROOT_DIR / "frontend" / "pages" / "work.py"
 
 
 def test_menu_uploader_accepts_multiple_files() -> None:
-    tree = ast.parse(FRONTEND_APP.read_text(encoding="utf-8"))
+    tree = ast.parse(FRONTEND_WORK_PAGE.read_text(encoding="utf-8"))
     upload_calls = [
         node
         for node in ast.walk(tree)
