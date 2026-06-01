@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import binascii
+import logging
 import re
 import uuid
 from dataclasses import dataclass
@@ -20,11 +21,15 @@ from backend.app.core.prompts import PROMPT_VERSION, build_prompt
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 
+logger = logging.getLogger(__name__)
+
 DATA_URL_PATTERN = re.compile(
     r"^data:(image/(?:png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$",
     re.IGNORECASE,
 )
 ResizeMode = Literal["cover", "contain"]
+SUPPORTED_UPLOAD_TYPES = ("jpg", "jpeg", "png", "webp")
+SUPPORTED_UPLOAD_LABEL = "JPG, PNG, WEBP"
 
 
 def _detect_image_mime(content: bytes) -> str | None:
@@ -39,12 +44,23 @@ def _detect_image_mime(content: bytes) -> str | None:
 
 
 @dataclass(frozen=True)
+class ImageInfo:
+    """업로드 이미지의 실제 디코딩 결과. OpenAI 실패 원인 추적에 사용한다."""
+
+    format: str
+    mode: str
+    width: int
+    height: int
+
+
+@dataclass(frozen=True)
 class UploadedImage:
     """OpenAI multipart 요청에 필요한 업로드 이미지 정보."""
 
     mime_type: str
     content: bytes
     extension: str
+    info: ImageInfo
 
 
 @dataclass(frozen=True)
@@ -70,6 +86,63 @@ def _target_size_or_preset(
     if target_width is None or target_height is None:
         return TargetSize(width=preset.width, height=preset.height)
     return TargetSize(width=target_width, height=target_height)
+
+
+def _inspect_image(content: bytes) -> ImageInfo:
+    """Pillow로 실제 이미지를 열어 포맷·모드·크기를 확인한다."""
+    try:
+        with Image.open(BytesIO(content)) as image:
+            # 애니메이션/멀티프레임 이미지도 첫 프레임 기준으로 처리한다.
+            image.seek(0)
+            image.load()
+            return ImageInfo(
+                format=str(image.format or "unknown"),
+                mode=image.mode,
+                width=image.width,
+                height=image.height,
+            )
+    except Exception as exc:
+        raise ValueError("이미지 파일을 열 수 없습니다.") from exc
+
+
+def _to_rgb_image(source: Image.Image) -> Image.Image:
+    """OpenAI 입력 안정성을 위해 모든 업로드 이미지를 RGB 이미지로 맞춘다."""
+    image = ImageOps.exif_transpose(source)
+
+    # 투명 채널이 있으면 흰 배경에 합성해 광고 이미지에서 예측 가능한 RGB로 만든다.
+    if image.mode in {"RGBA", "LA"} or "transparency" in image.info:
+        rgba = image.convert("RGBA")
+        background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+        background.alpha_composite(rgba)
+        return background.convert("RGB")
+
+    return image.convert("RGB")
+
+
+def normalize_for_openai(uploaded: UploadedImage) -> UploadedImage:
+    """OpenAI 호출 전 입력 이미지를 표준 PNG/RGB로 정규화한다.
+
+    브라우저와 Pillow가 열 수 있는 이미지라도 CMYK, 팔레트, 일부 WebP/EXIF 조합은
+    OpenAI 이미지 편집 API에서 거절될 수 있어, 외부 API에는 항상 PNG/RGB만 보낸다.
+    """
+    with Image.open(BytesIO(uploaded.content)) as source:
+        source.seek(0)
+        image = _to_rgb_image(source)
+
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    normalized = output.getvalue()
+    return UploadedImage(
+        mime_type="image/png",
+        content=normalized,
+        extension="png",
+        info=ImageInfo(
+            format="PNG",
+            mode="RGB",
+            width=image.width,
+            height=image.height,
+        ),
+    )
 
 
 def _feedback_with_context(
@@ -100,7 +173,7 @@ def parse_image(data_url: str, max_upload_bytes: int) -> UploadedImage:
     """프론트가 보낸 data URL을 검증하고 이미지 바이트로 변환한다."""
     match = DATA_URL_PATTERN.match(data_url or "")
     if not match:
-        raise ValueError("PNG, JPG, WEBP 이미지만 업로드할 수 있습니다.")
+        raise ValueError(f"{SUPPORTED_UPLOAD_LABEL} 이미지만 업로드할 수 있습니다.")
 
     mime_type = match.group(1).lower().replace("image/jpg", "image/jpeg")
     try:
@@ -118,8 +191,14 @@ def parse_image(data_url: str, max_upload_bytes: int) -> UploadedImage:
     if detected_mime != mime_type:
         raise ValueError("이미지 MIME 타입과 실제 파일 형식이 일치하지 않습니다.")
 
+    info = _inspect_image(content)
     extension = "jpg" if mime_type == "image/jpeg" else mime_type.split("/")[-1]
-    return UploadedImage(mime_type=mime_type, content=content, extension=extension)
+    return UploadedImage(
+        mime_type=mime_type,
+        content=content,
+        extension=extension,
+        info=info,
+    )
 
 
 def _render_cover(image: Image.Image, target_size: TargetSize) -> Image.Image:
@@ -250,6 +329,12 @@ async def _call_openai_edit(
             error = payload.get("error")
             if isinstance(error, dict):
                 message = str(error.get("message") or message)
+        logger.warning(
+            "OpenAI image edit failed status=%s model=%s message=%s",
+            response.status_code,
+            settings.openai_image_model,
+            message,
+        )
         raise RuntimeError(message)
 
     return _extract_b64_json(payload)
@@ -393,8 +478,27 @@ async def edit_image(
         )
 
     try:
+        openai_uploaded = await asyncio.to_thread(normalize_for_openai, uploaded)
+        logger.info(
+            "OpenAI image input prepared request_id=%s original_mime=%s "
+            "original_format=%s original_mode=%s original_size=%sx%s "
+            "normalized_mime=%s normalized_format=%s normalized_mode=%s "
+            "normalized_size=%sx%s normalized_bytes=%s",
+            request_id,
+            uploaded.mime_type,
+            uploaded.info.format,
+            uploaded.info.mode,
+            uploaded.info.width,
+            uploaded.info.height,
+            openai_uploaded.mime_type,
+            openai_uploaded.info.format,
+            openai_uploaded.info.mode,
+            openai_uploaded.info.width,
+            openai_uploaded.info.height,
+            len(openai_uploaded.content),
+        )
         b64_json = await _call_openai_edit(
-            uploaded=uploaded,
+            uploaded=openai_uploaded,
             preset=preset,
             prompt=prompt,
             settings=settings,

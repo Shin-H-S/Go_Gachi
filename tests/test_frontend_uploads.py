@@ -31,6 +31,13 @@ def test_menu_uploader_accepts_multiple_files() -> None:
     assert multiple_keyword.value.value is True
 
 
+def test_upload_policy_is_shared_constant() -> None:
+    """프론트 업로드 허용 확장자는 upload_utils 상수로 관리한다."""
+    from frontend.upload_utils import UPLOAD_FILE_TYPES
+
+    assert UPLOAD_FILE_TYPES == ["jpg", "jpeg", "png", "webp"]
+
+
 def test_get_primary_uploaded_file_returns_first_file_from_multiple_uploads() -> None:
     from frontend.upload_utils import get_primary_uploaded_file
 
