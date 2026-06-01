@@ -7,7 +7,7 @@ import streamlit as st
 from api_client import BACKEND_URL, FRONTEND_USE_MOCK, build_feedback, request_backend
 from image_utils import bytes_to_data_url, create_mock_banner, make_preview_canvas
 from styles import add_css
-from upload_utils import get_primary_uploaded_file
+from upload_utils import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_primary_uploaded_file
 
 from config import (
     CHANNEL_SLUGS,
@@ -179,8 +179,8 @@ with left_col:
 
         uploaded_files = st.file_uploader(
             "메뉴 사진 업로드",
-            type=["jpg", "jpeg", "png", "webp"],
-            help="JPG, PNG, WEBP 파일을 업로드할 수 있습니다.",
+            type=UPLOAD_FILE_TYPES,
+            help=UPLOAD_HELP_TEXT,
             accept_multiple_files=True,
             label_visibility="collapsed",
         )

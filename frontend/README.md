@@ -30,6 +30,12 @@ uv run streamlit run frontend/app.py
 광고 채널과 규격은 레포 루트의 `config/presets.json`을 기준으로 맞춥니다.
 프론트에서 백엔드로 보내는 `presetId`는 `config/presets.json`의 `id`와 반드시 일치해야 합니다.
 
+## Upload Policy
+
+- 프론트 업로드 허용 확장자는 `frontend/upload_utils.py`의 `UPLOAD_FILE_TYPES`에서 관리합니다.
+- 현재 허용 형식은 JPG, PNG, WEBP입니다.
+- 백엔드는 업로드 원본을 검증한 뒤 OpenAI 호출 전 PNG/RGB로 정규화하므로, 프론트는 별도 이미지 변환을 하지 않습니다.
+
 ## Backend Connection
 
 프론트엔드는 레포 최상단 `.env`를 먼저 읽고, `frontend/.env`가 있으면 프론트 전용

@@ -38,7 +38,9 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 }
 ```
 
-- `imageDataUrl`: PNG, JPG, WEBP data URL
+- `imageDataUrl`: JPG, PNG, WEBP data URL.
+  백엔드는 파일 시그니처와 실제 디코딩 가능 여부를 확인한 뒤, OpenAI 호출 전
+  입력 이미지를 PNG/RGB로 정규화합니다.
 - `presetId`: `GET /api/config`에서 받은 프리셋 ID. 생략하면 기본 프리셋 사용
 - `detailType`: 프리셋 안의 상세 광고 유형 ID. 채널·상세 유형별 전용 프롬프트를 고르는 데 사용
 - `feedback`: 사용자 추가 요청 문구
@@ -68,6 +70,13 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 - `prompt`: `APP_ENV=production`에서는 내부 프롬프트 보호를 위해 `null`로 응답합니다.
   `local`/`dev` 환경에서는 디버깅을 위해 생성에 사용한 프롬프트가 포함될 수 있습니다.
 - 응답 `imageDataUrl`의 PNG는 `targetWidth` x `targetHeight` 크기로 후처리되어 반환됩니다.
+
+## Upload Policy
+
+- 프론트/백엔드 공통 허용 형식은 JPG, PNG, WEBP입니다.
+- 업로드 원본은 감사와 재현을 위해 `backend/uploads`에 그대로 저장합니다.
+- OpenAI에는 원본을 직접 보내지 않고, EXIF 방향 보정 후 PNG/RGB로 변환한 이미지를 보냅니다.
+- OpenAI 입력 이미지 로그에는 MIME, 포맷, 모드, 크기, 정규화 후 바이트 수만 남기고 API 키나 프롬프트는 남기지 않습니다.
 
 ## Database / Migrations
 

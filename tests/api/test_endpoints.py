@@ -399,6 +399,45 @@ def test_generate_returns_503_when_openai_result_is_not_image(
     assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
 
 
+def test_generate_normalizes_uploaded_image_before_openai(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CMYK JPEG처럼 모드가 특이한 이미지도 OpenAI 호출 전 PNG/RGB로 정리한다."""
+    source = Image.new("CMYK", (3, 2), (0, 128, 128, 0))
+    source_buffer = BytesIO()
+    source.save(source_buffer, format="JPEG")
+    data_url = (
+        "data:image/jpeg;base64,"
+        f"{base64.b64encode(source_buffer.getvalue()).decode('ascii')}"
+    )
+    captured: dict[str, image_edit.UploadedImage] = {}
+
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        captured["uploaded"] = kwargs["uploaded"]
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={"imageDataUrl": data_url, "presetId": None, "feedback": ""},
+    )
+
+    assert response.status_code == 200
+    uploaded = captured["uploaded"]
+    assert uploaded.mime_type == "image/png"
+    assert uploaded.extension == "png"
+    assert uploaded.info.format == "PNG"
+    assert uploaded.info.mode == "RGB"
+    assert uploaded.info.width == 3
+    assert uploaded.info.height == 2
+    with Image.open(BytesIO(uploaded.content)) as normalized:
+        assert normalized.format == "PNG"
+        assert normalized.mode == "RGB"
+        assert normalized.size == (3, 2)
+
+
 def test_generate_hides_prompt_in_production(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
