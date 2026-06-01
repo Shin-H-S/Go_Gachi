@@ -220,6 +220,42 @@ def test_generate_rejects_incomplete_target_size() -> None:
     assert response.status_code == 422
 
 
+def test_generate_rejects_unknown_resize_mode() -> None:
+    """지원하지 않는 resizeMode는 요청 스키마 단계에서 거절한다."""
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram_square",
+            "resizeMode": "stretch",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_render_target_png_contain_preserves_full_image() -> None:
+    """contain 모드는 원본 전체를 중앙에 보존하고 최종 크기는 정확히 맞춘다."""
+    source = Image.new("RGB", (4, 8), "#ffffff")
+    for y in range(8):
+        source.putpixel((0, y), (255, 0, 0))
+        source.putpixel((3, y), (0, 128, 0))
+
+    source_buffer = BytesIO()
+    source.save(source_buffer, format="PNG")
+
+    rendered = image_edit.render_target_png(
+        source_buffer.getvalue(),
+        image_edit.TargetSize(width=8, height=8),
+        "contain",
+    )
+
+    with Image.open(BytesIO(rendered)) as image:
+        assert image.size == (8, 8)
+        assert image.getpixel((2, 0)) == (255, 0, 0)
+        assert image.getpixel((5, 0)) == (0, 128, 0)
+
+
 def test_generate_returns_503_when_openai_key_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -275,6 +311,83 @@ def test_generate_returns_503_when_network_fails(
 
     monkeypatch.setattr(image_edit.httpx, "AsyncClient", _BoomClient)
 
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
+
+
+def test_generate_returns_503_when_openai_result_is_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenAI 성공 응답이라도 data가 비어 있으면 500이 아니라 503으로 정리한다."""
+
+    class _EmptyDataResponse:
+        status_code = 200
+
+        def json(self) -> dict[str, list[dict[str, str]]]:
+            return {"data": []}
+
+    class _EmptyDataClient:
+        def __init__(self, *args, **kwargs):  # noqa: ARG002, ANN003
+            pass
+
+        async def __aenter__(self):  # noqa: ANN202
+            return self
+
+        async def __aexit__(self, *args):  # noqa: ANN003, ANN202
+            return None
+
+        async def post(self, *args, **kwargs):  # noqa: ANN003, ARG002, ANN202
+            return _EmptyDataResponse()
+
+    monkeypatch.setattr(image_edit.httpx, "AsyncClient", _EmptyDataClient)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
+
+
+def test_generate_returns_503_when_openai_result_base64_is_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenAI 결과 base64가 깨져 있으면 500이 아니라 503으로 정리한다."""
+
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        return "not-valid-base64!"
+
+    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == IMAGE_GENERATION_UNAVAILABLE_MESSAGE
+
+
+def test_generate_returns_503_when_openai_result_is_not_image(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenAI 결과가 base64여도 이미지가 아니면 500이 아니라 503으로 정리한다."""
+    fake_b64 = base64.b64encode(b"not-an-image").decode("ascii")
+
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        return fake_b64
+
+    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
 
     response = client.post(

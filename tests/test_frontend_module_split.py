@@ -26,6 +26,62 @@ def test_frontend_config_exposes_preset_helpers() -> None:
     assert format_size_label((1080, 1080)) == "1080 x 1080"
 
 
+def test_frontend_config_can_load_presets_from_backend(monkeypatch) -> None:
+    from frontend import config
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, list[dict[str, object]]]:
+            return {
+                "presets": [
+                    {
+                        "id": "custom_channel",
+                        "label": "테스트 채널",
+                        "width": 100,
+                        "height": 200,
+                        "details": [
+                            {
+                                "id": "custom_detail",
+                                "label": "테스트 상세",
+                                "width": 300,
+                                "height": 400,
+                            }
+                        ],
+                    }
+                ]
+            }
+
+    def fake_get(url: str, timeout: int) -> FakeResponse:
+        assert url == f"{config.BACKEND_URL}/api/config"
+        assert timeout == 2
+        return FakeResponse()
+
+    monkeypatch.setattr(config.httpx, "get", fake_get)
+
+    options = config._format_options_from_presets(config._load_backend_presets())
+
+    assert options["테스트 채널"]["value"] == "custom_channel"
+    assert options["테스트 채널"]["details"][0]["id"] == "custom_detail"
+    assert options["테스트 채널"]["details"][0]["size"] == (300, 400)
+
+
+def test_frontend_config_falls_back_to_local_presets(monkeypatch) -> None:
+    from frontend import config
+
+    def fake_get(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise config.httpx.ConnectError("backend down")
+
+    monkeypatch.setattr(config, "FRONTEND_CONFIG_SOURCE", "auto")
+    monkeypatch.setattr(config, "FRONTEND_USE_MOCK", False)
+    monkeypatch.setattr(config.httpx, "get", fake_get)
+
+    presets = config.load_presets()
+
+    assert presets[0]["id"] == "instagram_square"
+
+
 def test_image_utils_builds_preview_canvas_and_data_url() -> None:
     from frontend.image_utils import bytes_to_data_url, make_preview_canvas
 
@@ -92,3 +148,6 @@ def test_app_delegates_split_module_responsibilities() -> None:
     )
     assert "FRONTEND_USE_MOCK" in app_source
     assert "NETWORK_ERROR" in app_source
+    assert "build_result_context" in defined_functions
+    assert "sync_result_state" in defined_functions
+    assert "result_context" in app_source

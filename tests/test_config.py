@@ -1,5 +1,8 @@
+import os
+
+from backend.app.core import config as runtime_config
 from backend.app.core.presets import get_presets
-from backend.app.core.prompts import build_prompt
+from backend.app.core.prompts import PROMPT_VERSION, build_prompt
 from backend.app.services.image_edit import parse_image
 
 
@@ -17,6 +20,43 @@ def test_presets() -> None:
     assert presets["instagram_square"].find_detail("story_image") is not None
     assert presets["baemin_notice"].find_detail("solid_background") is not None
     assert presets["daangn_post"].find_detail("promotion_image") is not None
+
+
+def test_channel_detail_prompt_presets_are_specific() -> None:
+    presets = get_presets()
+
+    assert "thumbnail readability" in presets["baemin_notice"].channel_prompt
+    assert "nearby shop owner" in presets["daangn_post"].channel_prompt
+    assert "story stickers or text" in (
+        presets["instagram_square"].find_detail("story_image").prompt_hint
+    )
+    assert "seasonal offer" in presets["daangn_post"].find_detail("discount_event").prompt_hint
+    assert PROMPT_VERSION == "2026-05-30-v3-channel-detail-presets"
+
+
+def test_load_env_uses_only_root_env(monkeypatch, tmp_path) -> None:
+    """백엔드도 레포 최상단 .env만 공통 기준으로 읽는다."""
+    backend_dir = tmp_path / "backend"
+    backend_dir.mkdir()
+    (tmp_path / ".env").write_text(
+        "APP_ENV=root-env\nOPENAI_TEXT_MODEL=gpt-5\n",
+        encoding="utf-8",
+    )
+    (backend_dir / ".env").write_text(
+        "APP_ENV=backend-env\nOPENAI_IMAGE_MODEL=gpt-image-2\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(runtime_config, "ROOT_DIR", tmp_path)
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("OPENAI_TEXT_MODEL", raising=False)
+    monkeypatch.delenv("OPENAI_IMAGE_MODEL", raising=False)
+
+    runtime_config.load_env()
+
+    assert os.environ["APP_ENV"] == "root-env"
+    assert os.environ["OPENAI_TEXT_MODEL"] == "gpt-5"
+    assert "OPENAI_IMAGE_MODEL" not in os.environ
 
 
 def test_prompt() -> None:

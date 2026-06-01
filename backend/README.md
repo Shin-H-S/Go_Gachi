@@ -33,7 +33,8 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
   "detailType": "story_image",
   "feedback": "광고 유형: 스토리 이미지\n밝고 따뜻한 카페 광고 느낌으로 만들어줘",
   "targetWidth": 1080,
-  "targetHeight": 1920
+  "targetHeight": 1920,
+  "resizeMode": "cover"
 }
 ```
 
@@ -43,6 +44,9 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 - `feedback`: 사용자 추가 요청 문구
 - `targetWidth`, `targetHeight`: 사용자가 선택한 상세 광고 규격의 최종 출력 픽셀 크기.
   둘 중 하나만 보낼 수 없으며, 생략하면 프리셋 기본 크기를 사용합니다.
+- `resizeMode`: 최종 후처리 방식. 기본값은 `cover`입니다.
+  `cover`는 캔버스를 꽉 채우고 중앙 기준으로 일부를 자를 수 있으며,
+  `contain`은 원본 전체를 보존하고 남는 영역을 흐림 배경으로 채웁니다.
 
 알 수 없는 `presetId`는 연동 오류를 빨리 발견할 수 있도록 `400`으로 응답합니다.
 
@@ -64,6 +68,12 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 - `prompt`: `APP_ENV=production`에서는 내부 프롬프트 보호를 위해 `null`로 응답합니다.
   `local`/`dev` 환경에서는 디버깅을 위해 생성에 사용한 프롬프트가 포함될 수 있습니다.
 - 응답 `imageDataUrl`의 PNG는 `targetWidth` x `targetHeight` 크기로 후처리되어 반환됩니다.
+
+## Database / Migrations
+
+- 운영·공유 DB 스키마는 Alembic으로 관리합니다.
+- 새 DB를 연결하거나 마이그레이션이 추가되면 백엔드 실행 전에 `uv run alembic upgrade head`를 적용합니다.
+- `backend.app.db.database.async_init_db()`는 테스트와 임시 개발 DB 보조용입니다. 앱 시작 시 운영 테이블을 자동 생성하는 용도로 사용하지 않습니다.
 
 ## Key Files
 

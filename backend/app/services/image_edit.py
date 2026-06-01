@@ -9,9 +9,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
+from typing import Literal
 
 import httpx
-from PIL import Image, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 
 from backend.app.core.config import Settings
 from backend.app.core.presets import Preset, PresetDetail
@@ -23,6 +24,7 @@ DATA_URL_PATTERN = re.compile(
     r"^data:(image/(?:png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$",
     re.IGNORECASE,
 )
+ResizeMode = Literal["cover", "contain"]
 
 
 def _detect_image_mime(content: bytes) -> str | None:
@@ -74,12 +76,17 @@ def _feedback_with_context(
     feedback: str,
     target_size: TargetSize,
     detail: PresetDetail | None,
+    resize_mode: ResizeMode,
 ) -> str:
     """프롬프트와 캐시 키에 최종 출력 크기를 함께 반영한다."""
     context_parts = [
         f"Target output canvas: {target_size.width}x{target_size.height}px. "
         "Compose for this final aspect ratio."
     ]
+    if resize_mode == "contain":
+        context_parts.append("Final resize mode: contain. Preserve the full generated image.")
+    else:
+        context_parts.append("Final resize mode: cover. Fill the canvas edge to edge.")
     if detail:
         context_parts.append(f"Selected detail type: {detail.id} ({detail.label}).")
 
@@ -115,20 +122,47 @@ def parse_image(data_url: str, max_upload_bytes: int) -> UploadedImage:
     return UploadedImage(mime_type=mime_type, content=content, extension=extension)
 
 
-def render_target_png(content: bytes, target_size: TargetSize) -> bytes:
+def _render_cover(image: Image.Image, target_size: TargetSize) -> Image.Image:
+    """캔버스를 꽉 채우고 남는 영역은 중앙 기준으로 잘라낸다."""
+    return ImageOps.fit(
+        image,
+        (target_size.width, target_size.height),
+        method=Image.Resampling.LANCZOS,
+        centering=(0.5, 0.5),
+    )
+
+
+def _render_contain(image: Image.Image, target_size: TargetSize) -> Image.Image:
+    """원본 전체가 보이도록 맞추고, 남는 영역은 흐림 배경으로 채운다."""
+    canvas_size = (target_size.width, target_size.height)
+    background = _render_cover(image, target_size)
+    blur_radius = max(target_size.width, target_size.height) // 28
+    background = background.filter(ImageFilter.GaussianBlur(max(8, blur_radius)))
+
+    foreground = image.copy()
+    foreground.thumbnail(canvas_size, Image.Resampling.LANCZOS)
+    x = (target_size.width - foreground.width) // 2
+    y = (target_size.height - foreground.height) // 2
+    background.paste(foreground, (x, y))
+    return background
+
+
+def render_target_png(
+    content: bytes,
+    target_size: TargetSize,
+    resize_mode: ResizeMode = "cover",
+) -> bytes:
     """이미지 바이트를 선택한 상세 사이즈의 PNG로 정확히 맞춘다.
 
     OpenAI가 지원하는 생성 크기와 실제 광고 게시 규격은 다를 수 있으므로,
-    모델 결과를 받은 뒤 중앙 기준 cover 방식으로 최종 픽셀 크기를 고정한다.
+    모델 결과를 받은 뒤 선택한 리사이즈 정책으로 최종 픽셀 크기를 고정한다.
     """
     with Image.open(BytesIO(content)) as source:
         image = ImageOps.exif_transpose(source).convert("RGB")
-        fitted = ImageOps.fit(
-            image,
-            (target_size.width, target_size.height),
-            method=Image.Resampling.LANCZOS,
-            centering=(0.5, 0.5),
-        )
+        if resize_mode == "contain":
+            fitted = _render_contain(image, target_size)
+        else:
+            fitted = _render_cover(image, target_size)
 
     output = BytesIO()
     fitted.save(output, format="PNG", optimize=True)
@@ -140,6 +174,26 @@ async def _file_to_data_url(path: Path) -> str:
     content = await asyncio.to_thread(path.read_bytes)
     encoded = base64.b64encode(content).decode("ascii")
     return f"data:image/png;base64,{encoded}"
+
+
+def _extract_b64_json(payload: object) -> str:
+    """OpenAI 이미지 응답에서 결과 base64를 안전하게 꺼낸다."""
+    if not isinstance(payload, dict):
+        raise RuntimeError("이미지 API 응답 형식이 올바르지 않습니다.")
+
+    data = payload.get("data")
+    if not isinstance(data, list) or not data:
+        raise RuntimeError("이미지 API 응답에 결과 이미지가 없습니다.")
+
+    first_item = data[0]
+    if not isinstance(first_item, dict):
+        raise RuntimeError("이미지 API 응답 형식이 올바르지 않습니다.")
+
+    b64_json = first_item.get("b64_json")
+    if not isinstance(b64_json, str) or not b64_json.strip():
+        raise RuntimeError("이미지 API 응답에 결과 이미지가 없습니다.")
+
+    return b64_json
 
 
 async def _call_openai_edit(
@@ -191,13 +245,14 @@ async def _call_openai_edit(
         raise RuntimeError("이미지 API 응답을 해석하지 못했습니다.") from exc
 
     if response.status_code >= 400:
-        message = payload.get("error", {}).get("message", "이미지 생성에 실패했습니다.")
+        message = "이미지 생성에 실패했습니다."
+        if isinstance(payload, dict):
+            error = payload.get("error")
+            if isinstance(error, dict):
+                message = str(error.get("message") or message)
         raise RuntimeError(message)
 
-    b64_json = payload.get("data", [{}])[0].get("b64_json")
-    if not b64_json:
-        raise RuntimeError("이미지 API 응답에 결과 이미지가 없습니다.")
-    return b64_json
+    return _extract_b64_json(payload)
 
 
 async def edit_image(
@@ -208,6 +263,7 @@ async def edit_image(
     detail: PresetDetail | None = None,
     target_width: int | None = None,
     target_height: int | None = None,
+    resize_mode: ResizeMode = "cover",
     settings: Settings,
 ) -> dict[str, str | None]:
     """설정된 provider에 따라 mock 반환 또는 OpenAI 이미지 편집을 수행한다.
@@ -223,11 +279,11 @@ async def edit_image(
         target_width=target_width,
         target_height=target_height,
     )
-    generation_feedback = _feedback_with_context(feedback, target_size, detail)
+    generation_feedback = _feedback_with_context(feedback, target_size, detail, resize_mode)
 
     if settings.image_provider == "mock":
         # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
-        target_png = render_target_png(uploaded.content, target_size)
+        target_png = render_target_png(uploaded.content, target_size, resize_mode)
         encoded = base64.b64encode(target_png).decode("ascii")
         return {
             "image_data_url": f"data:image/png;base64,{encoded}",
@@ -339,8 +395,14 @@ async def edit_image(
             prompt=prompt,
             settings=settings,
         )
-        decoded = base64.b64decode(b64_json)
-        target_png = await asyncio.to_thread(render_target_png, decoded, target_size)
+        # OpenAI가 응답은 했지만 결과 이미지 base64가 깨졌다면 외부 응답 처리 실패로 본다.
+        decoded = base64.b64decode(b64_json, validate=True)
+        target_png = await asyncio.to_thread(
+            render_target_png,
+            decoded,
+            target_size,
+            resize_mode,
+        )
         await asyncio.to_thread(output_path.write_bytes, target_png)
     except Exception as exc:
         # OpenAI 호출/응답 디코딩/파일 저장 중 하나라도 실패하면 failed로 남긴다.
@@ -358,7 +420,9 @@ async def edit_image(
                 estimated_cost=0.0,
                 cached=False,
             )
-        raise
+        if isinstance(exc, RuntimeError):
+            raise
+        raise RuntimeError("이미지 API 응답 이미지를 처리하지 못했습니다.") from exc
 
     # 3) 성공: 파일로 저장 → DB success로 갱신 → 사용량 기록.
     async with async_session_scope() as db:

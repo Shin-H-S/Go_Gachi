@@ -1,3 +1,4 @@
+import hashlib
 import time
 from html import escape
 
@@ -12,6 +13,7 @@ from config import (
     CHANNEL_SLUGS,
     FORMAT_OPTIONS,
     format_size_label,
+    get_detail_id,
     get_detail_labels,
     get_detail_size,
     get_existing_channel_asset_path,
@@ -69,6 +71,39 @@ def render_image_preview(
         """,
         detail_label,
     )
+
+
+def clear_result_state() -> None:
+    """현재 입력과 맞지 않는 생성 결과를 세션에서 제거한다."""
+    st.session_state.pop("result_bytes", None)
+    st.session_state.pop("result_context", None)
+
+
+def build_result_context(uploaded_file, prompt: str, format_label: str, detail_label: str):
+    """생성 결과가 어떤 입력 조건에서 만들어졌는지 비교할 키를 만든다."""
+    if not uploaded_file or not prompt.strip():
+        return None
+
+    target_size = get_detail_size(format_label, detail_label)
+    upload_hash = hashlib.sha256(uploaded_file.getvalue()).hexdigest()
+    return {
+        "presetId": FORMAT_OPTIONS[format_label]["value"],
+        "detailType": get_detail_id(format_label, detail_label),
+        "targetWidth": target_size[0],
+        "targetHeight": target_size[1],
+        "prompt": prompt.strip(),
+        "uploadHash": upload_hash,
+    }
+
+
+def sync_result_state(current_context) -> None:
+    """입력 조건이 바뀐 경우 이전 생성 결과를 숨긴다."""
+    if "result_bytes" not in st.session_state:
+        st.session_state.pop("result_context", None)
+        return
+
+    if st.session_state.get("result_context") != current_context:
+        clear_result_state()
 
 
 def get_selected_channel() -> str:
@@ -193,6 +228,14 @@ with left_col:
             height=150,
             label_visibility="collapsed",
         )
+
+        current_result_context = build_result_context(
+            uploaded_file,
+            prompt,
+            format_label,
+            detail_label,
+        )
+        sync_result_state(current_result_context)
 
         st.markdown('<div class="generate-button-marker"></div>', unsafe_allow_html=True)
         generate = st.button("✦ 이미지 만들기", use_container_width=True, type="primary")
@@ -343,6 +386,7 @@ if generate:
                     detail_label,
                 )
             st.session_state["result_bytes"] = result_bytes
+            st.session_state["result_context"] = current_result_context
             st.rerun()
         except httpx.HTTPStatusError as exc:
             detail = exc.response.text

@@ -40,6 +40,14 @@ BACKEND_URL=http://127.0.0.1:8080
 ```
 
 배포된 백엔드나 별도 서버를 바라봐야 하면 `BACKEND_URL`만 해당 주소로 바꿉니다.
+광고 채널/상세 유형 프리셋은 기본적으로 백엔드 `/api/config`를 먼저 읽고, 백엔드가 아직
+준비되지 않은 경우 로컬 `config/presets.json`으로 화면을 구성합니다.
+
+```env
+FRONTEND_CONFIG_SOURCE=auto
+```
+
+값을 `backend`로 두면 백엔드 config만 사용하고, `local`로 두면 로컬 파일만 사용합니다.
 
 현재 백엔드 MVP에서 우선 연동할 API는 아래와 같습니다.
 
