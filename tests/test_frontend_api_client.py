@@ -60,7 +60,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             "targetWidth": 1080,
             "targetHeight": 1080,
         },
-        "timeout": 90,
+        "timeout": 120,
     }
 
 

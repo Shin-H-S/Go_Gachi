@@ -64,7 +64,7 @@ def request_backend(uploaded_file, prompt: str, format_label: str, detail_label:
         "targetHeight": target_size[1],
     }
 
-    response = httpx.post(f"{BACKEND_URL}/api/generate", json=payload, timeout=90)
+    response = httpx.post(f"{BACKEND_URL}/api/generate", json=payload, timeout=120)
     response.raise_for_status()
     data = response.json()
     image_data_url = data.get("imageDataUrl")
