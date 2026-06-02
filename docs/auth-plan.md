@@ -93,7 +93,7 @@ Authorization: Bearer <supabase_access_token>
 
 Supabase가 관리하는 `auth.users`와 별도로 앱 권한을 위한 `profiles` 테이블을 둡니다.
 
-이 테이블은 **기존 테이블(`generations`, `api_usage`)과 동일하게 Alembic 마이그레이션으로 생성/관리**합니다. `auth.users`에 하드 외래키(FK)를 걸지 않고, `id`에는 Supabase 로그인 유저의 UUID(JWT의 `sub` 값)를 문자열로 저장합니다. 이렇게 하면 스키마 관리가 Alembic 한 곳으로 일관되고, DB 종류(PostgreSQL/SQLite 폴백)에 상관없이 동작합니다.
+이 테이블은 **기존 테이블(`generations`, `api_usage`)과 동일하게 Alembic 마이그레이션으로 생성/관리**합니다. `auth.users`에 하드 외래키(FK)를 걸지 않고, `id`에는 Supabase 로그인 유저의 UUID(JWT의 `sub` 값)를 문자열로 저장합니다. 이렇게 하면 앱 DB 스키마 관리를 Alembic 한 곳으로 일관되게 유지할 수 있습니다. 운영/데모/배포 DB는 PostgreSQL(Supabase) 기준입니다.
 
 ```python
 # backend/app/db/models.py (Alembic이 생성)

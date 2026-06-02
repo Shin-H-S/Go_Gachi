@@ -15,14 +15,19 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.get("/me")
 async def read_me(user: AuthUser = Depends(get_current_user)) -> dict[str, str | None]:
-    """현재 로그인한 사용자의 식별자/이메일/권한을 반환한다.
+    """현재 로그인한 사용자의 식별자/이메일/권한/표시 이름을 반환한다.
 
     Args:
         user: 토큰 검증을 통과한 로그인 사용자.
     Returns:
-        dict: id, email, role.
+        dict: id, email, role, display_name.
     """
-    return {"id": user.id, "email": user.email, "role": user.role}
+    return {
+        "id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "display_name": user.display_name,
+    }
 
 
 @router.get("/me/generations")

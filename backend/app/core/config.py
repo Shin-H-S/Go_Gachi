@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 CONFIG_DIR = ROOT_DIR / "config"
+ALLOW_SQLITE_DATABASE_ENV = "ALLOW_SQLITE_DATABASE"
 
 
 def _load_env_file(env_path: Path) -> None:
@@ -68,8 +69,8 @@ class Settings(BaseModel):
     openai_image_quality: str = "medium"
     max_upload_bytes: int = 50 * 1024 * 1024
 
-    # DB 라우팅용 설정. 운영 이전 시 DATABASE_URL 한 줄만 교체하면 PostgreSQL로 간다.
-    database_url: str = f"sqlite:///{(DEFAULT_DATA_DIR / 'app.db').as_posix()}"
+    # DB 라우팅용 설정. 실제 실행/데모/배포는 PostgreSQL DATABASE_URL을 필수로 받는다.
+    database_url: str = ""
     # data/output/upload 경로는 보통 기본값으로 충분하지만, 테스트·Docker·Cloud Run에서 임시
     # 폴더로 리다이렉트할 수 있게 env override를 남겨둔다.
     data_dir: Path = DEFAULT_DATA_DIR
@@ -106,11 +107,7 @@ def get_settings() -> Settings:
     data_dir = Path(os.getenv("DATA_DIR", str(DEFAULT_DATA_DIR)))
     output_dir = Path(os.getenv("OUTPUT_DIR", str(DEFAULT_OUTPUT_DIR)))
     upload_dir = Path(os.getenv("UPLOAD_DIR", str(DEFAULT_UPLOAD_DIR)))
-    # DB URL 기본값은 data_dir/app.db. 환경변수로 명시하면 Supabase/PostgreSQL로 그대로 전환.
-    database_url = os.getenv(
-        "DATABASE_URL",
-        f"sqlite:///{(data_dir / 'app.db').as_posix()}",
-    )
+    database_url = _database_url_from_env()
 
     return Settings(
         port=int(os.getenv("PORT", "8080")),
@@ -134,3 +131,26 @@ def get_settings() -> Settings:
         supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
         supabase_jwt_secret=os.getenv("SUPABASE_JWT_SECRET", ""),
     )
+
+
+def _database_url_from_env() -> str:
+    """DATABASE_URL을 검증해서 반환한다.
+
+    실제 실행/데모/배포는 PostgreSQL을 기준으로 한다. SQLite는 pytest 격리 테스트처럼
+    명시적으로 허용한 경우에만 사용할 수 있다.
+    """
+    import os
+
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is required. Set a PostgreSQL/Supabase connection string.")
+
+    if database_url.startswith("sqlite"):
+        allow_sqlite = os.getenv(ALLOW_SQLITE_DATABASE_ENV, "").strip().lower()
+        if allow_sqlite not in {"1", "true", "yes"}:
+            raise RuntimeError(
+                "SQLite DATABASE_URL is only allowed for isolated tests. "
+                f"Use PostgreSQL for runtime or set {ALLOW_SQLITE_DATABASE_ENV}=true in tests."
+            )
+
+    return database_url

@@ -26,6 +26,8 @@ class AuthUser:
     id: str
     email: str | None
     role: str
+    # 회원가입 시 입력한 표시 이름. 비어 있을 수 있어 화면에선 email로 폴백한다.
+    display_name: str | None = None
 
 
 def verify_supabase_jwt(token: str) -> dict:
@@ -89,13 +91,19 @@ async def get_current_user(
             detail="토큰에 사용자 식별자(sub)가 없습니다.",
         )
     email = claims.get("email")
+    # 회원가입 시 sign_up options.data.display_name으로 넣은 값이 user_metadata에 따라온다.
+    display_name = claims.get("user_metadata", {}).get("display_name")
 
     # 첫 로그인이면 프로필 생성(role='user'), 이후엔 메타데이터만 갱신하고 role 보존.
     async with async_session_scope() as db:
-        profile = await crud.upsert_profile(db, user_id=user_id, email=email)
+        profile = await crud.upsert_profile(
+            db, user_id=user_id, email=email, display_name=display_name
+        )
         role = profile.role
+        # 마이페이지에서 바뀐 값을 반영하려면 JWT 토큰이 아니라 DB의 최신값을 사용한다.
+        display_name = profile.display_name
 
-    return AuthUser(id=user_id, email=email, role=role)
+    return AuthUser(id=user_id, email=email, role=role, display_name=display_name)
 
 
 async def get_optional_user(

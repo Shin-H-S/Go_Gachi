@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 from backend.app.core import config as runtime_config
 from backend.app.core.presets import get_presets
 from backend.app.core.prompts import PROMPT_VERSION, build_prompt
@@ -57,6 +59,30 @@ def test_load_env_uses_only_root_env(monkeypatch, tmp_path) -> None:
     assert os.environ["APP_ENV"] == "root-env"
     assert os.environ["OPENAI_TEXT_MODEL"] == "gpt-5"
     assert "OPENAI_IMAGE_MODEL" not in os.environ
+
+
+def test_database_url_is_required(monkeypatch) -> None:
+    """실제 실행 환경에서 DATABASE_URL 누락을 조용한 SQLite 폴백으로 넘기지 않는다."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    with pytest.raises(RuntimeError, match="DATABASE_URL is required"):
+        runtime_config._database_url_from_env()
+
+
+def test_sqlite_database_url_requires_explicit_test_flag(monkeypatch) -> None:
+    """SQLite URL은 테스트 격리처럼 명시적으로 허용한 경우에만 통과한다."""
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///tmp/app.db")
+    monkeypatch.delenv("ALLOW_SQLITE_DATABASE", raising=False)
+
+    with pytest.raises(RuntimeError, match="SQLite DATABASE_URL"):
+        runtime_config._database_url_from_env()
+
+
+def test_sqlite_database_url_is_allowed_for_isolated_tests(monkeypatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///tmp/app.db")
+    monkeypatch.setenv("ALLOW_SQLITE_DATABASE", "true")
+
+    assert runtime_config._database_url_from_env() == "sqlite:///tmp/app.db"
 
 
 def test_prompt() -> None:
