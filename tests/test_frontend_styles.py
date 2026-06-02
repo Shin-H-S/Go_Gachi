@@ -1,11 +1,12 @@
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-STYLES_FILE = ROOT_DIR / "frontend" / "styles.py"
+STYLE_WORK_SELECTION_FILE = ROOT_DIR / "frontend" / "style_work_selection.py"
+STYLE_WORK_FORMS_FILE = ROOT_DIR / "frontend" / "style_work_forms.py"
 
 
 def test_radio_indicator_keeps_unselected_circle_white() -> None:
-    styles = STYLES_FILE.read_text(encoding="utf-8")
+    styles = STYLE_WORK_SELECTION_FILE.read_text(encoding="utf-8")
 
     assert 'input[type="radio"]' in styles
     assert 'background-color: #ffffff !important;' in styles
@@ -13,8 +14,15 @@ def test_radio_indicator_keeps_unselected_circle_white() -> None:
 
 
 def test_section_labels_render_at_twenty_pixels() -> None:
-    styles = STYLES_FILE.read_text(encoding="utf-8")
+    styles = STYLE_WORK_FORMS_FILE.read_text(encoding="utf-8")
 
     assert "p.section-label" in styles
     assert "p.detail-choice-label" in styles
     assert "font-size: 20px !important;" in styles
+
+
+def test_segmented_control_grid_does_not_assume_three_presets() -> None:
+    styles = STYLE_WORK_SELECTION_FILE.read_text(encoding="utf-8")
+
+    assert "repeat(3" not in styles
+    assert "auto-fit" in styles

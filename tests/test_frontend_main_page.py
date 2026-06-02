@@ -1,0 +1,43 @@
+import ast
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+FRONTEND_APP = ROOT_DIR / "frontend" / "app.py"
+FRONTEND_MAIN_PAGE = ROOT_DIR / "frontend" / "pages" / "main.py"
+FRONTEND_ROUTER = ROOT_DIR / "frontend" / "router.py"
+STYLE_MAIN_LAYOUT_FILE = ROOT_DIR / "frontend" / "style_main_layout.py"
+STYLE_MAIN_VISUAL_FILE = ROOT_DIR / "frontend" / "style_main_visual.py"
+
+
+def test_main_page_module_exposes_route_and_copy() -> None:
+    app_source = FRONTEND_APP.read_text(encoding="utf-8")
+    main_source = FRONTEND_MAIN_PAGE.read_text(encoding="utf-8")
+    router_source = FRONTEND_ROUTER.read_text(encoding="utf-8")
+    tree = ast.parse(main_source)
+    defined_functions = {
+        node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
+    }
+
+    assert "render_main_page" in defined_functions
+    assert "get_current_page" in router_source
+    assert "st.query_params" in router_source
+    assert 'href="?page=work"' in main_source
+    assert 'target="_self"' in main_source
+    assert 'st.session_state.get("current_page", "main")' not in app_source
+    assert "사장님의 메뉴 사진을" in main_source
+    assert "광고 이미지로 바꾸는" in main_source
+    assert "무료로 시작하기" in main_source
+
+
+def test_main_page_styles_match_linktree_inspired_hero() -> None:
+    styles = (
+        STYLE_MAIN_LAYOUT_FILE.read_text(encoding="utf-8")
+        + STYLE_MAIN_VISUAL_FILE.read_text(encoding="utf-8")
+    )
+
+    assert ".main-landing" in styles
+    assert ".landing-nav" in styles
+    assert ".hero-title" in styles
+    assert ".blue-slide-track" in styles
+    assert "@keyframes blue-panel-slide" in styles
+    assert "#d8ff00" in styles
