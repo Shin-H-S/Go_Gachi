@@ -1,8 +1,16 @@
+import sys
+from pathlib import Path
+
 import streamlit as st
-from pages.main import render_main_page
-from pages.work import render_work_page
-from router import get_current_page, init_session_state
-from styles import add_css
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from frontend.core.router import get_current_page, init_session_state  # noqa: E402
+from frontend.pages.main import render_main_page  # noqa: E402
+from frontend.pages.work import render_work_page  # noqa: E402
+from frontend.styles import add_css  # noqa: E402
 
 st.set_page_config(
     page_title="Go Gachi",

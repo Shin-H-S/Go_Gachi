@@ -5,13 +5,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-FRONTEND_DIR = ROOT_DIR / "frontend"
 
 
 def import_frontend_module(module_name: str):
-    frontend_path = str(FRONTEND_DIR)
-    if frontend_path not in sys.path:
-        sys.path.insert(0, frontend_path)
+    root_path = str(ROOT_DIR)
+    if root_path not in sys.path:
+        sys.path.insert(0, root_path)
 
     return importlib.import_module(module_name)
 
@@ -23,7 +22,7 @@ def first_format_and_detail(format_options):
 
 
 def test_router_normalizes_query_param_page_names() -> None:
-    router = import_frontend_module("router")
+    router = import_frontend_module("frontend.core.router")
 
     assert router.normalize_page_name("main") == "main"
     assert router.normalize_page_name("work") == "work"
@@ -34,7 +33,7 @@ def test_router_normalizes_query_param_page_names() -> None:
 
 
 def test_router_navigation_writes_normalized_page_to_query_params(monkeypatch) -> None:
-    router = import_frontend_module("router")
+    router = import_frontend_module("frontend.core.router")
     fake_st = SimpleNamespace(query_params={})
     monkeypatch.setattr(router, "st", fake_st)
 
@@ -48,7 +47,7 @@ def test_router_navigation_writes_normalized_page_to_query_params(monkeypatch) -
 
 
 def test_init_session_state_sets_default_selected_channel(monkeypatch) -> None:
-    router = import_frontend_module("router")
+    router = import_frontend_module("frontend.core.router")
     fake_st = SimpleNamespace(session_state={})
     monkeypatch.setattr(router, "st", fake_st)
 
@@ -58,7 +57,7 @@ def test_init_session_state_sets_default_selected_channel(monkeypatch) -> None:
 
 
 def test_selected_channel_falls_back_to_first_configured_preset(monkeypatch) -> None:
-    work_state = import_frontend_module("work_state")
+    work_state = import_frontend_module("frontend.work.state")
     fake_format_options = {
         "테스트 채널": {"value": "test_channel", "details": []},
         "두번째 채널": {"value": "second_channel", "details": []},
@@ -74,7 +73,7 @@ def test_selected_channel_falls_back_to_first_configured_preset(monkeypatch) -> 
 
 
 def test_result_context_uses_trimmed_prompt_upload_hash_and_selected_preset() -> None:
-    work_state = import_frontend_module("work_state")
+    work_state = import_frontend_module("frontend.work.state")
     format_label, detail = first_format_and_detail(work_state.FORMAT_OPTIONS)
     image_bytes = b"uploaded image"
     uploaded_file = SimpleNamespace(getvalue=lambda: image_bytes)
@@ -97,7 +96,7 @@ def test_result_context_uses_trimmed_prompt_upload_hash_and_selected_preset() ->
 
 
 def test_result_context_requires_upload_and_prompt() -> None:
-    work_state = import_frontend_module("work_state")
+    work_state = import_frontend_module("frontend.work.state")
     format_label, detail = first_format_and_detail(work_state.FORMAT_OPTIONS)
     uploaded_file = SimpleNamespace(getvalue=lambda: b"uploaded image")
 
@@ -109,7 +108,7 @@ def test_result_context_requires_upload_and_prompt() -> None:
 
 
 def test_sync_result_state_clears_stale_generated_result(monkeypatch) -> None:
-    work_state = import_frontend_module("work_state")
+    work_state = import_frontend_module("frontend.work.state")
     fake_st = SimpleNamespace(
         session_state={
             "result_bytes": b"old-result",
@@ -125,7 +124,7 @@ def test_sync_result_state_clears_stale_generated_result(monkeypatch) -> None:
 
 
 def test_sync_result_state_keeps_matching_generated_result(monkeypatch) -> None:
-    work_state = import_frontend_module("work_state")
+    work_state = import_frontend_module("frontend.work.state")
     result_context = {"prompt": "same"}
     fake_st = SimpleNamespace(
         session_state={

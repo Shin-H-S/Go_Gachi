@@ -4,9 +4,9 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[1]
 FRONTEND_APP = ROOT_DIR / "frontend" / "app.py"
 FRONTEND_MAIN_PAGE = ROOT_DIR / "frontend" / "pages" / "main.py"
-FRONTEND_ROUTER = ROOT_DIR / "frontend" / "router.py"
-STYLE_MAIN_LAYOUT_FILE = ROOT_DIR / "frontend" / "style_main_layout.py"
-STYLE_MAIN_VISUAL_FILE = ROOT_DIR / "frontend" / "style_main_visual.py"
+FRONTEND_ROUTER = ROOT_DIR / "frontend" / "core" / "router.py"
+STYLE_MAIN_LAYOUT_FILE = ROOT_DIR / "frontend" / "css" / "main_layout.py"
+STYLE_MAIN_VISUAL_FILE = ROOT_DIR / "frontend" / "css" / "main_visual.py"
 
 
 def test_main_page_module_exposes_route_and_copy() -> None:

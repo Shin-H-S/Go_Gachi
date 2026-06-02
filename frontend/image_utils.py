@@ -1,15 +1,6 @@
-try:
-    from frontend.image_data import bytes_to_data_url
-    from frontend.mock_banner import create_mock_banner
-    from frontend.preview_canvas import make_preview_canvas
-except ModuleNotFoundError:
-    from image_data import bytes_to_data_url
-    from mock_banner import create_mock_banner
-    from preview_canvas import make_preview_canvas
+import sys
 
+from frontend.media import image_utils as _image_utils
 
-__all__ = [
-    "bytes_to_data_url",
-    "create_mock_banner",
-    "make_preview_canvas",
-]
+sys.modules[__name__] = _image_utils
+sys.modules["frontend"].image_utils = _image_utils

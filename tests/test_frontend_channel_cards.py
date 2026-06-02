@@ -7,9 +7,8 @@ from types import SimpleNamespace
 from PIL import Image
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-FRONTEND_DIR = ROOT_DIR / "frontend"
-FRONTEND_WORK_COMPONENTS = ROOT_DIR / "frontend" / "work_components.py"
-STYLE_WORK_CHANNELS_FILE = ROOT_DIR / "frontend" / "style_work_channels.py"
+FRONTEND_WORK_COMPONENTS = ROOT_DIR / "frontend" / "work" / "components.py"
+STYLE_WORK_CHANNELS_FILE = ROOT_DIR / "frontend" / "css" / "work_channels.py"
 
 
 class FakeColumn:
@@ -21,9 +20,9 @@ class FakeColumn:
 
 
 def import_frontend_module(module_name: str):
-    frontend_path = str(FRONTEND_DIR)
-    if frontend_path not in sys.path:
-        sys.path.insert(0, frontend_path)
+    root_path = str(ROOT_DIR)
+    if root_path not in sys.path:
+        sys.path.insert(0, root_path)
 
     return importlib.import_module(module_name)
 
@@ -73,7 +72,7 @@ def test_channel_tabs_render_logo_card_media() -> None:
 
 
 def test_channel_tabs_create_one_column_per_configured_preset(monkeypatch) -> None:
-    work_components = import_frontend_module("work_components")
+    work_components = import_frontend_module("frontend.work.components")
     fake_format_options = {
         "첫 채널": {"value": "first_channel", "details": []},
         "두번째 채널": {"value": "second_channel", "details": []},

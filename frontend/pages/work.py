@@ -1,11 +1,24 @@
 import streamlit as st
-from upload_utils import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_primary_uploaded_file
-from work_components import render_channel_tabs, render_generation_lock_css, render_header
-from work_generation import handle_generation_request
-from work_preview import render_image_preview, render_preview_shell
-from work_state import build_result_context, get_selected_channel, sync_result_state
 
-from config import FORMAT_OPTIONS, format_size_label, get_detail_labels, get_detail_size
+from frontend.core.config import (
+    FORMAT_OPTIONS,
+    format_size_label,
+    get_detail_labels,
+    get_detail_size,
+)
+from frontend.work.components import (
+    render_channel_tabs,
+    render_generation_lock_css,
+    render_header,
+)
+from frontend.work.generation import handle_generation_request
+from frontend.work.preview import render_image_preview, render_preview_shell
+from frontend.work.state import build_result_context, get_selected_channel, sync_result_state
+from frontend.work.uploads import (
+    UPLOAD_FILE_TYPES,
+    UPLOAD_HELP_TEXT,
+    get_primary_uploaded_file,
+)
 
 
 def render_work_page() -> None:

@@ -1,8 +1,8 @@
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-STYLE_WORK_SELECTION_FILE = ROOT_DIR / "frontend" / "style_work_selection.py"
-STYLE_WORK_FORMS_FILE = ROOT_DIR / "frontend" / "style_work_forms.py"
+STYLE_WORK_SELECTION_FILE = ROOT_DIR / "frontend" / "css" / "work_selection.py"
+STYLE_WORK_FORMS_FILE = ROOT_DIR / "frontend" / "css" / "work_forms.py"
 
 
 def test_radio_indicator_keeps_unselected_circle_white() -> None:

@@ -1,9 +1,9 @@
 from html import escape
 
 import streamlit as st
-from image_data import bytes_to_data_url
 
-from config import CHANNEL_SLUGS, FORMAT_OPTIONS, get_existing_channel_asset_path
+from frontend.core.config import CHANNEL_SLUGS, FORMAT_OPTIONS, get_existing_channel_asset_path
+from frontend.media.image_data import bytes_to_data_url
 
 
 def render_channel_tabs(selected_label: str) -> None:
