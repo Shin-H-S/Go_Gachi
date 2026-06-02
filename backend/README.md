@@ -80,9 +80,10 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 
 ## Database / Migrations
 
+- 운영/데모/배포 DB는 PostgreSQL(Supabase) 기준입니다.
 - 운영·공유 DB 스키마는 Alembic으로 관리합니다.
 - 새 DB를 연결하거나 마이그레이션이 추가되면 백엔드 실행 전에 `uv run alembic upgrade head`를 적용합니다.
-- `backend.app.db.database.async_init_db()`는 테스트와 임시 개발 DB 보조용입니다. 앱 시작 시 운영 테이블을 자동 생성하는 용도로 사용하지 않습니다.
+- `backend.app.db.database.async_init_db()`는 pytest 격리 테스트용 보조 함수입니다. 앱 시작 시 운영 테이블을 자동 생성하는 용도로 사용하지 않습니다.
 
 ## Key Files
 
@@ -93,7 +94,12 @@ backend/
   app/core/config.py          환경변수 기반 런타임 설정
   app/core/presets.py         config/presets.json 로딩
   app/core/prompts.py         이미지 편집 프롬프트 조립
-  app/services/image_edit.py  이미지 검증, 캐시, OpenAI 호출 흐름
+  app/services/image_edit.py          기존 import 호환용 이미지 생성 진입점
+  app/services/generation_service.py  이미지 생성 전체 흐름 조립
+  app/services/image_validation.py    업로드 이미지 검증
+  app/services/image_processing.py    OpenAI 입력 정규화와 최종 리사이즈
+  app/services/openai_images.py       OpenAI Images API 호출
+  app/services/image_types.py         이미지 처리 공통 타입
   app/db/                     생성 기록, 캐시, 사용량 추적 DB 계층
 ```
 
@@ -101,4 +107,4 @@ backend/
 
 - 실제 API 키는 저장소에 커밋하지 않습니다.
 - GCP 배포 시 `OPENAI_API_KEY`는 Secret Manager를 통해 주입합니다.
-- 기본 DB는 SQLite지만, 운영 저장소가 필요하면 Cloud SQL/PostgreSQL 전환을 고려합니다.
+- `DATABASE_URL`은 PostgreSQL 연결 문자열로 설정해야 합니다. SQLite는 실제 실행용 DB로 사용하지 않습니다.
