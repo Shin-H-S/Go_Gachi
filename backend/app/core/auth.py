@@ -5,6 +5,7 @@ profiles 테이블에서 앱 권한(role)을 확인한다. SUPABASE_JWT_SECRET�
 아직 인증이 설정되지 않은 것으로 보고 보호 라우트에서 503을 돌려준다(현 단계 호환).
 """
 
+import logging
 from dataclasses import dataclass
 
 import jwt
@@ -14,6 +15,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from backend.app.core.config import get_settings
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
+
+logger = logging.getLogger(__name__)
 
 # auto_error=False: 토큰이 없어도 여기서 바로 401을 던지지 않고 의존성에서 직접 처리한다.
 _bearer = HTTPBearer(auto_error=False)
@@ -49,9 +52,10 @@ def verify_supabase_jwt(token: str) -> dict:
             audience="authenticated",
         )
     except jwt.PyJWTError as exc:
+        logger.warning("invalid supabase jwt: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"유효하지 않은 인증 토큰입니다: {exc}",
+            detail="유효하지 않은 인증 토큰입니다.",
         ) from exc
 
 
