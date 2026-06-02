@@ -27,6 +27,14 @@ def test_main_page_module_exposes_route_and_copy() -> None:
     assert "사장님의 메뉴 사진을" in main_source
     assert "광고 이미지로 바꾸는" in main_source
     assert "무료로 시작하기" in main_source
+    assert "landing-start-link" in main_source
+    assert "landing-url-chip" not in main_source
+    assert "go-gachi.ai/우리카페" not in main_source
+    assert "landing-menu" not in main_source
+    assert "서비스" not in main_source
+    assert "템플릿" not in main_source
+    assert "활용법" not in main_source
+    assert "요금" not in main_source
 
 
 def test_main_page_styles_match_linktree_inspired_hero() -> None:
@@ -41,3 +49,15 @@ def test_main_page_styles_match_linktree_inspired_hero() -> None:
     assert ".blue-slide-track" in styles
     assert "@keyframes blue-panel-slide" in styles
     assert "#d8ff00" in styles
+    assert ".landing-login {" in styles
+    assert ".landing-signup {" in styles
+    assert ".landing-login:hover" in styles
+    assert ".landing-signup:hover" in styles
+    assert "text-decoration: none !important;" in styles
+    assert ".landing-login {\n    background: #eff1ec;\n    color: #0b0e14 !important;" in styles
+    assert (
+        ".landing-signup {\n"
+        "    border-radius: 999px;\n"
+        "    background: #1e2433;\n"
+        "    color: #ffffff !important;"
+    ) in styles

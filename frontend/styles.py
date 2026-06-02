@@ -1,9 +1,11 @@
 import streamlit as st
 
 from frontend.css.base import BASE_CSS
+from frontend.css.login import LOGIN_CSS
 from frontend.css.main_layout import MAIN_LAYOUT_CSS
 from frontend.css.main_visual import MAIN_VISUAL_CSS
 from frontend.css.responsive import RESPONSIVE_CSS
+from frontend.css.signup import SIGNUP_CSS
 from frontend.css.work_channels import WORK_CHANNELS_CSS
 from frontend.css.work_controls import WORK_CONTROLS_CSS
 from frontend.css.work_forms import WORK_FORMS_CSS
@@ -13,8 +15,10 @@ from frontend.css.work_upload import WORK_UPLOAD_CSS
 
 CSS_PARTS = [
     BASE_CSS,
+    LOGIN_CSS,
     MAIN_LAYOUT_CSS,
     MAIN_VISUAL_CSS,
+    SIGNUP_CSS,
     WORK_FORMS_CSS,
     WORK_PREVIEW_CSS,
     WORK_CONTROLS_CSS,

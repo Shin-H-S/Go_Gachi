@@ -43,7 +43,11 @@ def test_router_navigation_writes_normalized_page_to_query_params(monkeypatch) -
 
     router.navigate_to("login")
 
-    assert fake_st.query_params["page"] == "main"
+    assert fake_st.query_params["page"] == "login"
+
+    router.navigate_to("signup")
+
+    assert fake_st.query_params["page"] == "signup"
 
 
 def test_init_session_state_sets_default_selected_channel(monkeypatch) -> None:
