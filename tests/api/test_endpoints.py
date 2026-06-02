@@ -1,7 +1,7 @@
 """/api/* 엔드포인트 e2e 테스트.
 
-테스트 모드는 mock provider 기본. 캐시 경로(openai 분기)는 마지막 케이스에서
-monkeypatch로 _call_openai_edit를 가짜 응답으로 바꿔 확인한다.
+테스트 모드는 mock provider 기본. 캐시 경로(openai 분기)는 일부 케이스에서
+generation_service.call_openai_edit를 가짜 응답으로 바꿔 확인한다.
 """
 
 import asyncio
@@ -23,7 +23,7 @@ from backend.app.core.presets import default_preset
 from backend.app.db.database import async_init_db, async_session_scope
 from backend.app.db.models import ApiUsage, Generation
 from backend.app.main import IMAGE_GENERATION_UNAVAILABLE_MESSAGE, app
-from backend.app.services import image_edit
+from backend.app.services import generation_service, image_edit, openai_images
 from backend.app.services.costs import CostSnapshot
 
 # 1x1 투명 PNG (base64). multipart 업로드 없이 data URL 형식만 검증할 때 쓴다.
@@ -279,7 +279,7 @@ def test_generate_returns_503_when_provider_fails(
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
         raise RuntimeError("provider exploded")
 
-    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
 
     response = client.post(
@@ -309,7 +309,7 @@ def test_generate_returns_503_when_network_fails(
         async def post(self, *args, **kwargs):  # noqa: ANN003, ARG002, ANN202
             raise httpx.ConnectError("network down")
 
-    monkeypatch.setattr(image_edit.httpx, "AsyncClient", _BoomClient)
+    monkeypatch.setattr(openai_images.httpx, "AsyncClient", _BoomClient)
 
     force_openai_mode(monkeypatch)
 
@@ -346,7 +346,7 @@ def test_generate_returns_503_when_openai_result_is_empty(
         async def post(self, *args, **kwargs):  # noqa: ANN003, ARG002, ANN202
             return _EmptyDataResponse()
 
-    monkeypatch.setattr(image_edit.httpx, "AsyncClient", _EmptyDataClient)
+    monkeypatch.setattr(openai_images.httpx, "AsyncClient", _EmptyDataClient)
     force_openai_mode(monkeypatch)
 
     response = client.post(
@@ -366,7 +366,7 @@ def test_generate_returns_503_when_openai_result_base64_is_invalid(
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
         return "not-valid-base64!"
 
-    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
 
     response = client.post(
@@ -387,7 +387,7 @@ def test_generate_returns_503_when_openai_result_is_not_image(
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
         return fake_b64
 
-    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
 
     response = client.post(
@@ -416,7 +416,7 @@ def test_generate_normalizes_uploaded_image_before_openai(
         captured["uploaded"] = kwargs["uploaded"]
         return TINY_PNG_B64
 
-    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
 
     response = client.post(
@@ -447,7 +447,7 @@ def test_generate_hides_prompt_in_production(
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
         return fake_b64
 
-    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     real_settings = force_openai_mode(monkeypatch)
     monkeypatch.setattr(real_settings, "app_env", "production")
 
@@ -471,7 +471,7 @@ def test_generate_openai_result_matches_target_size(
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
         return fake_b64
 
-    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
 
     response = client.post(
@@ -504,7 +504,7 @@ def test_generate_exposes_prompt_in_local(
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
         return fake_b64
 
-    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     real_settings = force_openai_mode(monkeypatch)
     # 기본 app_env는 "local". production 조건을 잘못 뒤집어도 이 테스트가 잡는다.
     assert real_settings.app_env != "production"
@@ -523,13 +523,13 @@ def test_generate_exposes_prompt_in_local(
 
 def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> None:
     """같은 입력으로 두 번 호출하면 두 번째는 캐시 hit(`cached=True`)이 되어야 한다."""
-    # OpenAI 실호출은 막고, 결정적인 PNG b64를 반환하도록 _call_openai_edit를 가짜로 교체.
+    # OpenAI 실호출은 막고, 결정적인 PNG b64를 반환하도록 call_openai_edit를 가짜로 교체.
     fake_b64 = TINY_PNG_B64
 
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
         return fake_b64
 
-    monkeypatch.setattr(image_edit, "_call_openai_edit", _fake_call)
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     real_settings = force_openai_mode(monkeypatch)
 
     preset = default_preset()
