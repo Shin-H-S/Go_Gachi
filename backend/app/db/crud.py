@@ -9,11 +9,15 @@ import re
 from pathlib import Path
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.db.models import ApiUsage, Generation
+from backend.app.db.models import ApiUsage, Generation, Profile
 
 _WHITESPACE_RE = re.compile(r"\s+")
+
+# 프로필 권한으로 허용되는 값. DB의 CHECK 제약(ck_profiles_role)과 반드시 일치시킨다.
+VALID_ROLES = ("user", "admin")
 
 
 def image_sha256(file_bytes: bytes) -> str:
@@ -113,6 +117,7 @@ async def create_pending_generation(
     model: str,
     original_path: str | None,
     prompt: str | None,
+    user_id: str | None = None,
 ) -> Generation:
     """OpenAI 호출 직전, 'pending' 상태로 행을 먼저 만든다.
 
@@ -129,11 +134,13 @@ async def create_pending_generation(
         model: 사용할 OpenAI 모델 ID.
         original_path: 원본 사진 저장 경로(있으면 문자열).
         prompt: OpenAI에 보낼 프롬프트 본문.
+        user_id: 요청한 로그인 사용자의 UUID(비로그인이면 None).
     Returns:
         새로 만들어진 pending Generation 행.
     """
     generation = Generation(
         request_id=request_id,
+        user_id=user_id,
         image_hash=image_hash,
         preset_id=preset_id,
         instruction_hash=instruction_hash,
@@ -215,6 +222,7 @@ async def create_cached_generation(
     output_path: str | None,
     image_url: str | None,
     prompt: str | None,
+    user_id: str | None = None,
 ) -> Generation:
     """캐시 hit 요청도 별도 'cached' 행으로 남겨 감사·통계 로그를 유지한다.
 
@@ -234,11 +242,13 @@ async def create_cached_generation(
         output_path: 원본 결과 파일 경로.
         image_url: 원본 결과 URL(없을 수 있음).
         prompt: 원본 행의 프롬프트 본문.
+        user_id: 이번 캐시 hit을 요청한 로그인 사용자의 UUID(비로그인이면 None).
     Returns:
         새로 만들어진 cached Generation 행.
     """
     generation = Generation(
         request_id=request_id,
+        user_id=user_id,
         image_hash=image_hash,
         preset_id=preset_id,
         instruction_hash=instruction_hash,
@@ -315,3 +325,124 @@ async def usage_summary(db: AsyncSession) -> dict[str, float | int]:
         "generation_count": int(generation_count),
         "cached_count": int(cached_count),
     }
+
+
+async def get_profile(db: AsyncSession, user_id: str) -> Profile | None:
+    """유저 UUID로 프로필 1건을 조회한다.
+
+    Args:
+        db: 활성 DB 세션.
+        user_id: Supabase 유저 UUID(JWT sub).
+    Returns:
+        Profile 행 또는 없으면 None.
+    """
+    result = await db.execute(select(Profile).where(Profile.id == user_id))
+    return result.scalar_one_or_none()
+
+
+async def upsert_profile(
+    db: AsyncSession,
+    *,
+    user_id: str,
+    email: str | None = None,
+    display_name: str | None = None,
+) -> Profile:
+    """프로필을 없으면 role='user'로 생성하고, 있으면 이메일/이름만 갱신한다(원자적 upsert).
+
+    첫 로그인 시 자동 프로필 생성을 담당한다. role은 여기서 건드리지 않아
+    관리자 승격 값이 덮어써지지 않는다.
+
+    동시성 주의: 신규 유저의 첫 요청이 동시에 2개 들어오면 select→insert 방식은
+    같은 PK로 둘 다 insert를 시도해 충돌(500)이 날 수 있다. 이를 막기 위해 Postgres에서는
+    INSERT ... ON CONFLICT로 DB가 한 번에 원자적으로 처리한다. SQLite는 쓰기가 직렬화되어
+    경쟁이 없으므로 기존 select→insert 경로를 그대로 쓴다.
+
+    Args:
+        db: 활성 DB 세션.
+        user_id: Supabase 유저 UUID(JWT sub).
+        email: 토큰에서 받은 이메일(있으면 갱신).
+        display_name: 표시 이름(있으면 갱신).
+    Returns:
+        생성 또는 갱신된 Profile 행.
+    """
+    dialect = db.get_bind().dialect.name
+
+    if dialect == "postgresql":
+        # 신규면 role='user'로 insert, 이미 있으면 role은 보존하고 메타데이터만 갱신.
+        stmt = pg_insert(Profile).values(
+            id=user_id, email=email, display_name=display_name, role="user"
+        )
+        updates: dict[str, object] = {}
+        if email is not None:
+            updates["email"] = stmt.excluded.email
+        if display_name is not None:
+            updates["display_name"] = stmt.excluded.display_name
+        if updates:
+            stmt = stmt.on_conflict_do_update(index_elements=["id"], set_=updates)
+        else:
+            # 갱신할 메타데이터가 없으면 충돌 시 아무것도 하지 않는다(기존 행 보존).
+            stmt = stmt.on_conflict_do_nothing(index_elements=["id"])
+        await db.execute(stmt)
+        # ON CONFLICT 직후 행은 반드시 존재한다.
+        profile = await get_profile(db, user_id)
+        assert profile is not None  # noqa: S101 - upsert 직후 불변식 보장.
+        return profile
+
+    # SQLite 등: 쓰기가 직렬화되어 동시 경쟁이 없으므로 select→insert로 충분하다.
+    profile = await get_profile(db, user_id)
+    if profile is None:
+        profile = Profile(id=user_id, email=email, display_name=display_name, role="user")
+        db.add(profile)
+        return profile
+
+    if email is not None:
+        profile.email = email
+    if display_name is not None:
+        profile.display_name = display_name
+    return profile
+
+
+async def set_profile_role(db: AsyncSession, user_id: str, role: str) -> Profile | None:
+    """프로필의 권한(role)을 변경한다 (관리자 승격/강등용).
+
+    DB의 CHECK 제약에 닿기 전에 앱 레벨에서도 허용값을 검증해, 잘못된 role이
+    의도치 않게 들어오는 것을 명확한 에러로 막는다(2겹 방어).
+
+    Args:
+        db: 활성 DB 세션.
+        user_id: 대상 유저 UUID.
+        role: 새 권한 값('user' 또는 'admin').
+    Returns:
+        변경된 Profile 행, 대상이 없으면 None.
+    Raises:
+        ValueError: role이 허용값(user/admin)이 아닐 때.
+    """
+    if role not in VALID_ROLES:
+        raise ValueError(f"허용되지 않은 role입니다: {role!r} (가능: {VALID_ROLES})")
+    profile = await get_profile(db, user_id)
+    if profile is None:
+        return None
+    profile.role = role
+    return profile
+
+
+async def list_user_generations(
+    db: AsyncSession, user_id: str, *, limit: int = 50
+) -> list[Generation]:
+    """특정 사용자가 만든 생성 기록을 최신순으로 조회한다 ("내 작업 기록").
+
+    Args:
+        db: 활성 DB 세션.
+        user_id: 조회할 사용자의 UUID.
+        limit: 최대 반환 개수(기본 50).
+    Returns:
+        최신순으로 정렬된 Generation 리스트(없으면 빈 리스트).
+    """
+    stmt = (
+        select(Generation)
+        .where(Generation.user_id == user_id)
+        .order_by(Generation.created_at.desc(), Generation.id.desc())
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
