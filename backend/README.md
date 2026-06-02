@@ -94,7 +94,12 @@ backend/
   app/core/config.py          환경변수 기반 런타임 설정
   app/core/presets.py         config/presets.json 로딩
   app/core/prompts.py         이미지 편집 프롬프트 조립
-  app/services/image_edit.py  이미지 검증, 캐시, OpenAI 호출 흐름
+  app/services/image_edit.py          기존 import 호환용 이미지 생성 진입점
+  app/services/generation_service.py  이미지 생성 전체 흐름 조립
+  app/services/image_validation.py    업로드 이미지 검증
+  app/services/image_processing.py    OpenAI 입력 정규화와 최종 리사이즈
+  app/services/openai_images.py       OpenAI Images API 호출
+  app/services/image_types.py         이미지 처리 공통 타입
   app/db/                     생성 기록, 캐시, 사용량 추적 DB 계층
 ```
 
