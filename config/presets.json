@@ -101,7 +101,7 @@
         "label": "할인/이벤트 이미지",
         "width": 1280,
         "height": 960,
-        "prompt_hint": "Create an event-ready promotional image optimized for Danggeun posts. Keep the product central and easy to recognize while creating a brighter and more attention-catching composition suitable for local promotions. Preserve clean space and maintain approachable local-community visual quality."
+        "prompt_hint": "Create an event-ready promotional image optimized for Danggeun posts. Keep the product central and easy to recognize while creating a brighter and more attention-catching composition suitable for local promotions or seasonal offer campaigns. Preserve clean space and maintain approachable local-community visual quality."
       }
     ]
   }
