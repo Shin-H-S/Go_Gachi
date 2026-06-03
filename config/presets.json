@@ -28,7 +28,7 @@
         "label": "스토리 이미지",
         "width": 1080,
         "height": 1920,
-        "prompt_hint": "Optimize composition for a 9:16 Instagram Story layout. Position the product near the lower third while maintaining full product visibility and balanced composition. Preserve generous upper negative space and sufficient surrounding space for immersive vertical storytelling. Create a cohesive premium Korean Instagram-style environment with realistic spatial depth, natural scene continuity, and seamless environmental integration. Build atmosphere through environmental composition and realistic spatial relationships. Avoid flat cutout appearance, isolated object placement, cluttered backgrounds, unfinished scenes, excessive decoration, and full-screen object filling while maintaining a stable story promotional layout."
+        "prompt_hint": "Optimize composition for a 9:16 Instagram Story layout. Position the product near the lower third while maintaining full product visibility and balanced composition. Preserve generous upper negative space and sufficient surrounding space for immersive vertical storytelling, including later story stickers or text. Create a cohesive premium Korean Instagram-style environment with realistic spatial depth, natural scene continuity, and seamless environmental integration. Build atmosphere through environmental composition and realistic spatial relationships. Avoid flat cutout appearance, isolated object placement, cluttered backgrounds, unfinished scenes, excessive decoration, and full-screen object filling while maintaining a stable story promotional layout."
       }
     ]
   },
