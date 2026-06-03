@@ -1,26 +1,34 @@
-"""저장된 결과 파일 → 외부에서 접근 가능한 정적 URL 변환.
+"""저장된 결과 파일 경로를 프론트가 쓸 수 있는 정적 경로로 변환한다.
 
-지금은 로컬 ``/outputs`` 정적 마운트를 기준으로 URL을 만든다.
-GCS / signed URL 등 다른 백엔드로 옮길 때 이 모듈만 교체하면 된다.
+백엔드는 ``/outputs/result.png`` 같은 루트 상대 경로만 돌려주고,
+프론트는 환경별 backend origin을 직접 붙여 사용한다. 그래서 응답에는
+local/VM/Cloud Run 호스트 같은 환경 의존 값을 박지 않는다.
 """
 
 from pathlib import Path
 
-from backend.app.core.config import Settings
 
-
-def public_output_url(settings: Settings, output_path: Path | str | None) -> str | None:
-    """저장된 결과 파일 경로를 브라우저에서 접근 가능한 ``/outputs`` URL로 변환한다.
+def public_output_url(output_path: Path | str | None) -> str | None:
+    """저장된 결과 파일의 ``/outputs`` 루트 상대 경로를 만든다.
 
     Args:
-        settings: ``base_url``을 참조하기 위한 런타임 설정.
-        output_path: 결과 파일의 경로. ``None`` 또는 빈 값이면 URL을 만들 수 없다.
+        output_path: 저장된 결과 파일 경로. ``None``이거나 파일명이 비면 ``None``.
     Returns:
-        ``{base_url}/outputs/{filename}`` 형태의 URL, 또는 ``None``.
+        ``/outputs/{filename}`` 또는 ``None``.
     """
     if output_path is None:
         return None
     filename = Path(output_path).name
     if not filename:
         return None
-    return f"{settings.base_url}/outputs/{filename}"
+    return f"/outputs/{filename}"
+
+
+def public_output_url_if_exists(output_path: Path | str | None) -> str | None:
+    """Return ``/outputs`` path only when the stored output file still exists."""
+    if output_path is None:
+        return None
+    path = Path(output_path)
+    if not path.is_file():
+        return None
+    return public_output_url(path)

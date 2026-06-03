@@ -37,7 +37,7 @@ app.include_router(auth_router)
 if get_settings().app_env != "production":
     app.include_router(internal_router)
 
-# 생성된 이미지를 image_url(http) 형태로 프론트에 내려주기 위해 /outputs를 정적 파일로 노출한다.
+# 생성된 이미지를 /outputs/... 경로로 프론트에 내려주기 위해 outputs 폴더를 정적 파일로 노출한다.
 # 운영(Cloud Run) 환경에서는 컨테이너 디스크가 휘발성이므로 추후 GCS URL로 대체하는 것이 권장된다.
 _static_output_dir = get_settings().output_dir
 _static_output_dir.mkdir(parents=True, exist_ok=True)

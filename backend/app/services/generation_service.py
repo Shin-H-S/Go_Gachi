@@ -148,10 +148,8 @@ async def edit_image(
         cached_path = Path(cached_snapshot["output_path"])
         if await asyncio.to_thread(cached_path.exists):
             image_data_url = await _file_to_data_url(cached_path)
-            # 응답에는 현재 BASE_URL을 기준으로 매번 새로 만든 URL을 내려준다.
-            # DB에 절대 URL을 저장하면 BASE_URL이 바뀔 때 옛 기록이 깨지므로,
-            # 로컬 스토리지 단계에서는 DB에 image_url을 채우지 않는다.
-            image_url = public_output_url(settings, cached_path)
+            # DB에는 환경별 호스트를 저장하지 않고, 응답에만 /outputs/... 경로를 만든다.
+            image_url = public_output_url(cached_path)
             request_id = _new_request_id()
             async with async_session_scope() as db:
                 await crud.create_cached_generation(
@@ -263,9 +261,9 @@ async def edit_image(
         raise RuntimeError("이미지 API 응답 이미지를 처리하지 못했습니다.") from exc
 
     # 4) 성공: 파일 저장 → DB success 갱신 → 사용량 기록.
-    # 응답에는 현재 BASE_URL 기준으로 만든 URL을 함께 내려준다.
-    # 로컬 스토리지 단계에서는 DB에 절대 URL을 저장하지 않는다(BASE_URL 변경 시 옛 기록 보호).
-    image_url = public_output_url(settings, output_path)
+    # 응답에는 /outputs/... 경로를 함께 내려준다.
+    # 로컬 스토리지 단계에서는 DB에 환경별 절대 URL을 저장하지 않는다.
+    image_url = public_output_url(output_path)
     async with async_session_scope() as db:
         await crud.mark_generation_success(
             db,

@@ -18,8 +18,10 @@ from PIL import Image
 from sqlalchemy import func, select
 
 from backend.app.api import internal
+from backend.app.core.auth import AuthUser, get_current_user
 from backend.app.core.config import Settings, get_settings
 from backend.app.core.presets import default_preset
+from backend.app.db import crud
 from backend.app.db.database import async_init_db, async_session_scope
 from backend.app.db.models import ApiUsage, Generation
 from backend.app.main import IMAGE_GENERATION_UNAVAILABLE_MESSAGE, app
@@ -149,6 +151,7 @@ def test_generate_mock_mode_succeeds_without_db_record() -> None:
 
     assert response.status_code == 200
     assert body["provider"] == "mock"
+    assert body["imageUrl"] is None
     assert image_size_from_data_url(body["imageDataUrl"]) == (1200, 900)
 
     # mock은 DB에 흔적을 남기지 않는다.
@@ -407,8 +410,7 @@ def test_generate_normalizes_uploaded_image_before_openai(
     source_buffer = BytesIO()
     source.save(source_buffer, format="JPEG")
     data_url = (
-        "data:image/jpeg;base64,"
-        f"{base64.b64encode(source_buffer.getvalue()).decode('ascii')}"
+        f"data:image/jpeg;base64,{base64.b64encode(source_buffer.getvalue()).decode('ascii')}"
     )
     captured: dict[str, image_edit.UploadedImage] = {}
 
@@ -489,6 +491,9 @@ def test_generate_openai_result_matches_target_size(
 
     assert response.status_code == 200
     assert body["provider"] == "openai"
+    assert body["imageUrl"].startswith("/outputs/")
+    assert body["imageUrl"].endswith(".png")
+    assert "://" not in body["imageUrl"]
     assert image_size_from_data_url(body["imageDataUrl"]) == (1080, 1920)
     assert "1080x1920" in body["prompt"]
     assert "story_image" in body["prompt"]
@@ -521,6 +526,75 @@ def test_generate_exposes_prompt_in_local(
     assert "cafe" in body["prompt"].lower()
 
 
+def test_my_generations_hides_image_url_when_output_file_is_missing() -> None:
+    """마이페이지는 DB 기록이 있어도 실제 결과 파일이 없으면 image_url을 null로 내려준다."""
+    user = AuthUser(
+        id="user-image-url-check",
+        email="user@example.com",
+        role="user",
+        display_name="User",
+    )
+
+    async def _override_user() -> AuthUser:
+        return user
+
+    settings = get_settings()
+    existing_output = settings.output_dir / "existing-result.png"
+    missing_output = settings.output_dir / "missing-result.png"
+    existing_output.write_bytes(b"png")
+
+    async def _seed() -> None:
+        async with async_session_scope() as db:
+            await crud.create_pending_generation(
+                db,
+                request_id="existing-file",
+                image_hash="hash-existing",
+                preset_id="instagram_square",
+                instruction_hash="instruction-existing",
+                prompt_version="prompt-v-test",
+                model="model-test",
+                original_path=None,
+                prompt=None,
+                user_id=user.id,
+            )
+            await crud.mark_generation_success(
+                db,
+                request_id="existing-file",
+                output_path=str(existing_output),
+                image_url=None,
+            )
+            await crud.create_pending_generation(
+                db,
+                request_id="missing-file",
+                image_hash="hash-missing",
+                preset_id="instagram_square",
+                instruction_hash="instruction-missing",
+                prompt_version="prompt-v-test",
+                model="model-test",
+                original_path=None,
+                prompt=None,
+                user_id=user.id,
+            )
+            await crud.mark_generation_success(
+                db,
+                request_id="missing-file",
+                output_path=str(missing_output),
+                image_url=None,
+            )
+
+    asyncio.run(_seed())
+    app.dependency_overrides[get_current_user] = _override_user
+    try:
+        response = client.get("/api/auth/me/generations")
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 200
+    items = {item["request_id"]: item for item in response.json()["items"]}
+    assert items["existing-file"]["image_url"] == "/outputs/existing-result.png"
+    assert items["missing-file"]["image_url"] is None
+
+
 def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> None:
     """같은 입력으로 두 번 호출하면 두 번째는 캐시 hit(`cached=True`)이 되어야 한다."""
     # OpenAI 실호출은 막고, 결정적인 PNG b64를 반환하도록 call_openai_edit를 가짜로 교체.
@@ -545,6 +619,8 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
     )
     assert result1["provider"] == "openai"
     assert result1["image_data_url"].startswith("data:image/png;base64,")
+    assert result1["image_url"].startswith("/outputs/")
+    assert "://" not in result1["image_url"]
 
     # 두 번째 호출: 같은 image + preset + feedback → 캐시 hit
     result2 = asyncio.run(
@@ -556,6 +632,7 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
         )
     )
     assert result2["provider"] == "openai"
+    assert result2["image_url"] == result1["image_url"]
     assert result2["note"] == "캐시된 결과 재사용"
 
     # DB 상태 검증: success 1건 + cached 1건, usage 2건 (cached=True 1건)

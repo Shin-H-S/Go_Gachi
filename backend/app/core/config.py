@@ -89,10 +89,6 @@ class Settings(BaseModel):
     supabase_anon_key: str = ""
     supabase_jwt_secret: str = ""
 
-    # 로컬 정적 파일(/outputs/*.png) URL을 만들 때 기준이 되는 호스트.
-    # Cloud Run/도메인 운영 시 외부에서 접근 가능한 주소로 교체한다.
-    base_url: str = "http://localhost:8080"
-
 
 @lru_cache
 def get_settings() -> Settings:
@@ -134,7 +130,6 @@ def get_settings() -> Settings:
         supabase_url=os.getenv("SUPABASE_URL", ""),
         supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
         supabase_jwt_secret=os.getenv("SUPABASE_JWT_SECRET", ""),
-        base_url=os.getenv("BASE_URL", "http://localhost:8080").rstrip("/"),
     )
 
 
