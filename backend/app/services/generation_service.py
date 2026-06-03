@@ -16,6 +16,7 @@ from backend.app.services.image_processing import normalize_for_openai, render_t
 from backend.app.services.image_types import ResizeMode, TargetSize
 from backend.app.services.image_validation import parse_image
 from backend.app.services.openai_images import call_openai_edit
+from backend.app.services.storage_url import public_output_url
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +101,8 @@ async def edit_image(
         encoded = base64.b64encode(target_png).decode("ascii")
         return {
             "image_data_url": f"data:image/png;base64,{encoded}",
+            # mock은 파일을 저장하지 않으므로 외부에서 받을 수 있는 URL이 없다.
+            "image_url": None,
             "provider": "mock",
             "note": "OPENAI_API_KEY가 없어 선택한 규격으로 로컬 흐름만 확인했습니다.",
             "prompt": None,
@@ -145,6 +148,10 @@ async def edit_image(
         cached_path = Path(cached_snapshot["output_path"])
         if await asyncio.to_thread(cached_path.exists):
             image_data_url = await _file_to_data_url(cached_path)
+            # 응답에는 현재 BASE_URL을 기준으로 매번 새로 만든 URL을 내려준다.
+            # DB에 절대 URL을 저장하면 BASE_URL이 바뀔 때 옛 기록이 깨지므로,
+            # 로컬 스토리지 단계에서는 DB에 image_url을 채우지 않는다.
+            image_url = public_output_url(settings, cached_path)
             request_id = _new_request_id()
             async with async_session_scope() as db:
                 await crud.create_cached_generation(
@@ -157,7 +164,7 @@ async def edit_image(
                     model=cached_snapshot["model"],
                     original_path=cached_snapshot["original_path"],
                     output_path=cached_snapshot["output_path"],
-                    image_url=cached_snapshot["image_url"],
+                    image_url=None,
                     prompt=cached_snapshot["prompt"],
                     user_id=user_id,
                 )
@@ -171,10 +178,10 @@ async def edit_image(
                 )
             return {
                 "image_data_url": image_data_url,
+                "image_url": image_url,
                 "provider": "openai",
                 "note": "캐시된 결과 재사용",
                 "prompt": cached_snapshot["prompt"],
-                "image_url": cached_snapshot["image_url"],
             }
         # 파일이 사라졌으면 캐시 미스로 떨어져 OpenAI 호출 분기로 이어진다.
 
@@ -256,6 +263,9 @@ async def edit_image(
         raise RuntimeError("이미지 API 응답 이미지를 처리하지 못했습니다.") from exc
 
     # 4) 성공: 파일 저장 → DB success 갱신 → 사용량 기록.
+    # 응답에는 현재 BASE_URL 기준으로 만든 URL을 함께 내려준다.
+    # 로컬 스토리지 단계에서는 DB에 절대 URL을 저장하지 않는다(BASE_URL 변경 시 옛 기록 보호).
+    image_url = public_output_url(settings, output_path)
     async with async_session_scope() as db:
         await crud.mark_generation_success(
             db,
@@ -275,6 +285,7 @@ async def edit_image(
     # 프론트가 별도 파일 저장 없이 바로 미리보기할 수 있도록 data URL로 반환한다.
     return {
         "image_data_url": f"data:image/png;base64,{base64.b64encode(target_png).decode('ascii')}",
+        "image_url": image_url,
         "provider": "openai",
         "note": None,
         "prompt": prompt,

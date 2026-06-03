@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.auth import router as auth_router
 from backend.app.api.internal import router as internal_router
@@ -35,6 +36,16 @@ app.include_router(auth_router)
 # 운영에서도 사용량을 봐야 한다면 별도 토큰 인증 라우터로 교체하면 됨.
 if get_settings().app_env != "production":
     app.include_router(internal_router)
+
+# 생성된 이미지를 image_url(http) 형태로 프론트에 내려주기 위해 /outputs를 정적 파일로 노출한다.
+# 운영(Cloud Run) 환경에서는 컨테이너 디스크가 휘발성이므로 추후 GCS URL로 대체하는 것이 권장된다.
+_static_output_dir = get_settings().output_dir
+_static_output_dir.mkdir(parents=True, exist_ok=True)
+app.mount(
+    "/outputs",
+    StaticFiles(directory=str(_static_output_dir)),
+    name="outputs",
+)
 
 
 @app.get("/")
@@ -125,6 +136,7 @@ async def generate(
 
     return GenerateResponse(
         imageDataUrl=result["image_data_url"],
+        imageUrl=result.get("image_url"),
         provider=result["provider"] or settings.image_provider,
         preset=preset,
         note=result["note"],

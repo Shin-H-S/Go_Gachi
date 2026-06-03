@@ -7,8 +7,10 @@
 from fastapi import APIRouter, Depends
 
 from backend.app.core.auth import AuthUser, get_current_user
+from backend.app.core.config import get_settings
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
+from backend.app.services.storage_url import public_output_url
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -41,6 +43,9 @@ async def read_my_generations(
     Returns:
         dict: items(생성 기록 리스트)와 count(개수).
     """
+    # BASE_URL이 환경마다 다르므로 DB 값(있어도) 신뢰하지 않고 매번 현재 BASE_URL로 재계산한다.
+    # GCS·고정 도메인으로 이전한 뒤에는 DB의 image_url을 그대로 신뢰하도록 바꿀 수 있다.
+    settings = get_settings()
     async with async_session_scope() as db:
         rows = await crud.list_user_generations(db, user.id)
         items = [
@@ -48,7 +53,7 @@ async def read_my_generations(
                 "request_id": row.request_id,
                 "preset_id": row.preset_id,
                 "status": row.status,
-                "image_url": row.image_url,
+                "image_url": public_output_url(settings, row.output_path),
                 "created_at": row.created_at.isoformat() if row.created_at else None,
             }
             for row in rows
