@@ -33,15 +33,9 @@ def render_main_page() -> None:
             """
             <nav class="landing-nav" aria-label="Go Gachi navigation">
                 <div class="landing-brand">Go Gachi<span>*</span></div>
-                <div class="landing-menu">
-                    <span>서비스</span>
-                    <span>템플릿</span>
-                    <span>활용법</span>
-                    <span>요금</span>
-                </div>
                 <div class="landing-auth">
-                    <span class="landing-login">로그인</span>
-                    <span class="landing-signup">회원가입</span>
+                    <a class="landing-login" href="?page=login" target="_self">로그인</a>
+                    <a class="landing-signup" href="?page=signup" target="_self">회원가입</a>
                 </div>
             </nav>
             """,
@@ -72,20 +66,13 @@ def render_main_page() -> None:
                 unsafe_allow_html=True,
             )
 
-            cta_input_col, cta_button_col = st.columns([0.48, 0.52], gap="small")
-            with cta_input_col:
-                st.markdown(
-                    '<div class="landing-url-chip">go-gachi.ai/우리카페</div>',
-                    unsafe_allow_html=True,
-                )
-            with cta_button_col:
-                st.markdown(
-                    (
-                        '<a class="landing-start-link" href="?page=work" '
-                        'target="_self">무료로 시작하기</a>'
-                    ),
-                    unsafe_allow_html=True,
-                )
+            st.markdown(
+                (
+                    '<a class="landing-start-link" href="?page=work" '
+                    'target="_self">무료로 시작하기</a>'
+                ),
+                unsafe_allow_html=True,
+            )
 
         with hero_right:
             st.markdown(

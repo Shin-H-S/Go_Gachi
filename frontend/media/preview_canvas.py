@@ -2,15 +2,8 @@ from io import BytesIO
 
 from PIL import Image
 
-try:
-    from frontend.image_common import fit_image_contain
-except ModuleNotFoundError:
-    from image_common import fit_image_contain
-
-try:
-    from frontend.config import get_detail_size
-except ModuleNotFoundError:
-    from config import get_detail_size
+from frontend.core.config import get_detail_size
+from frontend.media.image_common import fit_image_contain
 
 
 def make_preview_canvas(image_bytes: bytes, format_label: str, detail_label: str) -> bytes:

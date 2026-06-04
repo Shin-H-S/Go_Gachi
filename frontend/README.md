@@ -7,12 +7,21 @@
 
 ```text
 frontend/
-  app.py                # Streamlit 프론트엔드 진입점
-  app/                  # 향후 컴포넌트 분리용 폴더
-    components/         # 재사용 UI 컴포넌트 작성 위치
-  assets/               # 샘플 이미지, 아이콘 등 정적 리소스
-  tests/                # 프론트엔드 테스트 코드
-  .env.example          # 배포된 백엔드 URL 예시
+  app.py                # Streamlit entrypoint
+  pages/                # Page renderers such as main and work
+  core/                 # Config loading and routing helpers
+  services/             # Backend API boundary
+  work/                 # Work-page state, components, preview, generation, uploads
+  media/                # Image helpers, preview canvas, mock banner
+  css/                  # CSS fragments composed by styles.py
+  assets/               # Channel/sample image assets
+  styles.py             # CSS composer and injector
+  api_client.py         # Compatibility alias to services/api_client.py
+  config.py             # Compatibility alias to core/config.py
+  router.py             # Compatibility alias to core/router.py
+  upload_utils.py       # Compatibility alias to work/uploads.py
+  image_utils.py        # Compatibility alias to media/image_utils.py
+  .env.example          # Frontend env example
 ```
 
 ## Run

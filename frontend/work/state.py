@@ -2,7 +2,7 @@ import hashlib
 
 import streamlit as st
 
-from config import FORMAT_OPTIONS, get_detail_id, get_detail_size
+from frontend.core.config import FORMAT_OPTIONS, get_detail_id, get_detail_size
 
 
 def clear_result_state() -> None:

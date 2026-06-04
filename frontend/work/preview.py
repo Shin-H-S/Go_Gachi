@@ -1,8 +1,8 @@
 import streamlit as st
-from image_data import bytes_to_data_url
-from preview_canvas import make_preview_canvas
 
-from config import format_size_label, get_detail_size
+from frontend.core.config import format_size_label, get_detail_size
+from frontend.media.image_data import bytes_to_data_url
+from frontend.media.preview_canvas import make_preview_canvas
 
 
 def compact_html(html: str) -> str:

@@ -46,16 +46,6 @@ MAIN_LAYOUT_CSS = """
     margin-left: 2px;
 }
 
-.landing-menu {
-    display: flex;
-    align-items: center;
-    gap: 42px;
-    color: #1d2330;
-    font-size: 18px;
-    font-weight: 850;
-    white-space: nowrap;
-}
-
 .landing-auth {
     display: flex;
     align-items: center;
@@ -75,16 +65,34 @@ MAIN_LAYOUT_CSS = """
     padding: 0 34px;
     border-radius: 8px;
     box-sizing: border-box;
+    text-decoration: none !important;
 }
 
 .landing-login {
     background: #eff1ec;
+    color: #0b0e14 !important;
+    -webkit-text-fill-color: #0b0e14 !important;
 }
 
 .landing-signup {
     border-radius: 999px;
     background: #1e2433;
-    color: #ffffff;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+.landing-login:hover,
+.landing-login:visited {
+    color: #0b0e14 !important;
+    -webkit-text-fill-color: #0b0e14 !important;
+    text-decoration: none !important;
+}
+
+.landing-signup:hover,
+.landing-signup:visited {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    text-decoration: none !important;
 }
 
 .st-key-main-landing [data-testid="stHorizontalBlock"] {
@@ -127,26 +135,12 @@ MAIN_LAYOUT_CSS = """
     word-break: keep-all;
 }
 
-.landing-url-chip {
-    display: flex;
-    align-items: center;
-    min-height: 80px;
-    padding: 0 22px;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #5f6570;
-    font-size: 21px;
-    font-weight: 850;
-    box-sizing: border-box;
-    box-shadow: 0 14px 28px rgba(25, 53, 17, 0.10);
-}
-
 .landing-start-link {
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 80px;
-    width: 100%;
+    width: min(380px, 100%);
     border: 0;
     border-radius: 999px;
     background: #24551e;

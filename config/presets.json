@@ -6,8 +6,8 @@
     "width": 1080,
     "height": 1080,
     "api_size": "1024x1024",
-    "prompt_hint": "Create an Instagram-ready cafe menu image that feels polished, appetizing, and social-feed friendly. Keep the uploaded menu item as the hero subject and avoid changing what the product is.",
-    "channel_prompt": "Create an Instagram-ready cafe advertisement image with a trendy but realistic visual style. Prioritize scroll-stopping product clarity, warm cafe lighting, tasteful styling, and clean negative space for later text overlay without adding any text.",
+    "prompt_hint": "Create an Instagram-ready promotional image optimized for Korean social media aesthetics. Use the uploaded product image as the hero subject and preserve the original product identity. Focus on clean composition, realistic presentation, balanced spacing, and premium SNS visual quality while allowing environmental styling around the product.",
+    "channel_prompt": "Use the uploaded product image as the ONLY main subject. Create a Korean Instagram-style promotional image layout. This prompt defines only composition, image format behavior, and layout rules. Use ONLY the uploaded product image. Maintain a single-product composition. Keep the uploaded product unchanged. Do not generate additional products. Place the product at the center of the composition. Maintain balanced spacing around the product. Maintain a clean and visually stable layout. Maintain clear single-product visual hierarchy. Optimize composition for the selected Instagram output format. Keep the entire product fully visible. Prevent excessive zoom-in. Prevent object cropping. Maintain safe margins around the product. Preserve sufficient surrounding negative space. Maintain consistent composition across different aspect ratios. Product should occupy approximately 50–55% of canvas height. Reduce product scale automatically in vertical layouts. Maintain full product visibility in portrait formats. Avoid oversized product rendering. Use realistic photography style, natural lighting, realistic colors, clean composition, minimal editing, modern Korean SNS visual aesthetic, and authentic product presentation. Do not generate people, hands, faces, characters, additional products, excessive props, cluttered backgrounds, distracting objects, watermarks, logos, brand marks, excessive advertising graphics, typography, or text overlays. Generate only the final composed promotional image and preserve layout flexibility for downstream processing.",
     "details": [
       {
         "id": "square_feed",
@@ -21,14 +21,14 @@
         "label": "세로형 피드",
         "width": 1080,
         "height": 1350,
-        "prompt_hint": "Compose for a vertical Instagram feed post. Use the taller frame to show the product clearly in the lower or middle area, preserve appetizing detail, and leave calm space above or around it for later promotional copy."
+        "prompt_hint": "Optimize composition for a 4:5 Instagram portrait feed layout. Reduce product scale automatically for vertical formats and maintain full product visibility with sufficient top and bottom margins. Target approximately 45–50% canvas height and 60–70% canvas width occupancy. Preserve natural negative space and prevent oversized rendering. Create a cohesive premium Korean Instagram-style environment with realistic spatial depth, natural scene continuity, and seamless environmental integration. Build atmosphere through environmental composition, depth, and realistic spatial relationships. Avoid flat cutout appearance, isolated object placement, cluttered backgrounds, unfinished scenes, excessive decoration, and full-screen object filling. Prioritize improving environmental quality while maintaining a stable portrait promotional layout."
       },
       {
         "id": "story_image",
         "label": "스토리 이미지",
         "width": 1080,
         "height": 1920,
-        "prompt_hint": "Compose for an Instagram Story. Keep the product stable near the lower center, make the cup or plate immediately recognizable, and leave generous uncluttered space in the upper area for later story stickers or text."
+        "prompt_hint": "Optimize composition for a 9:16 Instagram Story layout. Position the product near the lower third while maintaining full product visibility and balanced composition. Preserve generous upper negative space and sufficient surrounding space for immersive vertical storytelling, including later story stickers or text. Create a cohesive premium Korean Instagram-style environment with realistic spatial depth, natural scene continuity, and seamless environmental integration. Build atmosphere through environmental composition and realistic spatial relationships. Avoid flat cutout appearance, isolated object placement, cluttered backgrounds, unfinished scenes, excessive decoration, and full-screen object filling while maintaining a stable story promotional layout."
       }
     ]
   },
@@ -39,22 +39,22 @@
     "width": 1280,
     "height": 560,
     "api_size": "1536x1024",
-    "prompt_hint": "Create a delivery-app-ready cafe menu image suitable for Baemin listing and owner notice contexts. Make the item easy to identify quickly, with accurate shape, color, portion size, and no typography.",
-    "channel_prompt": "Create a delivery-app-ready commercial food image for Baemin. Prioritize thumbnail readability, appetizing texture, clean background separation, accurate product identity, and bright trustworthy presentation for ordering decisions.",
+    "prompt_hint": "Create a delivery-app-ready product image optimized for Baemin layouts. Focus on fast product recognition, clear presentation, accurate shape and color, clean composition, and strong thumbnail readability. Preserve the uploaded product identity and avoid decorative styling or unnecessary scene generation.",
+    "channel_prompt": "Use the uploaded product image as the ONLY main subject. Create a Baemin-style commercial product layout focused on thumbnail readability and ordering decisions. Keep the uploaded product unchanged and preserve its original appearance, shape, color, portion, material, and details. Maintain a single-product composition and clear visual hierarchy. Ensure the entire product remains fully visible and immediately recognizable. Optimize composition for delivery-app thumbnails and selected output formats. Maintain clean separation between product and background. Use realistic photography style, natural lighting, realistic colors, and minimal editing. Do not generate people, hands, text, typography, logos, watermarks, excessive props, decorative styling, additional products, excessive advertising effects, or distracting backgrounds. Generate only the final composed product image.",
     "details": [
       {
         "id": "solid_background",
         "label": "단색 배경 이미지",
         "width": 1280,
         "height": 960,
-        "prompt_hint": "Use a clean solid-color background with gentle shadow and commercial product lighting. Keep props minimal, make the item sharp and bright, and ensure the product silhouette reads clearly in a delivery app thumbnail."
+        "prompt_hint": "Use a clean solid background with subtle shadow and stable commercial lighting. Keep the product centered, fully visible, and clearly separated from the background. Maintain minimal composition and maximize thumbnail readability."
       },
       {
         "id": "space_background",
         "label": "공간 배경 이미지",
         "width": 1280,
         "height": 960,
-        "prompt_hint": "Use a tidy real cafe-space background with shallow depth of field. Keep the product in the foreground, separate it clearly from the background, and maintain delivery-app thumbnail readability."
+        "prompt_hint": "Use a clean real-space background with simple environmental context. Keep the product visually dominant in the foreground and maintain clear separation from the background. Avoid excessive atmosphere, clutter, and decorative elements while preserving delivery-app readability."
       }
     ]
   },
@@ -65,43 +65,43 @@
     "width": 1200,
     "height": 900,
     "api_size": "1536x1024",
-    "prompt_hint": "Create a warm local-neighborhood cafe post image with natural light, friendly realism, and the uploaded menu item as the clear subject.",
-    "channel_prompt": "Create a Danggeun-ready local cafe image that feels approachable, warm, and trustworthy. It should look like a nearby shop owner sharing a genuine update with local residents, not like a glossy national brand advertisement.",
+    "prompt_hint": "Create a warm local-community style promotional image optimized for Danggeun layouts. Use the uploaded product as the clear subject and maintain a natural, approachable, and realistic presentation with balanced composition and subtle environmental context.",
+    "channel_prompt": "Use the uploaded product image as the ONLY main subject. Create a Danggeun-style local community promotional layout that feels approachable, trustworthy, and naturally shared by a nearby shop owner or local business rather than a polished national advertisement. Keep the uploaded product unchanged and preserve its original appearance, shape, color, material, and details. Maintain a single-product composition and clear visual hierarchy. Ensure the product remains fully visible and easy to recognize. Optimize composition for local community readability and selected output formats. Use realistic photography style, natural lighting, realistic colors, clean composition, and minimal editing. Do not generate people, hands, typography, logos, watermarks, excessive advertising effects, additional products, excessive props, cluttered backgrounds, or distracting visual elements. Generate only the final composed promotional image.",
     "details": [
       {
         "id": "menu_image",
         "label": "메뉴 이미지",
         "width": 1080,
         "height": 1080,
-        "prompt_hint": "Create a simple local menu image for Danggeun. Focus on accurate product color, natural texture, clean composition, and a friendly cafe mood without making the scene feel overly staged."
+        "prompt_hint": "Create a simple local product image optimized for Danggeun posts. Preserve accurate product appearance and natural presentation while maintaining clean composition and approachable local-community visual quality. Avoid excessive styling and keep the scene feeling practical and authentic."
       },
       {
         "id": "store_content_board",
         "label": "가게 콘텐츠보드",
         "width": 1080,
         "height": 1080,
-        "prompt_hint": "Create a warm shop-content-board image. Show the product in a natural cafe setting with enough table or store context to feel like a real local update from the shop."
+        "prompt_hint": "Create a warm local content-board style image optimized for Danggeun posts. Present the product in a natural and authentic local-business setting with simple environmental context and balanced composition. Preserve approachable community feeling while avoiding excessive staging and decorative styling."
       },
       {
         "id": "owner_notice",
         "label": "사장님 공지 이미지",
         "width": 1080,
         "height": 1080,
-        "prompt_hint": "Create a calm owner-notice style image. Keep the product visible but leave a clear uncluttered area where a later announcement can be placed, while maintaining a sincere local shop tone."
+        "prompt_hint": "Create a calm local notice-style image optimized for Danggeun posts. Keep the product clearly visible while maintaining balanced empty space and clean composition. Preserve a sincere, practical, and approachable local-community atmosphere without clutter."
       },
       {
         "id": "promotion_image",
         "label": "홍보 이미지",
         "width": 1280,
         "height": 960,
-        "prompt_hint": "Create a friendly promotional image for local residents. Make the menu item inviting, bright, and easy to approach, with a practical neighborhood-shop feeling rather than an exaggerated luxury mood."
+        "prompt_hint": "Create a friendly promotional image optimized for Danggeun local posts. Keep the product visually clear and approachable while maintaining realistic presentation, balanced composition, and subtle community-oriented visual warmth. Avoid excessive commercial styling or luxury advertising mood."
       },
       {
         "id": "discount_event",
         "label": "할인/이벤트 이미지",
         "width": 1280,
         "height": 960,
-        "prompt_hint": "Create a lively event-ready image for a local discount or seasonal offer. Keep the product central and appealing, add subtle celebratory energy through color and composition, and preserve open space for later event copy."
+        "prompt_hint": "Create an event-ready promotional image optimized for Danggeun posts. Keep the product central and easy to recognize while creating a brighter and more attention-catching composition suitable for local promotions or seasonal offer campaigns. Preserve clean space and maintain approachable local-community visual quality."
       }
     ]
   }

@@ -8,10 +8,10 @@ from PIL import Image
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 FRONTEND_APP = ROOT_DIR / "frontend" / "app.py"
-FRONTEND_IMAGE_UTILS = ROOT_DIR / "frontend" / "image_utils.py"
+FRONTEND_IMAGE_UTILS = ROOT_DIR / "frontend" / "media" / "image_utils.py"
 FRONTEND_MAIN_PAGE = ROOT_DIR / "frontend" / "pages" / "main.py"
 FRONTEND_WORK_PAGE = ROOT_DIR / "frontend" / "pages" / "work.py"
-FRONTEND_WORK_GENERATION = ROOT_DIR / "frontend" / "work_generation.py"
+FRONTEND_WORK_GENERATION = ROOT_DIR / "frontend" / "work" / "generation.py"
 FRONTEND_STYLES = ROOT_DIR / "frontend" / "styles.py"
 
 
@@ -136,7 +136,12 @@ def test_app_delegates_split_module_responsibilities() -> None:
     }
 
     assert FRONTEND_APP.read_text(encoding="utf-8").count("\n") + 1 <= 80
-    assert {"pages.main", "pages.work", "router", "styles"}.issubset(imported_modules)
+    assert {
+        "frontend.core.router",
+        "frontend.pages.main",
+        "frontend.pages.work",
+        "frontend.styles",
+    }.issubset(imported_modules)
     assert {"api_client", "config", "image_utils", "upload_utils"}.isdisjoint(
         imported_modules
     )
@@ -172,19 +177,19 @@ def test_large_frontend_modules_are_split_for_review() -> None:
 def test_styles_are_composed_from_reviewable_modules() -> None:
     styles_source = FRONTEND_STYLES.read_text(encoding="utf-8")
 
-    assert "from style_base import BASE_CSS" in styles_source
-    assert "from style_main_layout import MAIN_LAYOUT_CSS" in styles_source
-    assert "from style_work_preview import WORK_PREVIEW_CSS" in styles_source
+    assert "from frontend.css.base import BASE_CSS" in styles_source
+    assert "from frontend.css.main_layout import MAIN_LAYOUT_CSS" in styles_source
+    assert "from frontend.css.work_preview import WORK_PREVIEW_CSS" in styles_source
     assert "def build_css()" in styles_source
 
 
 def test_work_page_delegates_components_state_and_generation() -> None:
     work_source = FRONTEND_WORK_PAGE.read_text(encoding="utf-8")
 
-    assert "from work_components import" in work_source
-    assert "from work_generation import handle_generation_request" in work_source
-    assert "from work_preview import render_image_preview" in work_source
-    assert "from work_state import" in work_source
+    assert "from frontend.work.components import" in work_source
+    assert "from frontend.work.generation import handle_generation_request" in work_source
+    assert "from frontend.work.preview import render_image_preview" in work_source
+    assert "from frontend.work.state import" in work_source
     assert "def build_result_context" not in work_source
     assert "def render_channel_tabs" not in work_source
     assert "def create_mock_banner" not in work_source
@@ -193,8 +198,8 @@ def test_work_page_delegates_components_state_and_generation() -> None:
 def test_image_utils_is_a_compatibility_export_layer() -> None:
     image_utils_source = FRONTEND_IMAGE_UTILS.read_text(encoding="utf-8")
 
-    assert "from image_data import bytes_to_data_url" in image_utils_source
-    assert "from mock_banner import create_mock_banner" in image_utils_source
-    assert "from preview_canvas import make_preview_canvas" in image_utils_source
+    assert "from frontend.media.image_data import bytes_to_data_url" in image_utils_source
+    assert "from frontend.media.mock_banner import create_mock_banner" in image_utils_source
+    assert "from frontend.media.preview_canvas import make_preview_canvas" in image_utils_source
     assert "def create_mock_banner" not in image_utils_source
     assert "def make_preview_canvas" not in image_utils_source

@@ -2,8 +2,14 @@ import time
 
 import httpx
 import streamlit as st
-from api_client import BACKEND_URL, FRONTEND_USE_MOCK, build_feedback, request_backend
-from mock_banner import create_mock_banner
+
+from frontend.media.mock_banner import create_mock_banner
+from frontend.services.api_client import (
+    BACKEND_URL,
+    FRONTEND_USE_MOCK,
+    build_feedback,
+    request_backend,
+)
 
 
 def handle_generation_request(

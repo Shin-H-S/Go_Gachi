@@ -23,10 +23,6 @@ RESPONSIVE_CSS = """
         font-size: 26px;
     }
 
-    .landing-menu {
-        display: none;
-    }
-
     .landing-auth {
         gap: 6px;
         font-size: 14px;
@@ -53,7 +49,6 @@ RESPONSIVE_CSS = """
         margin: 22px 0 30px;
     }
 
-    .landing-url-chip,
     .landing-start-link,
     div[data-testid="stElementContainer"]:has(.main-start-button-marker)
         + div[data-testid="stButton"] button {

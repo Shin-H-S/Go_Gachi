@@ -2,27 +2,14 @@ from io import BytesIO
 
 from PIL import Image, ImageDraw, ImageFilter
 
-try:
-    from frontend.image_common import (
-        draw_gradient,
-        draw_wrapped_text,
-        fit_image_cover,
-        load_font,
-        rounded_paste,
-    )
-except ModuleNotFoundError:
-    from image_common import (
-        draw_gradient,
-        draw_wrapped_text,
-        fit_image_cover,
-        load_font,
-        rounded_paste,
-    )
-
-try:
-    from frontend.config import get_detail_size
-except ModuleNotFoundError:
-    from config import get_detail_size
+from frontend.core.config import get_detail_size
+from frontend.media.image_common import (
+    draw_gradient,
+    draw_wrapped_text,
+    fit_image_cover,
+    load_font,
+    rounded_paste,
+)
 
 
 def create_mock_banner(
