@@ -42,6 +42,8 @@ class GenerateResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     image_data_url: str = Field(alias="imageDataUrl")
+    # 같은 이미지를 외부에서 받을 수 있는 http(s) URL. mock 분기는 파일 저장이 없어 None.
+    image_url: str | None = Field(default=None, alias="imageUrl")
     provider: str
     preset: Preset
     note: str | None = None

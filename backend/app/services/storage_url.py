@@ -1,0 +1,34 @@
+"""저장된 결과 파일 경로를 프론트가 쓸 수 있는 정적 경로로 변환한다.
+
+백엔드는 ``/outputs/result.png`` 같은 루트 상대 경로만 돌려주고,
+프론트는 환경별 backend origin을 직접 붙여 사용한다. 그래서 응답에는
+local/VM/Cloud Run 호스트 같은 환경 의존 값을 박지 않는다.
+"""
+
+from pathlib import Path
+
+
+def public_output_url(output_path: Path | str | None) -> str | None:
+    """저장된 결과 파일의 ``/outputs`` 루트 상대 경로를 만든다.
+
+    Args:
+        output_path: 저장된 결과 파일 경로. ``None``이거나 파일명이 비면 ``None``.
+    Returns:
+        ``/outputs/{filename}`` 또는 ``None``.
+    """
+    if output_path is None:
+        return None
+    filename = Path(output_path).name
+    if not filename:
+        return None
+    return f"/outputs/{filename}"
+
+
+def public_output_url_if_exists(output_path: Path | str | None) -> str | None:
+    """Return ``/outputs`` path only when the stored output file still exists."""
+    if output_path is None:
+        return None
+    path = Path(output_path)
+    if not path.is_file():
+        return None
+    return public_output_url(path)
