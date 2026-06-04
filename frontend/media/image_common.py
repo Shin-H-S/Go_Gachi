@@ -48,12 +48,12 @@ def rounded_paste(
 
 
 def fit_image_cover(source: Image.Image, target_size: tuple[int, int]) -> Image.Image:
-    image = source.convert("RGB")
+    image = ImageOps.exif_transpose(source).convert("RGB")
     return ImageOps.fit(image, target_size, method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
 
 
 def fit_image_contain(source: Image.Image, target_size: tuple[int, int]) -> Image.Image:
-    image = source.convert("RGB")
+    image = ImageOps.exif_transpose(source).convert("RGB")
     image.thumbnail(target_size, Image.Resampling.LANCZOS)
     return image
 

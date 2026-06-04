@@ -55,6 +55,9 @@ application_default_credentials.json
 !.env.example
 !**/.env.example
 
+# Personal local manual-testing runbook
+/docs/local-manual-testing.md
+
 # ====================================================================
 # 3. BACKEND & AI CORE (Python, FastAPI, UV, Celery, Redis)
 # ====================================================================
