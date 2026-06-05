@@ -198,7 +198,7 @@ def test_generate_rejects_unknown_detail_type() -> None:
         "/api/generate",
         json={
             "imageDataUrl": TINY_PNG_DATA_URL,
-            "presetId": "instagram_square",
+            "presetId": "instagram",
             "detailType": "unknown_detail",
             "feedback": "",
         },
@@ -229,7 +229,7 @@ def test_generate_rejects_unknown_resize_mode() -> None:
         "/api/generate",
         json={
             "imageDataUrl": TINY_PNG_DATA_URL,
-            "presetId": "instagram_square",
+            "presetId": "instagram",
             "resizeMode": "stretch",
         },
     )
@@ -469,8 +469,10 @@ def test_generate_openai_result_matches_target_size(
 ) -> None:
     """OpenAI 결과도 최종 응답 전에 선택 상세 크기로 후처리한다."""
     fake_b64 = TINY_PNG_B64
+    captured_call: dict[str, str] = {}
 
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        captured_call["api_size"] = kwargs["api_size"]
         return fake_b64
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
@@ -480,7 +482,7 @@ def test_generate_openai_result_matches_target_size(
         "/api/generate",
         json={
             "imageDataUrl": TINY_PNG_DATA_URL,
-            "presetId": "instagram_square",
+            "presetId": "instagram",
             "detailType": "story_image",
             "feedback": "밝게",
             "targetWidth": 1080,
@@ -498,6 +500,7 @@ def test_generate_openai_result_matches_target_size(
     assert "1080x1920" in body["prompt"]
     assert "story_image" in body["prompt"]
     assert "Instagram Story" in body["prompt"]
+    assert captured_call["api_size"] == "1024x1536"
 
 
 def test_generate_exposes_prompt_in_local(
@@ -549,7 +552,7 @@ def test_my_generations_hides_image_url_when_output_file_is_missing() -> None:
                 db,
                 request_id="existing-file",
                 image_hash="hash-existing",
-                preset_id="instagram_square",
+                preset_id="instagram",
                 instruction_hash="instruction-existing",
                 prompt_version="prompt-v-test",
                 model="model-test",
@@ -567,7 +570,7 @@ def test_my_generations_hides_image_url_when_output_file_is_missing() -> None:
                 db,
                 request_id="missing-file",
                 image_hash="hash-missing",
-                preset_id="instagram_square",
+                preset_id="instagram",
                 instruction_hash="instruction-missing",
                 prompt_version="prompt-v-test",
                 model="model-test",

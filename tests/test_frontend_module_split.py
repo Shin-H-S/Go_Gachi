@@ -24,8 +24,8 @@ def test_frontend_config_exposes_preset_helpers() -> None:
         get_detail_size,
     )
 
-    assert FORMAT_OPTIONS["인스타그램"]["value"] == "instagram_square"
-    assert CHANNEL_SLUGS["인스타그램"] == "instagram_square"
+    assert FORMAT_OPTIONS["인스타그램"]["value"] == "instagram"
+    assert CHANNEL_SLUGS["인스타그램"] == "instagram"
     assert get_detail_id("인스타그램", "정사각형 피드") == "square_feed"
     assert get_detail_size("인스타그램", "정사각형 피드") == (1080, 1080)
     assert format_size_label((1080, 1080)) == "1080 x 1080"
@@ -84,7 +84,7 @@ def test_frontend_config_falls_back_to_local_presets(monkeypatch) -> None:
 
     presets = config.load_presets()
 
-    assert presets[0]["id"] == "instagram_square"
+    assert presets[0]["id"] == "instagram"
 
 
 def test_image_utils_builds_preview_canvas_and_data_url() -> None:

@@ -58,11 +58,6 @@ def _format_options_from_presets(
 
     for preset in raw_presets:
         preset_id = str(preset["id"])
-        fallback_detail = {
-            "id": "default",
-            "label": str(preset["label"]),
-            "size": (int(preset["width"]), int(preset["height"])),
-        }
         details = [
             {
                 "id": str(detail["id"]),
@@ -74,7 +69,7 @@ def _format_options_from_presets(
         options[str(preset["label"])] = {
             "value": preset_id,
             # 상세 유형은 백엔드와 같은 presets.json을 기준으로 맞춘다.
-            "details": details or [fallback_detail],
+            "details": details,
         }
 
     return options

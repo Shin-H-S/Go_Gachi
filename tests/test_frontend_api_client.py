@@ -59,7 +59,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             "imageDataUrl": (
                 f"data:image/png;base64,{base64.b64encode(b'source-image').decode('ascii')}"
             ),
-            "presetId": "instagram_square",
+            "presetId": "instagram",
             "detailType": "square_feed",
             "feedback": "광고 유형: 정사각형 피드\n제품을 크게 보여줘",
             "targetWidth": 1080,
