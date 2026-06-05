@@ -28,11 +28,11 @@ def _new_request_id() -> str:
 
 def _target_size_or_detail(
     *,
-    detail: PresetDetail | None = None,
+    detail: PresetDetail,
     target_width: int | None,
     target_height: int | None,
 ) -> TargetSize:
-    """요청 출력 크기가 없으면 선택한 상세 광고 유형의 기본 크기를 사용한다."""
+    """출력 크기를 정한다. target 가로·세로가 비면 detail 기본 크기로 폴백한다."""
     if target_width is None or target_height is None:
         return TargetSize(width=detail.width, height=detail.height)
     return TargetSize(width=target_width, height=target_height)
