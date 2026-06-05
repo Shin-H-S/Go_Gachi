@@ -27,7 +27,7 @@
         "width": 1080,
         "height": 1920,
         "api_size": "1024x1536",
-        "prompt_hint": "Optimize composition for a 9:16 Instagram Story layout. Position the product near the lower-middle area while maintaining full visibility and natural scale. Preserve generous upper negative space for future story elements and maintain immersive vertical composition. Build clean environmental depth and smooth visual flow while avoiding oversized rendering, cluttered layouts, and edge cropping."
+        "prompt_hint": "Optimize composition for a 9:16 Instagram Story layout. Position the product near the lower-middle area while maintaining full visibility and natural scale. Preserve generous upper negative space for future story stickers or text and maintain immersive vertical composition. Build clean environmental depth and smooth visual flow while avoiding oversized rendering, cluttered layouts, and edge cropping."
       }
     ]
   },
