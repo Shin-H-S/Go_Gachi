@@ -37,11 +37,14 @@ def handle_generation_request(
                         detail_label=detail_label,
                     )
                 else:
+                    # 로그인 상태면 백엔드가 user_id로 기록을 묶을 수 있도록 JWT를 같이 넘긴다.
+                    access_token = st.session_state.get("auth_access_token", "")
                     result_bytes = request_backend(
                         uploaded_file,
                         prompt.strip(),
                         format_label,
                         detail_label,
+                        access_token=access_token,
                     )
                 st.session_state["result_bytes"] = result_bytes
                 st.session_state["result_context"] = current_result_context
@@ -51,8 +54,7 @@ def handle_generation_request(
                 st.error(f"백엔드 생성 요청 실패 [HTTP {exc.response.status_code}]: {detail}")
             except httpx.HTTPError as exc:
                 st.error(
-                    f"백엔드 연결 실패 [NETWORK_ERROR] {BACKEND_URL}: "
-                    f"{type(exc).__name__}: {exc}"
+                    f"백엔드 연결 실패 [NETWORK_ERROR] {BACKEND_URL}: {type(exc).__name__}: {exc}"
                 )
             except Exception as exc:
                 st.error(f"이미지 생성 중 오류가 발생했습니다: {exc}")

@@ -22,11 +22,17 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
     captured_request = {}
     result_data_url = "data:image/png;base64,cmVzdWx0LWltYWdl"
 
-    def fake_post(url: str, json: dict[str, str], timeout: int) -> FakeResponse:
+    def fake_post(
+        url: str,
+        json: dict[str, str],
+        headers: dict[str, str],
+        timeout: int,
+    ) -> FakeResponse:
         captured_request.update(
             {
                 "url": url,
                 "json": json,
+                "headers": headers,
                 "timeout": timeout,
             }
         )
@@ -51,8 +57,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
         "url": "https://backend.example/api/generate",
         "json": {
             "imageDataUrl": (
-                "data:image/png;base64,"
-                f"{base64.b64encode(b'source-image').decode('ascii')}"
+                f"data:image/png;base64,{base64.b64encode(b'source-image').decode('ascii')}"
             ),
             "presetId": "instagram_square",
             "detailType": "square_feed",
@@ -60,8 +65,39 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             "targetWidth": 1080,
             "targetHeight": 1080,
         },
+        # access_token 미전달 시 Authorization 헤더가 빠져야 한다(비로그인 호환).
+        "headers": {},
         "timeout": 300,
     }
+
+
+def test_request_backend_attaches_authorization_header_when_token_given(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_headers: dict[str, str] = {}
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],  # noqa: ARG001
+        headers: dict[str, str],
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        captured_headers.update(headers)
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    api_client.request_backend(
+        uploaded_file,
+        "프롬프트",
+        "인스타그램",
+        "정사각형 피드",
+        access_token="fake-jwt-token",
+    )
+
+    assert captured_headers == {"Authorization": "Bearer fake-jwt-token"}
 
 
 def test_request_backend_uses_default_local_backend_url(
@@ -69,7 +105,12 @@ def test_request_backend_uses_default_local_backend_url(
 ) -> None:
     captured_request = {}
 
-    def fake_post(url: str, json: dict[str, object], timeout: int) -> FakeResponse:  # noqa: ARG001
+    def fake_post(
+        url: str,
+        json: dict[str, object],  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
         captured_request["url"] = url
         return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
 
@@ -93,7 +134,12 @@ def test_request_backend_uses_default_local_backend_url(
 def test_request_backend_rejects_missing_image_data_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def fake_post(url: str, json: dict[str, str], timeout: int) -> FakeResponse:  # noqa: ARG001
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, str],  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
         return FakeResponse({})
 
     uploaded_file = SimpleNamespace(
