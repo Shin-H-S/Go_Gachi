@@ -17,6 +17,10 @@ def test_verify_supabase_jwt_hides_provider_error_detail(
     def fake_decode(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
         raise jwt.ExpiredSignatureError("Signature has expired")
 
+    # HS256 경로가 jwt.decode까지 도달하려면 SUPABASE_JWT_SECRET이 채워져 있어야 한다.
+    # CI에는 환경변수가 없으므로 검증 흐름만 확인할 수 있게 임의 값으로 채운다.
+    settings = auth.get_settings()
+    monkeypatch.setattr(settings, "supabase_jwt_secret", "test-secret")
     monkeypatch.setattr(auth.jwt, "get_unverified_header", lambda token: {"alg": "HS256"})
     monkeypatch.setattr(auth.jwt, "decode", fake_decode)
 
