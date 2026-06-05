@@ -5,6 +5,7 @@
 local/VM/Cloud Run 호스트 같은 환경 의존 값을 박지 않는다.
 """
 
+import asyncio
 from pathlib import Path
 
 
@@ -39,5 +40,22 @@ def public_output_url_if_exists(output_path: Path | str | None) -> str | None:
         return None
     path = Path(output_path)
     if not path.is_file():
+        return None
+    return public_output_url(path)
+
+
+async def public_output_url_if_exists_async(
+    output_path: Path | str | None,
+) -> str | None:
+    """``public_output_url_if_exists``의 비동기 버전.
+
+    디스크 stat(``is_file``)을 별도 스레드에서 실행해 FastAPI 이벤트 루프를
+    차단하지 않는다. 마이페이지처럼 한 요청에서 여러 행을 검사할 때 사용한다.
+    """
+    if output_path is None:
+        return None
+    path = Path(output_path)
+    exists = await asyncio.to_thread(path.is_file)
+    if not exists:
         return None
     return public_output_url(path)
