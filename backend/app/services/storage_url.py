@@ -25,7 +25,16 @@ def public_output_url(output_path: Path | str | None) -> str | None:
 
 
 def public_output_url_if_exists(output_path: Path | str | None) -> str | None:
-    """Return ``/outputs`` path only when the stored output file still exists."""
+    """저장된 결과 파일이 실제 디스크에 존재할 때만 ``/outputs`` 경로를 만든다.
+
+    옛 기록 중 파일이 사라진 행은 ``None``으로 응답해 마이페이지에서 깨진
+    이미지 링크가 노출되지 않도록 막는다.
+
+    Args:
+        output_path: 저장된 결과 파일 경로. ``None``이거나 파일이 없으면 ``None``.
+    Returns:
+        ``/outputs/{filename}`` 또는 ``None``.
+    """
     if output_path is None:
         return None
     path = Path(output_path)
