@@ -5,7 +5,6 @@ import logging
 import httpx
 
 from backend.app.core.config import Settings
-from backend.app.core.presets import Preset
 from backend.app.services.image_types import UploadedImage
 
 logger = logging.getLogger(__name__)
@@ -34,7 +33,7 @@ def _extract_b64_json(payload: object) -> str:
 async def call_openai_edit(
     *,
     uploaded: UploadedImage,
-    preset: Preset,
+    api_size: str,
     prompt: str,
     settings: Settings,
 ) -> str:
@@ -48,7 +47,7 @@ async def call_openai_edit(
                 data={
                     "model": settings.openai_image_model,
                     "prompt": prompt,
-                    "size": preset.api_size,
+                    "size": api_size,
                     "quality": settings.openai_image_quality,
                     "output_format": "png",
                 },

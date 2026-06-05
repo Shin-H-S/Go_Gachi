@@ -29,7 +29,7 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 ```json
 {
   "imageDataUrl": "data:image/png;base64,...",
-  "presetId": "instagram_square",
+  "presetId": "instagram",
   "detailType": "story_image",
   "feedback": "광고 유형: 스토리 이미지\n밝고 따뜻한 카페 광고 느낌으로 만들어줘",
   "targetWidth": 1080,
@@ -45,7 +45,7 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 - `detailType`: 프리셋 안의 상세 광고 유형 ID. 채널·상세 유형별 전용 프롬프트를 고르는 데 사용
 - `feedback`: 사용자 추가 요청 문구
 - `targetWidth`, `targetHeight`: 사용자가 선택한 상세 광고 규격의 최종 출력 픽셀 크기.
-  둘 중 하나만 보낼 수 없으며, 생략하면 프리셋 기본 크기를 사용합니다.
+  둘 중 하나만 보낼 수 없으며, 생략하면 선택한 상세 광고 유형의 기본 크기를 사용합니다.
 - `resizeMode`: 최종 후처리 방식. 기본값은 `cover`입니다.
   `cover`는 캔버스를 꽉 채우고 중앙 기준으로 일부를 자를 수 있으며,
   `contain`은 원본 전체를 보존하고 남는 영역을 흐림 배경으로 채웁니다.
@@ -59,7 +59,7 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
   "imageDataUrl": "data:image/png;base64,...",
   "provider": "openai",
   "preset": {
-    "id": "instagram_square",
+    "id": "instagram",
     "label": "인스타그램"
   },
   "note": null,

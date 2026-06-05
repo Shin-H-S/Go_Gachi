@@ -26,15 +26,15 @@ def _new_request_id() -> str:
     return f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
 
-def _target_size_or_preset(
+def _target_size_or_detail(
     *,
-    preset: Preset,
+    detail: PresetDetail | None = None,
     target_width: int | None,
     target_height: int | None,
 ) -> TargetSize:
-    """요청 출력 크기가 없으면 프리셋 기본 크기를 사용한다."""
+    """요청 출력 크기가 없으면 선택한 상세 광고 유형의 기본 크기를 사용한다."""
     if target_width is None or target_height is None:
-        return TargetSize(width=preset.width, height=preset.height)
+        return TargetSize(width=detail.width, height=detail.height)
     return TargetSize(width=target_width, height=target_height)
 
 
@@ -88,12 +88,18 @@ async def edit_image(
     """
     # provider와 무관하게 먼저 입력 이미지를 검증해 프론트 오류를 빠르게 돌려준다.
     uploaded = parse_image(image_data_url, settings.max_upload_bytes)
-    target_size = _target_size_or_preset(
-        preset=preset,
+    selected_detail = detail or preset.default_detail()
+    target_size = _target_size_or_detail(
+        detail=selected_detail,
         target_width=target_width,
         target_height=target_height,
     )
-    generation_feedback = _feedback_with_context(feedback, target_size, detail, resize_mode)
+    generation_feedback = _feedback_with_context(
+        feedback,
+        target_size,
+        selected_detail,
+        resize_mode,
+    )
 
     if settings.image_provider == "mock":
         # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
@@ -111,7 +117,7 @@ async def edit_image(
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY가 설정되지 않았습니다.")
 
-    prompt = build_prompt(preset, generation_feedback, detail)
+    prompt = build_prompt(preset, generation_feedback, selected_detail)
     image_hash = crud.image_sha256(uploaded.content)
     instruction_hash = crud.instruction_sha256(generation_feedback)
     model = settings.openai_image_model
@@ -227,7 +233,7 @@ async def edit_image(
         )
         b64_json = await call_openai_edit(
             uploaded=openai_uploaded,
-            preset=preset,
+            api_size=selected_detail.api_size,
             prompt=prompt,
             settings=settings,
         )

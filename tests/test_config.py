@@ -12,27 +12,28 @@ def test_presets() -> None:
     presets = get_presets()
 
     # preset id는 API 요청에 쓰이는 값이라 프론트와 동일하게 유지한다.
-    assert set(presets) == {"instagram_square", "baemin_notice", "daangn_post"}
+    assert set(presets) == {"instagram", "baemin", "daangn"}
     assert all(preset_id.isascii() for preset_id in presets)
-    assert presets["instagram_square"].width == 1080
-    assert presets["instagram_square"].label == "인스타그램"
-    assert presets["baemin_notice"].label == "배달의 민족"
-    assert presets["daangn_post"].label == "당근"
-    assert presets["instagram_square"].channel_prompt
-    assert presets["instagram_square"].find_detail("story_image") is not None
-    assert presets["baemin_notice"].find_detail("solid_background") is not None
-    assert presets["daangn_post"].find_detail("promotion_image") is not None
+    assert presets["instagram"].label == "인스타그램"
+    assert presets["baemin"].label == "배달의 민족"
+    assert presets["daangn"].label == "당근"
+    assert presets["instagram"].channel_prompt
+    assert presets["instagram"].default_detail().id == "square_feed"
+    assert presets["instagram"].find_detail("story_image").api_size == "1024x1536"
+    assert presets["baemin"].find_detail("solid_background") is not None
+    assert presets["daangn"].find_detail("menu_image") is not None
+    assert presets["daangn"].find_detail("promotion_image") is None
 
 
 def test_channel_detail_prompt_presets_are_specific() -> None:
     presets = get_presets()
 
-    assert "thumbnail readability" in presets["baemin_notice"].channel_prompt
-    assert "nearby shop owner" in presets["daangn_post"].channel_prompt
+    assert "thumbnail readability" in presets["baemin"].channel_prompt
+    assert "nearby shop owner" in presets["daangn"].channel_prompt
     assert "story stickers or text" in (
-        presets["instagram_square"].find_detail("story_image").prompt_hint
+        presets["instagram"].find_detail("story_image").prompt_hint
     )
-    assert "seasonal offer" in presets["daangn_post"].find_detail("discount_event").prompt_hint
+    assert "seasonal offer" in presets["daangn"].find_detail("discount_event").prompt_hint
     assert PROMPT_VERSION == "2026-05-30-v3-channel-detail-presets"
 
 
@@ -86,7 +87,7 @@ def test_sqlite_database_url_is_allowed_for_isolated_tests(monkeypatch) -> None:
 
 
 def test_prompt() -> None:
-    preset = get_presets()["instagram_square"]
+    preset = get_presets()["instagram"]
     detail = preset.find_detail("story_image")
     prompt = build_prompt(preset, "make it brighter", detail)
 

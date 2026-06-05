@@ -15,18 +15,15 @@ class PresetDetail(BaseModel):
     label: str
     width: int
     height: int
+    api_size: str
     prompt_hint: str = ""
 
 
 class Preset(BaseModel):
-    """프론트 표시 정보와 OpenAI 요청 크기를 함께 가진 광고 규격."""
+    """게시 채널의 공통 프롬프트와 상세 광고 유형 목록."""
 
     id: str
     label: str
-    detail: str
-    width: int
-    height: int
-    api_size: str
     prompt_hint: str
     channel_prompt: str = ""
     details: list[PresetDetail] = Field(default_factory=list)
@@ -36,6 +33,12 @@ class Preset(BaseModel):
         if not detail_id:
             return None
         return next((detail for detail in self.details if detail.id == detail_id), None)
+
+    def default_detail(self) -> PresetDetail:
+        """detailType이 없을 때 사용할 기본 상세 광고 유형을 반환한다."""
+        if not self.details:
+            raise ValueError(f"프리셋에 상세 광고 유형이 없습니다: {self.id}")
+        return self.details[0]
 
 
 @lru_cache

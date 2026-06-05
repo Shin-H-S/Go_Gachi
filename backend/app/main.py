@@ -102,8 +102,12 @@ async def generate(
     else:
         preset = default_preset()
 
-    detail = preset.find_detail(request.detail_type)
-    if request.detail_type and detail is None:
+    detail = (
+        preset.find_detail(request.detail_type)
+        if request.detail_type
+        else preset.default_detail()
+    )
+    if detail is None:
         raise HTTPException(
             status_code=400,
             detail=f"지원하지 않는 detailType입니다: {request.detail_type}",
