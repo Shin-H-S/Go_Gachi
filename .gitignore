@@ -178,6 +178,9 @@ pnpm-debug.log*
 /backend/data/*
 !/backend/data/.gitkeep
 
+# Prompt engineering local references
+/docs/prompt-references/
+
 # Jupyter Notebook 캐시
 .ipynb_checkpoints
 
