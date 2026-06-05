@@ -1,8 +1,13 @@
 """Supabase Auth 기반 인증/권한 검증.
 
 프론트가 Supabase로 로그인해 받은 access token(JWT)을 백엔드가 검증하고,
-profiles 테이블에서 앱 권한(role)을 확인한다. SUPABASE_JWT_SECRET이 비어 있으면
-아직 인증이 설정되지 않은 것으로 보고 보호 라우트에서 503을 돌려준다(현 단계 호환).
+profiles 테이블에서 앱 권한(role)을 확인한다. 토큰의 alg에 따라 두 방식을 모두 지원한다.
+
+  - ES256/RS256 (새 Supabase signing key): SUPABASE_URL로 JWKS를 조회해 공개키로 검증.
+  - HS256 (기존 Legacy JWT Secret): SUPABASE_JWT_SECRET으로 대칭 키 검증.
+
+SUPABASE_URL과 SUPABASE_JWT_SECRET 둘 다 비어 있으면 인증이 설정되지 않은 것으로 보고
+보호 라우트에서 503을 돌려준다(현 단계 호환).
 """
 
 import logging
@@ -20,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 # auto_error=False: 토큰이 없어도 여기서 바로 401을 던지지 않고 의존성에서 직접 처리한다.
 _bearer = HTTPBearer(auto_error=False)
+ASYMMETRIC_JWT_ALGORITHMS = {"ES256", "RS256"}
+LEGACY_JWT_ALGORITHMS = {"HS256"}
 
 
 @dataclass
@@ -33,25 +40,94 @@ class AuthUser:
     display_name: str | None = None
 
 
+def _supabase_issuer() -> str | None:
+    """SUPABASE_URL로부터 Supabase가 발급한 토큰의 표준 issuer URL을 만든다.
+
+    Returns:
+        ``{SUPABASE_URL}/auth/v1`` 형태의 issuer, SUPABASE_URL 미설정이면 None.
+    """
+    settings = get_settings()
+    supabase_url = settings.supabase_url.strip().rstrip("/")
+    if not supabase_url:
+        return None
+    return f"{supabase_url}/auth/v1"
+
+
+def _decode_asymmetric_supabase_jwt(token: str, algorithm: str) -> dict:
+    """ES256/RS256 토큰을 Supabase의 JWKS 공개키로 검증한다.
+
+    Supabase가 새로 도입한 signing key 방식에 대응한다. SUPABASE_URL이 없으면
+    JWKS 엔드포인트를 만들 수 없어 검증이 불가능하다.
+    """
+    issuer = _supabase_issuer()
+    if not issuer:
+        raise jwt.InvalidIssuerError("SUPABASE_URL is required for JWKS JWT verification")
+
+    jwks_client = jwt.PyJWKClient(f"{issuer}/.well-known/jwks.json")
+    signing_key = jwks_client.get_signing_key_from_jwt(token)
+    return jwt.decode(
+        token,
+        signing_key.key,
+        algorithms=[algorithm],
+        audience="authenticated",
+        issuer=issuer,
+    )
+
+
+def _decode_legacy_supabase_jwt(token: str) -> dict:
+    """HS256 토큰을 SUPABASE_JWT_SECRET(대칭 키)로 검증한다(레거시 호환).
+
+    SUPABASE_URL이 함께 설정돼 있으면 issuer까지 같이 검증해 토큰 출처를 좁힌다.
+    """
+    settings = get_settings()
+    if not settings.supabase_jwt_secret:
+        raise jwt.InvalidKeyError("SUPABASE_JWT_SECRET is required for HS256 JWT verification")
+
+    issuer = _supabase_issuer()
+    kwargs: dict[str, str] = {"audience": "authenticated"}
+    if issuer:
+        kwargs["issuer"] = issuer
+    return jwt.decode(
+        token,
+        settings.supabase_jwt_secret,
+        algorithms=["HS256"],
+        **kwargs,
+    )
+
+
+def _auth_verification_configured() -> bool:
+    """JWT 검증에 필요한 설정이 최소 하나라도 들어있는지 본다.
+
+    JWKS 방식은 SUPABASE_URL, 레거시는 SUPABASE_JWT_SECRET이 필요하다.
+    둘 다 비어 있으면 백엔드는 보호 라우트에서 503을 돌려준다.
+    """
+    settings = get_settings()
+    return bool(settings.supabase_url or settings.supabase_jwt_secret)
+
+
 def verify_supabase_jwt(token: str) -> dict:
-    """Supabase access token(JWT)을 HS256 + JWT Secret으로 검증해 claims를 반환한다.
+    """Supabase access token(JWT)을 검증해 claims를 반환한다.
+
+    토큰 헤더의 alg에 따라 두 경로로 분기한다:
+      - ES256/RS256: SUPABASE_URL의 JWKS 공개키로 검증(새 signing key 방식).
+      - HS256: SUPABASE_JWT_SECRET 대칭 키로 검증(레거시 Legacy JWT Secret).
 
     Args:
         token: 프론트가 보낸 Bearer access token 문자열.
     Returns:
         검증된 JWT payload(claims) 딕셔너리.
     Raises:
-        HTTPException(401): 서명/만료/형식이 잘못된 토큰.
+        HTTPException(401): 서명/만료/issuer/형식·알고리즘이 잘못된 토큰.
     """
-    settings = get_settings()
     try:
-        return jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-    except jwt.PyJWTError as exc:
+        header = jwt.get_unverified_header(token)
+        algorithm = str(header.get("alg", ""))
+        if algorithm in ASYMMETRIC_JWT_ALGORITHMS:
+            return _decode_asymmetric_supabase_jwt(token, algorithm)
+        if algorithm in LEGACY_JWT_ALGORITHMS:
+            return _decode_legacy_supabase_jwt(token)
+        raise jwt.InvalidAlgorithmError(f"Unsupported JWT algorithm: {algorithm}")
+    except (jwt.PyJWTError, jwt.PyJWKClientError) as exc:
         logger.warning("invalid supabase jwt: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -64,22 +140,21 @@ async def get_current_user(
 ) -> AuthUser:
     """요청의 Bearer 토큰을 검증하고 프로필을 upsert해 로그인 사용자를 반환한다.
 
-    SUPABASE_JWT_SECRET이 설정돼 있어야 동작한다(없으면 503). 첫 로그인이면 프로필을
-    자동 생성하고(role='user'), 이후 요청에선 저장된 role을 그대로 읽는다.
+    SUPABASE_URL 또는 SUPABASE_JWT_SECRET 중 하나는 설정돼 있어야 동작한다(없으면 503).
+    첫 로그인이면 프로필을 자동 생성하고(role='user'), 이후 요청에선 저장된 role을 그대로 읽는다.
 
     Args:
         credentials: Authorization 헤더에서 파싱된 Bearer 자격증명(없으면 None).
     Returns:
-        검증된 AuthUser(id/email/role).
+        검증된 AuthUser(id/email/role/display_name).
     Raises:
         HTTPException(401): 토큰 누락 또는 검증 실패.
-        HTTPException(503): 서버에 SUPABASE_JWT_SECRET 미설정.
+        HTTPException(503): SUPABASE_URL과 SUPABASE_JWT_SECRET이 모두 미설정.
     """
-    settings = get_settings()
-    if not settings.supabase_jwt_secret:
+    if not _auth_verification_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="인증이 아직 설정되지 않았습니다(SUPABASE_JWT_SECRET 없음).",
+            detail="인증이 아직 설정되지 않았습니다(SUPABASE_URL 또는 SUPABASE_JWT_SECRET 없음).",
         )
     if credentials is None:
         raise HTTPException(
@@ -125,9 +200,8 @@ async def get_optional_user(
     Raises:
         HTTPException(401): 토큰이 있는데 검증에 실패한 경우.
     """
-    settings = get_settings()
     # 인증 미설정(키 없음)이거나 토큰이 없으면 익명으로 통과시킨다.
-    if not settings.supabase_jwt_secret or credentials is None:
+    if not _auth_verification_configured() or credentials is None:
         return None
     return await get_current_user(credentials)
 

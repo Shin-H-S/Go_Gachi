@@ -1,4 +1,5 @@
 import logging
+from types import SimpleNamespace
 
 import jwt
 import pytest
@@ -16,6 +17,7 @@ def test_verify_supabase_jwt_hides_provider_error_detail(
     def fake_decode(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
         raise jwt.ExpiredSignatureError("Signature has expired")
 
+    monkeypatch.setattr(auth.jwt, "get_unverified_header", lambda token: {"alg": "HS256"})
     monkeypatch.setattr(auth.jwt, "decode", fake_decode)
 
     with caplog.at_level(logging.WARNING):
@@ -26,3 +28,42 @@ def test_verify_supabase_jwt_hides_provider_error_detail(
     assert exc_info.value.detail == "유효하지 않은 인증 토큰입니다."
     assert "Signature has expired" not in exc_info.value.detail
     assert "Signature has expired" in caplog.text
+
+
+def test_verify_supabase_jwt_uses_jwks_for_asymmetric_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ES256/RS256 Supabase tokens are verified with the project's JWKS endpoint."""
+    settings = auth.get_settings()
+    monkeypatch.setattr(settings, "supabase_url", "https://project-ref.supabase.co")
+
+    captured: dict[str, object] = {}
+
+    class FakeJwksClient:
+        def __init__(self, url: str) -> None:
+            captured["jwks_url"] = url
+
+        def get_signing_key_from_jwt(self, token: str):  # noqa: ANN201
+            captured["token"] = token
+            return SimpleNamespace(key="public-key")
+
+    def fake_decode(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        captured["decode_args"] = args
+        captured["decode_kwargs"] = kwargs
+        return {"sub": "user-123", "email": "user@example.com"}
+
+    monkeypatch.setattr(auth.jwt, "get_unverified_header", lambda token: {"alg": "ES256"})
+    monkeypatch.setattr(auth.jwt, "PyJWKClient", FakeJwksClient)
+    monkeypatch.setattr(auth.jwt, "decode", fake_decode)
+
+    claims = auth.verify_supabase_jwt("jwt-token")
+
+    assert claims["sub"] == "user-123"
+    assert captured["jwks_url"] == ("https://project-ref.supabase.co/auth/v1/.well-known/jwks.json")
+    assert captured["token"] == "jwt-token"
+    assert captured["decode_args"] == ("jwt-token", "public-key")
+    assert captured["decode_kwargs"] == {
+        "algorithms": ["ES256"],
+        "audience": "authenticated",
+        "issuer": "https://project-ref.supabase.co/auth/v1",
+    }

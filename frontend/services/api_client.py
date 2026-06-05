@@ -43,7 +43,13 @@ def build_feedback(prompt: str, detail_label: str) -> str:
     return f"광고 유형: {detail_label}\n{prompt.strip()}"
 
 
-def request_backend(uploaded_file, prompt: str, format_label: str, detail_label: str) -> bytes:
+def request_backend(
+    uploaded_file,
+    prompt: str,
+    format_label: str,
+    detail_label: str,
+    access_token: str = "",
+) -> bytes:
     target_size = get_detail_size(format_label, detail_label)
     payload = {
         "imageDataUrl": file_to_data_url(uploaded_file),
@@ -54,7 +60,18 @@ def request_backend(uploaded_file, prompt: str, format_label: str, detail_label:
         "targetHeight": target_size[1],
     }
 
-    response = httpx.post(f"{BACKEND_URL}/api/generate", json=payload, timeout=120)
+    # 로그인 상태면 JWT를 Authorization 헤더에 담아 백엔드로 전달한다.
+    # 비로그인이면 빈 headers를 보내고, 백엔드는 익명 요청(user_id=None)으로 처리한다.
+    headers = {}
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
+    response = httpx.post(
+        f"{BACKEND_URL}/api/generate",
+        json=payload,
+        headers=headers,
+        timeout=120,
+    )
     response.raise_for_status()
     data = response.json()
     image_data_url = data.get("imageDataUrl")
