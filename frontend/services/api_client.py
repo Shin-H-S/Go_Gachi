@@ -70,7 +70,7 @@ def request_backend(
         f"{BACKEND_URL}/api/generate",
         json=payload,
         headers=headers,
-        timeout=120,
+        timeout=300,
     )
     response.raise_for_status()
     data = response.json()

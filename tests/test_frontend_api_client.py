@@ -67,7 +67,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
         },
         # access_token 미전달 시 Authorization 헤더가 빠져야 한다(비로그인 호환).
         "headers": {},
-        "timeout": 120,
+        "timeout": 300,
     }
 
 
