@@ -11,7 +11,9 @@ SUPABASE_URL과 SUPABASE_JWT_SECRET 둘 다 비어 있으면 인증이 설정되
 """
 
 import logging
+import time
 from dataclasses import dataclass
+from functools import lru_cache
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -27,6 +29,9 @@ logger = logging.getLogger(__name__)
 _bearer = HTTPBearer(auto_error=False)
 ASYMMETRIC_JWT_ALGORITHMS = {"ES256", "RS256"}
 LEGACY_JWT_ALGORITHMS = {"HS256"}
+# Supabase가 signing key를 회전했을 때 우리 캐시가 영원히 옛 키에 묶이지 않도록
+# PyJWKClient 인스턴스를 시간 윈도우 단위로 새로 만든다(1시간마다 새 인스턴스).
+_JWKS_CACHE_TTL_SECONDS = 3600
 
 
 @dataclass
@@ -53,6 +58,22 @@ def _supabase_issuer() -> str | None:
     return f"{supabase_url}/auth/v1"
 
 
+@lru_cache(maxsize=4)
+def _jwks_client_cached(issuer: str, _epoch_window: int) -> jwt.PyJWKClient:
+    """Supabase issuer × 시간 윈도우 단위로 PyJWKClient를 보관한다.
+
+    ``_epoch_window``는 ``_jwks_client``가 현재 시각으로부터 계산해 넘긴다.
+    시간 윈도우가 바뀌면 자연스럽게 새 인스턴스가 만들어지면서 JWKS를 다시 받는다.
+    """
+    return jwt.PyJWKClient(f"{issuer}/.well-known/jwks.json")
+
+
+def _jwks_client(issuer: str) -> jwt.PyJWKClient:
+    """현재 시간 윈도우에 해당하는 PyJWKClient를 돌려준다(키 회전 대비 TTL 적용)."""
+    epoch_window = int(time.time() // _JWKS_CACHE_TTL_SECONDS)
+    return _jwks_client_cached(issuer, epoch_window)
+
+
 def _decode_asymmetric_supabase_jwt(token: str, algorithm: str) -> dict:
     """ES256/RS256 토큰을 Supabase의 JWKS 공개키로 검증한다.
 
@@ -63,7 +84,7 @@ def _decode_asymmetric_supabase_jwt(token: str, algorithm: str) -> dict:
     if not issuer:
         raise jwt.InvalidIssuerError("SUPABASE_URL is required for JWKS JWT verification")
 
-    jwks_client = jwt.PyJWKClient(f"{issuer}/.well-known/jwks.json")
+    jwks_client = _jwks_client(issuer)
     signing_key = jwks_client.get_signing_key_from_jwt(token)
     return jwt.decode(
         token,
