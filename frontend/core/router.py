@@ -3,7 +3,7 @@ import streamlit as st
 from frontend.core.config import FORMAT_OPTIONS
 
 DEFAULT_PAGE = "main"
-VALID_PAGE_NAMES = {"login", "main", "signup", "work"}
+VALID_PAGE_NAMES = {"login", "main", "mypage", "signup", "work"}
 
 
 def normalize_page_name(page_name: str | list[str] | None) -> str:
@@ -24,6 +24,8 @@ def init_session_state() -> None:
         "auth_user_email": "",
         "auth_error": "",
         "auth_notice": "",
+        "mypage_view": "recent",
+        "mypage_show_folder_form": False,
     }
     for key, default_value in auth_defaults.items():
         st.session_state.setdefault(key, default_value)

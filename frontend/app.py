@@ -39,6 +39,12 @@ def main() -> None:
         render_signup_page()
         st.stop()
 
+    if current_page == "mypage":
+        from frontend.pages.mypage import render_mypage_page
+
+        render_mypage_page()
+        st.stop()
+
     render_work_page()
 
 

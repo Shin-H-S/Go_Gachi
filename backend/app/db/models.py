@@ -7,15 +7,34 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     Float,
+    ForeignKey,
     Index,
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.db.database import Base
+
+
+class Folder(Base):
+    """사용자가 생성한 광고 이미지 정리용 폴더."""
+
+    __tablename__ = "folders"
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="uq_folders_user_id_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Generation(Base):
@@ -45,6 +64,11 @@ class Generation(Base):
     # 이 생성을 요청한 로그인 사용자의 Supabase UUID(JWT sub). 비로그인/익명이면 None.
     # "내 작업 기록" 조회·유저별 통계를 위한 소유권 표시이며, 캐시 키에는 포함하지 않는다.
     user_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    folder_id: Mapped[int | None] = mapped_column(
+        ForeignKey("folders.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
     # 업로드 사진 바이트의 SHA256. 캐시 키의 핵심.
     image_hash: Mapped[str] = mapped_column(String(64), index=True)
     # develop의 프리셋 ID (예: "instagram_feed_square"). 이전 placement 칼럼을 대체.

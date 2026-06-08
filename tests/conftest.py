@@ -23,6 +23,7 @@ _TEST_DIR.mkdir(parents=True, exist_ok=True)
 (_TEST_DIR / "uploads").mkdir(parents=True, exist_ok=True)
 
 # 테스트는 항상 임시 DB/폴더만 사용한다. 기존 환경변수에 실제 DB가 있어도 덮어쓴다.
+os.environ["PYTHON_DOTENV_DISABLED"] = "1"
 os.environ["DATABASE_URL"] = f"sqlite:///{(_TEST_DIR / 'app.db').as_posix()}"
 os.environ["ALLOW_SQLITE_DATABASE"] = "true"
 os.environ["DATA_DIR"] = str(_TEST_DIR)
@@ -30,6 +31,7 @@ os.environ["OUTPUT_DIR"] = str(_TEST_DIR / "outputs")
 os.environ["UPLOAD_DIR"] = str(_TEST_DIR / "uploads")
 os.environ["APP_ENV"] = "test"
 os.environ["IMAGE_PROVIDER"] = "mock"
+os.environ["FRONTEND_CONFIG_SOURCE"] = "local"
 # 실 API 키가 흘러들어가 실제 호출이 발생하지 않도록 항상 비운다.
 os.environ["OPENAI_API_KEY"] = ""
 os.environ["OPENAI_ADMIN_KEY"] = ""
