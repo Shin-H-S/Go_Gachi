@@ -9,7 +9,7 @@ import asyncio
 from pathlib import Path
 
 
-def public_output_url(output_path: Path | str | None) -> str | None:
+def output_url(output_path: Path | str | None) -> str | None:
     """저장된 결과 파일의 ``/outputs`` 루트 상대 경로를 만든다.
 
     Args:
@@ -25,7 +25,7 @@ def public_output_url(output_path: Path | str | None) -> str | None:
     return f"/outputs/{filename}"
 
 
-def public_output_url_if_exists(output_path: Path | str | None) -> str | None:
+def output_url_if_exists(output_path: Path | str | None) -> str | None:
     """저장된 결과 파일이 실제 디스크에 존재할 때만 ``/outputs`` 경로를 만든다.
 
     옛 기록 중 파일이 사라진 행은 ``None``으로 응답해 마이페이지에서 깨진
@@ -41,13 +41,13 @@ def public_output_url_if_exists(output_path: Path | str | None) -> str | None:
     path = Path(output_path)
     if not path.is_file():
         return None
-    return public_output_url(path)
+    return output_url(path)
 
 
-async def public_output_url_if_exists_async(
+async def output_url_if_exists_async(
     output_path: Path | str | None,
 ) -> str | None:
-    """``public_output_url_if_exists``의 비동기 버전.
+    """``output_url_if_exists``의 비동기 버전.
 
     디스크 stat(``is_file``)을 별도 스레드에서 실행해 FastAPI 이벤트 루프를
     차단하지 않는다. 마이페이지처럼 한 요청에서 여러 행을 검사할 때 사용한다.
@@ -58,4 +58,4 @@ async def public_output_url_if_exists_async(
     exists = await asyncio.to_thread(path.is_file)
     if not exists:
         return None
-    return public_output_url(path)
+    return output_url(path)
