@@ -26,6 +26,7 @@ def test_router_normalizes_query_param_page_names() -> None:
 
     assert router.normalize_page_name("main") == "main"
     assert router.normalize_page_name("work") == "work"
+    assert router.normalize_page_name("mypage") == "mypage"
     assert router.normalize_page_name("missing") == "main"
     assert router.normalize_page_name(["work", "main"]) == "work"
     assert router.normalize_page_name([]) == "main"
@@ -48,6 +49,10 @@ def test_router_navigation_writes_normalized_page_to_query_params(monkeypatch) -
     router.navigate_to("signup")
 
     assert fake_st.query_params["page"] == "signup"
+
+    router.navigate_to("mypage")
+
+    assert fake_st.query_params["page"] == "mypage"
 
 
 def test_init_session_state_sets_default_selected_channel(monkeypatch) -> None:

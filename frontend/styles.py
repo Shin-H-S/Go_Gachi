@@ -4,6 +4,7 @@ from frontend.css.base import BASE_CSS
 from frontend.css.login import LOGIN_CSS
 from frontend.css.main_layout import MAIN_LAYOUT_CSS
 from frontend.css.main_visual import MAIN_VISUAL_CSS
+from frontend.css.mypage import MYPAGE_CSS
 from frontend.css.responsive import RESPONSIVE_CSS
 from frontend.css.signup import SIGNUP_CSS
 from frontend.css.work_channels import WORK_CHANNELS_CSS
@@ -18,6 +19,7 @@ CSS_PARTS = [
     LOGIN_CSS,
     MAIN_LAYOUT_CSS,
     MAIN_VISUAL_CSS,
+    MYPAGE_CSS,
     SIGNUP_CSS,
     WORK_FORMS_CSS,
     WORK_PREVIEW_CSS,

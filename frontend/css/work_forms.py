@@ -12,6 +12,27 @@ WORK_FORMS_CSS = """
     margin: 0 0 8px;
 }
 
+.topbar-action-spacer {
+    height: 4px;
+}
+
+.st-key-work-mypage-link button {
+    border-radius: 8px;
+    background: #ffffff !important;
+    color: var(--ink) !important;
+    border: 1px solid rgba(32, 39, 37, 0.14) !important;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 900;
+    min-height: 40px;
+    box-shadow: 0 8px 18px rgba(44, 47, 42, 0.08) !important;
+}
+
+.st-key-work-mypage-link button:hover {
+    border-color: rgba(32, 39, 37, 0.26) !important;
+    color: var(--ink) !important;
+}
+
 .title {
     color: var(--ink);
     font-size: clamp(36px, 5vw, 62px);

@@ -3,6 +3,7 @@ from html import escape
 import streamlit as st
 
 from frontend.core.config import CHANNEL_SLUGS, FORMAT_OPTIONS, get_existing_channel_asset_path
+from frontend.core.router import navigate_to
 from frontend.media.image_data import bytes_to_data_url
 
 
@@ -44,18 +45,22 @@ def render_channel_tabs(selected_label: str) -> None:
 
 
 def render_header() -> None:
-    st.markdown(
-        """
-        <div class="topbar">
-            <p class="brand-kicker">GO-GACHI CAFE AD MAKER V1</p>
-            <h1 class="title">카페 메뉴 광고 이미지 제작</h1>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-
+    header_col, action_col = st.columns([0.78, 0.22], vertical_alignment="top")
+    with header_col:
+        st.markdown(
+            """
+            <div class="topbar">
+                <p class="brand-kicker">GO-GACHI CAFE AD MAKER V1</p>
+                <h1 class="title">카페 메뉴 광고 이미지 제작</h1>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with action_col:
+        st.markdown('<div class="topbar-action-spacer"></div>', unsafe_allow_html=True)
+        if st.button("마이페이지", key="work-mypage-link", use_container_width=True):
+            navigate_to("mypage")
+            st.rerun()
 
 
 def render_generation_lock_css() -> None:

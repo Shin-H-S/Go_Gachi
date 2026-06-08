@@ -55,7 +55,7 @@ client.auth.sign_out()
   "items": [
     {
       "request_id": "uuid",
-      "preset_id": "instagram_square",
+      "preset_id": "instagram",
       "status": "success",
       "image_url": null,
       "created_at": "2026-06-01T05:00:00"
