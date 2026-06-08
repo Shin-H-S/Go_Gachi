@@ -7,9 +7,9 @@
 import asyncio
 
 import base64
+import logging
 import mimetypes
 from pathlib import Path
-import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
