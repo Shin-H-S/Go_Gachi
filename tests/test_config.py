@@ -4,7 +4,13 @@ import pytest
 
 from backend.app.core import config as runtime_config
 from backend.app.core.presets import get_presets
-from backend.app.core.prompts import PROMPT_VERSION, build_prompt
+from backend.app.core.prompts import (
+    PROMPT_VERSION,
+    build_prompt,
+    build_system_prompt,
+    build_user_prompt,
+    merge_image_prompt,
+)
 from backend.app.services.image_edit import parse_image
 
 
@@ -34,7 +40,7 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
         presets["instagram"].find_detail("story_image").prompt_hint
     )
     assert "seasonal offer" in presets["daangn"].find_detail("discount_event").prompt_hint
-    assert PROMPT_VERSION == "2026-05-30-v3-channel-detail-presets"
+    assert PROMPT_VERSION == "2026-06-06-v1-system-user-prompt-builder"
 
 
 def test_load_env_uses_only_root_env(monkeypatch, tmp_path) -> None:
@@ -91,11 +97,38 @@ def test_prompt() -> None:
     detail = preset.find_detail("story_image")
     prompt = build_prompt(preset, "make it brighter", detail)
 
+    assert "[System instructions]" in prompt
+    assert "[User request]" in prompt
     assert "Do not add" in prompt
     assert "text" in prompt.lower()
     assert "make it brighter" in prompt
     assert "Instagram-ready" in prompt
     assert "Instagram Story" in prompt
+
+
+def test_prompt_builder_splits_system_and_user_prompt() -> None:
+    preset = get_presets()["instagram"]
+    detail = preset.find_detail("story_image")
+
+    system_prompt = build_system_prompt(preset, detail)
+    user_prompt = build_user_prompt("  make it brighter  ")
+    merged_prompt = merge_image_prompt(system_prompt, user_prompt)
+
+    assert "Instagram-ready" in system_prompt
+    assert "Instagram Story" in system_prompt
+    assert "Do not add" in system_prompt
+    assert "make it brighter" not in system_prompt
+    assert user_prompt == "User request for this generation:\nmake it brighter"
+    assert merged_prompt.startswith("[System instructions]")
+    assert "[User request]" in merged_prompt
+    assert merged_prompt.endswith("make it brighter")
+
+
+def test_empty_user_prompt_keeps_safe_default_instruction() -> None:
+    user_prompt = build_user_prompt("")
+
+    assert "No additional user request" in user_prompt
+    assert "selected preset" in user_prompt
 
 
 def test_parse_image_rejects_invalid_base64() -> None:

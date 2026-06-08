@@ -38,14 +38,17 @@ def test_verify_supabase_jwt_uses_jwks_for_asymmetric_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """ES256/RS256 Supabase tokens are verified with the project's JWKS endpoint."""
+    auth._jwks_client_cached.cache_clear()
     settings = auth.get_settings()
     monkeypatch.setattr(settings, "supabase_url", "https://project-ref.supabase.co")
 
     captured: dict[str, object] = {}
+    created_clients: list[str] = []
 
     class FakeJwksClient:
         def __init__(self, url: str) -> None:
             captured["jwks_url"] = url
+            created_clients.append(url)
 
         def get_signing_key_from_jwt(self, token: str):  # noqa: ANN201
             captured["token"] = token
@@ -61,13 +64,48 @@ def test_verify_supabase_jwt_uses_jwks_for_asymmetric_token(
     monkeypatch.setattr(auth.jwt, "decode", fake_decode)
 
     claims = auth.verify_supabase_jwt("jwt-token")
+    second_claims = auth.verify_supabase_jwt("jwt-token-2")
 
     assert claims["sub"] == "user-123"
+    assert second_claims["sub"] == "user-123"
     assert captured["jwks_url"] == ("https://project-ref.supabase.co/auth/v1/.well-known/jwks.json")
-    assert captured["token"] == "jwt-token"
-    assert captured["decode_args"] == ("jwt-token", "public-key")
+    assert created_clients == ["https://project-ref.supabase.co/auth/v1/.well-known/jwks.json"]
+    assert captured["token"] == "jwt-token-2"
+    assert captured["decode_args"] == ("jwt-token-2", "public-key")
     assert captured["decode_kwargs"] == {
         "algorithms": ["ES256"],
         "audience": "authenticated",
         "issuer": "https://project-ref.supabase.co/auth/v1",
     }
+    auth._jwks_client_cached.cache_clear()
+
+
+def test_jwks_client_cache_refreshes_after_ttl_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TTL 윈도우가 바뀌면 PyJWKClient를 새로 만들어 Supabase 키 회전을 따라잡는다."""
+    auth._jwks_client_cached.cache_clear()
+    created_clients: list[str] = []
+
+    class FakeJwksClient:
+        def __init__(self, url: str) -> None:
+            created_clients.append(url)
+
+    monkeypatch.setattr(auth.jwt, "PyJWKClient", FakeJwksClient)
+    monkeypatch.setattr(auth.time, "time", lambda: 10)
+
+    first_client = auth._jwks_client("https://project-ref.supabase.co/auth/v1")
+
+    monkeypatch.setattr(auth.time, "time", lambda: 20)
+    same_window_client = auth._jwks_client("https://project-ref.supabase.co/auth/v1")
+
+    monkeypatch.setattr(auth.time, "time", lambda: auth._JWKS_CACHE_TTL_SECONDS + 1)
+    next_window_client = auth._jwks_client("https://project-ref.supabase.co/auth/v1")
+
+    assert first_client is same_window_client
+    assert next_window_client is not first_client
+    assert created_clients == [
+        "https://project-ref.supabase.co/auth/v1/.well-known/jwks.json",
+        "https://project-ref.supabase.co/auth/v1/.well-known/jwks.json",
+    ]
+    auth._jwks_client_cached.cache_clear()

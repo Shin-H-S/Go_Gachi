@@ -4,12 +4,14 @@
 로그인/회원가입 자체는 프론트가 Supabase와 직접 처리하고, 백엔드는 토큰 검증만 담당한다.
 """
 
+import asyncio
+
 from fastapi import APIRouter, Depends
 
 from backend.app.core.auth import AuthUser, get_current_user
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
-from backend.app.services.storage_url import public_output_url_if_exists
+from backend.app.services.storage_url import public_output_url_if_exists_async
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -45,14 +47,18 @@ async def read_my_generations(
     # DB에는 환경별 호스트를 저장하지 않고, 응답할 때 /outputs/... 경로를 만든다.
     async with async_session_scope() as db:
         rows = await crud.list_user_generations(db, user.id)
-        items = [
-            {
-                "request_id": row.request_id,
-                "preset_id": row.preset_id,
-                "status": row.status,
-                "image_url": public_output_url_if_exists(row.output_path),
-                "created_at": row.created_at.isoformat() if row.created_at else None,
-            }
-            for row in rows
-        ]
+
+    image_urls = await asyncio.gather(
+        *(public_output_url_if_exists_async(row.output_path) for row in rows)
+    )
+    items = [
+        {
+            "request_id": row.request_id,
+            "preset_id": row.preset_id,
+            "status": row.status,
+            "image_url": image_url,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row, image_url in zip(rows, image_urls, strict=True)
+    ]
     return {"items": items, "count": len(items)}

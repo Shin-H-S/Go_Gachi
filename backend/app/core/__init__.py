@@ -1,1 +1,1 @@
-"""Core configuration and prompt helpers."""
+"""앱 전체에서 쓰는 설정·프롬프트 헬퍼 패키지."""
