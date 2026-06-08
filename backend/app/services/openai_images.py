@@ -1,6 +1,7 @@
 """OpenAI 이미지 편집 API 호출과 응답 파싱."""
 
 import logging
+import time
 
 import httpx
 
@@ -38,6 +39,7 @@ async def call_openai_edit(
     settings: Settings,
 ) -> str:
     """OpenAI Images Edit API를 호출하고 결과 base64 문자열을 돌려준다."""
+    start = time.perf_counter()
     try:
         async with httpx.AsyncClient(timeout=120) as client:
             # OpenAI Images Edit API는 이미지 파일을 multipart/form-data로 받는다.
@@ -61,7 +63,17 @@ async def call_openai_edit(
             )
     except httpx.HTTPError as exc:
         # 네트워크 실패·타임아웃·DNS 등은 사용자 잘못이 아니라 외부 의존성 문제다.
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.warning(
+            "OpenAI image edit connection failed model=%s took=%.1fms error=%s",
+            settings.openai_image_model,
+            elapsed_ms,
+            type(exc).__name__,
+        )
         raise RuntimeError("이미지 API에 연결하지 못했습니다.") from exc
+
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    openai_request_id = response.headers.get("x-request-id")
 
     try:
         # 오류 응답도 JSON으로 오는 경우가 많아 먼저 payload로 통일한다.
@@ -76,11 +88,21 @@ async def call_openai_edit(
             if isinstance(error, dict):
                 message = str(error.get("message") or message)
         logger.warning(
-            "OpenAI image edit failed status=%s model=%s message=%s",
+            "OpenAI image edit failed status=%s model=%s took=%.1fms "
+            "openai_request_id=%s message=%s",
             response.status_code,
             settings.openai_image_model,
+            elapsed_ms,
+            openai_request_id or "-",
             message,
         )
         raise RuntimeError(message)
 
+    logger.info(
+        "OpenAI image edit finished status=%s model=%s took=%.1fms openai_request_id=%s",
+        response.status_code,
+        settings.openai_image_model,
+        elapsed_ms,
+        openai_request_id or "-",
+    )
     return _extract_b64_json(payload)

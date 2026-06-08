@@ -9,8 +9,11 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.auth import router as auth_router
 from backend.app.api.internal import router as internal_router
+from backend.app.api.middlewares import AccessLogMiddleware, RequestIDMiddleware
 from backend.app.core.auth import AuthUser, get_optional_user
 from backend.app.core.config import get_settings
+from backend.app.core.logging_config import setup_logging
+from backend.app.core.logging_utils import short_id
 from backend.app.core.presets import default_preset, get_presets
 from backend.app.schemas import ConfigResponse, GenerateRequest, GenerateResponse
 from backend.app.services.image_edit import edit_image
@@ -24,10 +27,15 @@ IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
     """앱 시작·종료 훅. 스키마는 Alembic 마이그레이션이 관리하므로 여기서 생성하지 않는다."""
+    setup_logging(get_settings().app_env)
     yield
 
 
 app = FastAPI(title="Cafe Ad Maker V1", version="0.1.0", lifespan=lifespan)
+
+# add_middleware는 역순으로 실행되므로 RequestIDMiddleware를 나중에 등록한다.
+app.add_middleware(AccessLogMiddleware)
+app.add_middleware(RequestIDMiddleware)
 
 # 인증 라우트(/api/auth/me 등)는 환경과 무관하게 항상 등록한다.
 app.include_router(auth_router)
@@ -103,15 +111,20 @@ async def generate(
         preset = default_preset()
 
     detail = (
-        preset.find_detail(request.detail_type)
-        if request.detail_type
-        else preset.default_detail()
+        preset.find_detail(request.detail_type) if request.detail_type else preset.default_detail()
     )
     if detail is None:
         raise HTTPException(
             status_code=400,
             detail=f"지원하지 않는 detailType입니다: {request.detail_type}",
         )
+
+    logger.info(
+        "generate started preset=%s detail=%s user_id=%s",
+        preset.id,
+        detail.id,
+        short_id(user.id) if user else "-",
+    )
 
     try:
         # 이미지 검증, mock/openai 분기, 외부 API 호출은 service 계층에 위임한다.
@@ -137,6 +150,13 @@ async def generate(
             status_code=503,
             detail=IMAGE_GENERATION_UNAVAILABLE_MESSAGE,
         ) from exc
+
+    logger.debug(
+        "generate finished provider=%s preset=%s detail=%s",
+        result["provider"] or settings.image_provider,
+        preset.id,
+        detail.id,
+    )
 
     return GenerateResponse(
         imageDataUrl=result["image_data_url"],
