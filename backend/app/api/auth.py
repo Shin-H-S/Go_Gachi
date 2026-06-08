@@ -5,21 +5,25 @@
 """
 
 import asyncio
+
 import base64
 import mimetypes
 from pathlib import Path
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 
 from backend.app.core.auth import AuthUser, get_current_user
+from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Folder, Generation
-from backend.app.services.storage_url import public_output_url_if_exists_async
+from backend.app.services.storage_url import output_url_if_exists_async
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 class FolderCreateRequest(BaseModel):
@@ -97,7 +101,7 @@ async def read_my_generations(
         rows = await crud.list_user_generations(db, user.id)
 
     image_urls = await asyncio.gather(
-        *(public_output_url_if_exists_async(row.output_path) for row in rows)
+        *(output_url_if_exists_async(row.output_path) for row in rows)
     )
     items = [
         {
@@ -110,6 +114,7 @@ async def read_my_generations(
         }
         for row, image_url in zip(rows, image_urls, strict=True)
     ]
+    logger.info("my generations listed user_id=%s count=%d", short_id(user.id), len(items))
     return {"items": items, "count": len(items)}
 
 
