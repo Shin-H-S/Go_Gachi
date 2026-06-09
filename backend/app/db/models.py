@@ -67,6 +67,8 @@ class Generation(Base):
         index=True,
         nullable=True,
     )
+    # 같은 사진을 재수정해 새 결과를 만들 때 부모 generations.id를 가리킨다.
+    # 부모가 삭제되면 자식의 parent_id는 NULL로 떨어진다(ON DELETE SET NULL).
     parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("generations.id", ondelete="SET NULL"),
         index=True,

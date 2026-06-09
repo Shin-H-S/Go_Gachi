@@ -1,3 +1,5 @@
+"""generations 테이블 CRUD. 상태 전이: pending → success/failed, 캐시 hit는 cached로 별도 행."""
+
 import hashlib
 import re
 from pathlib import Path
@@ -11,10 +13,12 @@ _WHITESPACE_RE = re.compile(r"\s+")
 
 
 def image_sha256(file_bytes: bytes) -> str:
+    """캐시 키로 쓸 이미지 해시."""
     return hashlib.sha256(file_bytes).hexdigest()
 
 
 def normalize_instruction(user_prompt: str | None) -> str:
+    """공백·줄바꿈을 한 칸으로 합쳐 캐시 키 비교를 안정시킨다."""
     if not user_prompt:
         return ""
     stripped = user_prompt.strip()
@@ -22,6 +26,7 @@ def normalize_instruction(user_prompt: str | None) -> str:
 
 
 def instruction_sha256(user_prompt: str | None) -> str:
+    """캐시 키 비교용 사용자 입력 해시."""
     normalized = normalize_instruction(user_prompt)
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
@@ -35,6 +40,7 @@ async def find_cached_generation(
     model: str,
     prompt_version: str,
 ) -> Generation | None:
+    """최신 success 행을 찾되, 결과 파일이 실제로 남아있는 행만 돌려준다(사라진 옛 기록은 스킵)."""
     stmt = (
         select(Generation)
         .where(Generation.image_hash == image_hash)
@@ -66,6 +72,7 @@ async def create_pending_generation(
     user_id: str | None = None,
     parent_id: int | None = None,
 ) -> Generation:
+    """OpenAI 호출 전 'pending' 행을 먼저 만들어 실패해도 흔적이 남게 한다."""
     generation = Generation(
         request_id=request_id,
         user_id=user_id,
@@ -94,6 +101,7 @@ async def mark_generation_success(
     output_path: str,
     image_url: str | None,
 ) -> Generation:
+    """pending 행을 success로 갱신하고 결과 경로·URL을 채워 넣는다."""
     result = await db.execute(select(Generation).where(Generation.request_id == request_id))
     generation = result.scalar_one()
     generation.output_path = output_path
@@ -110,6 +118,7 @@ async def mark_generation_failed(
     request_id: str,
     error_message: str,
 ) -> Generation:
+    """pending 행을 failed로 갱신하고 실패 사유를 기록한다."""
     result = await db.execute(select(Generation).where(Generation.request_id == request_id))
     generation = result.scalar_one()
     generation.status = "failed"
@@ -134,6 +143,7 @@ async def create_cached_generation(
     user_id: str | None = None,
     parent_id: int | None = None,
 ) -> Generation:
+    """캐시 hit을 'cached' 행으로 남긴다. user_id·parent_id는 이번 요청 값을 저장한다."""
     generation = Generation(
         request_id=request_id,
         user_id=user_id,
