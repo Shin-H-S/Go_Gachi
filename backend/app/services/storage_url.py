@@ -25,6 +25,16 @@ def output_url(output_path: Path | str | None) -> str | None:
     return f"/outputs/{filename}"
 
 
+def upload_url(upload_path: Path | str | None) -> str | None:
+    """업로드 원본 파일의 ``/uploads`` 루트 상대 경로를 만든다."""
+    if upload_path is None:
+        return None
+    filename = Path(upload_path).name
+    if not filename:
+        return None
+    return f"/uploads/{filename}"
+
+
 def output_url_if_exists(output_path: Path | str | None) -> str | None:
     """저장된 결과 파일이 실제 디스크에 존재할 때만 ``/outputs`` 경로를 만든다.
 
@@ -44,6 +54,16 @@ def output_url_if_exists(output_path: Path | str | None) -> str | None:
     return output_url(path)
 
 
+def upload_url_if_exists(upload_path: Path | str | None) -> str | None:
+    """업로드 원본 파일이 실제 디스크에 존재할 때만 ``/uploads`` 경로를 만든다."""
+    if upload_path is None:
+        return None
+    path = Path(upload_path)
+    if not path.is_file():
+        return None
+    return upload_url(path)
+
+
 async def output_url_if_exists_async(
     output_path: Path | str | None,
 ) -> str | None:
@@ -59,3 +79,16 @@ async def output_url_if_exists_async(
     if not exists:
         return None
     return output_url(path)
+
+
+async def upload_url_if_exists_async(
+    upload_path: Path | str | None,
+) -> str | None:
+    """``upload_url_if_exists``의 비동기 버전."""
+    if upload_path is None:
+        return None
+    path = Path(upload_path)
+    exists = await asyncio.to_thread(path.is_file)
+    if not exists:
+        return None
+    return upload_url(path)
