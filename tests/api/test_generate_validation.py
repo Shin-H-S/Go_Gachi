@@ -2,6 +2,7 @@ import asyncio
 import base64
 from io import BytesIO
 
+import pytest
 from PIL import Image
 from sqlalchemy import func, select
 
@@ -194,7 +195,9 @@ def test_render_target_png_contain_preserves_full_image() -> None:
         assert image.getpixel((5, 0)) == (0, 128, 0)
 
 
-def test_generate_normalizes_uploaded_image_before_openai(monkeypatch) -> None:
+def test_generate_normalizes_uploaded_image_before_openai(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     source = Image.new("CMYK", (3, 2), (0, 128, 128, 0))
     source_buffer = BytesIO()
     source.save(source_buffer, format="JPEG")
@@ -203,7 +206,7 @@ def test_generate_normalizes_uploaded_image_before_openai(monkeypatch) -> None:
     )
     captured: dict[str, image_edit.UploadedImage] = {}
 
-    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+    async def _fake_call(**kwargs: object) -> str:
         captured["uploaded"] = kwargs["uploaded"]
         return TINY_PNG_B64
 
