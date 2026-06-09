@@ -13,6 +13,7 @@ from backend.app.core.text_layouts import find_text_layout
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.services.copywriting import AdCopy
+from backend.app.services.generation_copy import cache_instruction, rendered_copy_text
 from backend.app.services.generation_files import file_to_data_url, new_generation_id
 from backend.app.services.generation_inputs import target_size_or_detail, user_prompt_with_context
 from backend.app.services.image_processing import normalize_for_openai, render_target_png
@@ -61,10 +62,10 @@ async def edit_image(
         resize_mode,
     )
     clean_user_copy: str | None = (user_copy or "").strip() or None
-    stored_user_copy: str | None = _rendered_copy_text(text_copy)
+    stored_user_copy: str | None = rendered_copy_text(text_copy)
     has_logo: bool = bool(logo_data_url and logo_data_url.strip())
     stored_logo_position: str | None = logo_position if has_logo else None
-    cache_instruction = _cache_instruction(
+    cache_input = cache_instruction(
         generation_user_prompt,
         text_copy,
         user_copy=clean_user_copy,
@@ -93,7 +94,7 @@ async def edit_image(
 
     prompt = build_prompt(preset, generation_user_prompt, selected_detail)
     image_hash = crud.image_sha256(uploaded.content)
-    instruction_hash = crud.instruction_sha256(cache_instruction)
+    instruction_hash = crud.instruction_sha256(cache_input)
     model = settings.openai_image_model
     prompt_version = PROMPT_VERSION
 
@@ -320,47 +321,3 @@ async def edit_image(
         "note": None,
         "prompt": prompt,
     }
-
-
-def _rendered_copy_text(text_copy: AdCopy | None) -> str | None:
-    """이미지에 실제로 합성되는 광고 문구를 DB 저장용 문자열로 만든다."""
-    if text_copy is None:
-        return None
-
-    lines = [text_copy.headline, text_copy.subcopy, text_copy.cta]
-    rendered = "\n".join(line.strip() for line in lines if line and line.strip())
-    return rendered or None
-
-
-def _cache_instruction(
-    generation_user_prompt: str,
-    text_copy: AdCopy | None,
-    *,
-    user_copy: str | None = None,
-    has_logo: bool = False,
-    logo_position: str | None = None,
-) -> str:
-    """캐시 키에 텍스트 후처리 결과까지 반영한다.
-
-    OpenAI에 보내는 프롬프트에는 텍스트 합성 지시를 넣지 않지만, 저장 파일에는 텍스트가
-    들어갈 수 있으므로 캐시 키에는 문구/모드를 포함해야 서로 다른 결과가 섞이지 않는다.
-    """
-    if text_copy is None and not user_copy and not has_logo:
-        return generation_user_prompt
-
-    parts = [generation_user_prompt]
-    if user_copy:
-        parts.extend(["[User copy metadata]", user_copy])
-    if text_copy:
-        parts.extend(
-            [
-                "[Text overlay]",
-                f"copyMode={text_copy.mode}",
-                f"headline={text_copy.headline or ''}",
-                f"subcopy={text_copy.subcopy or ''}",
-                f"cta={text_copy.cta or ''}",
-            ]
-        )
-    if has_logo:
-        parts.extend(["[Logo metadata]", f"logoPosition={logo_position or ''}"])
-    return "\n".join(parts)
