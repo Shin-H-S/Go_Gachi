@@ -50,10 +50,10 @@ def build_system_prompt(
     return "\n".join(parts)
 
 
-def build_user_prompt(feedback: str = "") -> str:
+def build_user_prompt(user_prompt: str = "") -> str:
     """프론트에서 받은 사용자 요청을 user 성격 프롬프트로 만든다."""
-    # 사용자가 긴 피드백을 보내도 프롬프트가 과도하게 커지지 않도록 제한한다.
-    extra = (feedback or "").strip()[:1200]
+    # 사용자가 긴 요청을 보내도 프롬프트가 과도하게 커지지 않도록 제한한다.
+    extra = (user_prompt or "").strip()[:1200]
     if not extra:
         return (
             "No additional user request was provided. Follow the system instructions "
@@ -82,10 +82,10 @@ def merge_image_prompt(system_prompt: str, user_prompt: str) -> str:
 
 def build_prompt(
     preset: Preset,
-    feedback: str = "",
+    user_prompt: str = "",
     detail: PresetDetail | None = None,
 ) -> str:
     """프리셋 규칙과 사용자 요청을 현재 Images API용 단일 지시문으로 만든다."""
     system_prompt = build_system_prompt(preset, detail)
-    user_prompt = build_user_prompt(feedback)
-    return merge_image_prompt(system_prompt, user_prompt)
+    user_prompt_text = build_user_prompt(user_prompt)
+    return merge_image_prompt(system_prompt, user_prompt_text)
