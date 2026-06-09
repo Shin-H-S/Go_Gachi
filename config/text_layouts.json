@@ -1,0 +1,99 @@
+{
+  "instagram": {
+    "square_feed": {
+      "position": "bottom_center",
+      "safe_margin": 72,
+      "max_width_ratio": 0.78,
+      "headline_font_ratio": 0.052,
+      "subcopy_font_ratio": 0.03,
+      "cta_font_ratio": 0.028,
+      "max_lines": 3,
+      "align": "center",
+      "color": "#FFFFFF",
+      "shadow": true,
+      "backdrop": true
+    },
+    "portrait_feed": {
+      "position": "bottom_center",
+      "safe_margin": 86,
+      "max_width_ratio": 0.76,
+      "headline_font_ratio": 0.048,
+      "subcopy_font_ratio": 0.028,
+      "cta_font_ratio": 0.026,
+      "max_lines": 3,
+      "align": "center",
+      "color": "#FFFFFF",
+      "shadow": true,
+      "backdrop": true
+    },
+    "story_image": {
+      "position": "top_center",
+      "safe_margin": 108,
+      "max_width_ratio": 0.82,
+      "headline_font_ratio": 0.05,
+      "subcopy_font_ratio": 0.028,
+      "cta_font_ratio": 0.026,
+      "max_lines": 4,
+      "align": "center",
+      "color": "#FFFFFF",
+      "shadow": true,
+      "backdrop": false
+    }
+  },
+  "baemin": {
+    "solid_background": {
+      "position": "top_left",
+      "safe_margin": 76,
+      "max_width_ratio": 0.62,
+      "headline_font_ratio": 0.052,
+      "subcopy_font_ratio": 0.03,
+      "cta_font_ratio": 0.028,
+      "max_lines": 3,
+      "align": "left",
+      "color": "#111111",
+      "shadow": false,
+      "backdrop": false
+    },
+    "space_background": {
+      "position": "top_left",
+      "safe_margin": 76,
+      "max_width_ratio": 0.62,
+      "headline_font_ratio": 0.052,
+      "subcopy_font_ratio": 0.03,
+      "cta_font_ratio": 0.028,
+      "max_lines": 3,
+      "align": "left",
+      "color": "#FFFFFF",
+      "shadow": true,
+      "backdrop": true
+    }
+  },
+  "daangn": {
+    "menu_image": {
+      "position": "bottom_center",
+      "safe_margin": 72,
+      "max_width_ratio": 0.8,
+      "headline_font_ratio": 0.048,
+      "subcopy_font_ratio": 0.028,
+      "cta_font_ratio": 0.026,
+      "max_lines": 3,
+      "align": "center",
+      "color": "#FFFFFF",
+      "shadow": true,
+      "backdrop": true
+    },
+    "discount_event": {
+      "position": "top_center",
+      "safe_margin": 80,
+      "max_width_ratio": 0.78,
+      "headline_font_ratio": 0.052,
+      "subcopy_font_ratio": 0.03,
+      "cta_font_ratio": 0.028,
+      "max_lines": 3,
+      "align": "center",
+      "color": "#FFFFFF",
+      "shadow": true,
+      "backdrop": true
+    }
+  }
+}

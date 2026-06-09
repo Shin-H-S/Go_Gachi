@@ -90,7 +90,12 @@ def test_generate_uses_user_prompt(
 
     assert response.status_code == 200
     assert "V3 userPrompt 문구" in body["prompt"]
-    assert body["copy"] is None
+    assert body["copy"] == {
+        "headline": "V3 userPrompt 문구",
+        "subcopy": "카페에서 더 맛있게 즐겨보세요.",
+        "cta": None,
+        "copyMode": "polish",
+    }
     assert body["logo"] is None
     assert body["revision"] is None
 
