@@ -1,7 +1,7 @@
 """generations에 사용자 문구·로고 메타데이터 컬럼 5개 추가.
 
 Revision ID: dff5cf1cfe4f
-Revises: b7a3c9d2e8f1
+Revises: e1a2b3c4d5f6
 Create Date: 2026-06-09 13:05:20.438641
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "dff5cf1cfe4f"
-down_revision: str | Sequence[str] | None = "b7a3c9d2e8f1"
+down_revision: str | Sequence[str] | None = "e1a2b3c4d5f6"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

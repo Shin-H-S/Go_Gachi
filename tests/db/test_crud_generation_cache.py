@@ -144,6 +144,69 @@ async def test_find_cached_generation_misses_on_different_instruction(
     assert cached is None
 
 
+async def test_create_pending_generation_stores_parent_id(
+    db_session: AsyncSession,
+) -> None:
+    parent = await crud.create_pending_generation(
+        db_session,
+        request_id="req-parent",
+        image_hash="h-parent",
+        preset_id="instagram_feed_square",
+        instruction_hash=crud.instruction_sha256("parent"),
+        prompt_version="v1",
+        model="gpt-image-2",
+        original_path=None,
+        prompt="parent prompt",
+    )
+    child = await crud.create_pending_generation(
+        db_session,
+        request_id="req-child",
+        image_hash="h-child",
+        preset_id="instagram_feed_square",
+        instruction_hash=crud.instruction_sha256("child"),
+        prompt_version="v1",
+        model="gpt-image-2",
+        original_path=None,
+        prompt="child prompt",
+        parent_id=parent.id,
+    )
+
+    assert child.parent_id == parent.id
+
+
+async def test_create_cached_generation_stores_parent_id(
+    db_session: AsyncSession,
+) -> None:
+    parent = await crud.create_pending_generation(
+        db_session,
+        request_id="req-parent-cached",
+        image_hash="h-parent-cached",
+        preset_id="instagram_feed_square",
+        instruction_hash=crud.instruction_sha256("parent"),
+        prompt_version="v1",
+        model="gpt-image-2",
+        original_path=None,
+        prompt="parent prompt",
+    )
+    cached = await crud.create_cached_generation(
+        db_session,
+        request_id="req-cached-child",
+        image_hash="h-child-cached",
+        preset_id="instagram_feed_square",
+        instruction_hash=crud.instruction_sha256("child"),
+        prompt_version="v1",
+        model="gpt-image-2",
+        original_path=None,
+        output_path="outputs/result.png",
+        image_url=None,
+        prompt="cached prompt",
+        parent_id=parent.id,
+    )
+
+    assert cached.status == "cached"
+    assert cached.parent_id == parent.id
+
+
 async def test_find_cached_generation_ignores_failed_and_missing_files(
     db_session: AsyncSession,
     tmp_dir: Path,
