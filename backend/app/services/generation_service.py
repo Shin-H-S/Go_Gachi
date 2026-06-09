@@ -3,7 +3,6 @@
 import asyncio
 import base64
 import logging
-from pathlib import Path
 
 from backend.app.core.config import Settings
 from backend.app.core.logging_utils import short_id
@@ -13,8 +12,9 @@ from backend.app.core.text_layouts import find_text_layout
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.services.copywriting import AdCopy
+from backend.app.services.generation_cache import cached_response, find_cache_snapshot
 from backend.app.services.generation_copy import cache_instruction, rendered_copy_text
-from backend.app.services.generation_files import file_to_data_url, new_generation_id
+from backend.app.services.generation_files import new_generation_id
 from backend.app.services.generation_inputs import target_size_or_detail, user_prompt_with_context
 from backend.app.services.image_processing import normalize_for_openai, render_target_png
 from backend.app.services.image_types import ResizeMode
@@ -98,83 +98,23 @@ async def edit_image(
     model = settings.openai_image_model
     prompt_version = PROMPT_VERSION
 
-    # 1) 캐시 조회. 세션을 빨리 닫고 필요한 컬럼은 dict로 스냅샷한다.
-    async with async_session_scope() as db:
-        cached_row = await crud.find_cached_generation(
-            db,
-            image_hash=image_hash,
-            preset_id=preset.id,
-            instruction_hash=instruction_hash,
-            model=model,
-            prompt_version=prompt_version,
-        )
-        cached_snapshot: dict[str, str | None] | None
-        if cached_row is None:
-            cached_snapshot = None
-        else:
-            cached_snapshot = {
-                "image_hash": cached_row.image_hash,
-                "preset_id": cached_row.preset_id,
-                "instruction_hash": cached_row.instruction_hash,
-                "prompt_version": cached_row.prompt_version,
-                "model": cached_row.model,
-                "original_path": cached_row.original_path,
-                "output_path": cached_row.output_path,
-                "image_url": cached_row.image_url,
-                "prompt": cached_row.prompt,
-            }
-
-    # 2) 캐시 hit: 파일 읽기 성공 뒤에만 cached 기록·사용량을 남긴다.
-    if cached_snapshot is not None and cached_snapshot["output_path"]:
-        cached_path = Path(cached_snapshot["output_path"])
-        if await asyncio.to_thread(cached_path.exists):
-            image_data_url = await file_to_data_url(cached_path)
-            # DB에는 환경별 호스트를 저장하지 않고, 응답에만 /outputs/... 경로를 만든다.
-            image_url = output_url(cached_path)
-            generation_id = new_generation_id()
-            logger.info(
-                "cache hit generation_id=%s image_hash=%s preset=%s user_id=%s",
-                generation_id,
-                short_id(cached_snapshot["image_hash"]),
-                cached_snapshot["preset_id"],
-                short_id(user_id),
-            )
-            async with async_session_scope() as db:
-                await crud.create_cached_generation(
-                    db,
-                    request_id=generation_id,
-                    image_hash=cached_snapshot["image_hash"],
-                    preset_id=cached_snapshot["preset_id"],
-                    instruction_hash=cached_snapshot["instruction_hash"],
-                    prompt_version=cached_snapshot["prompt_version"],
-                    model=cached_snapshot["model"],
-                    original_path=cached_snapshot["original_path"],
-                    output_path=cached_snapshot["output_path"],
-                    image_url=None,
-                    prompt=cached_snapshot["prompt"],
-                    user_id=user_id,
-                    user_copy=stored_user_copy,
-                    has_logo=has_logo,
-                    logo_position=stored_logo_position,
-                    logo_image_hash=None,
-                    logo_storage_key=None,
-                )
-                await crud.record_usage(
-                    db,
-                    request_id=generation_id,
-                    model=model,
-                    operation="image_edit",
-                    estimated_cost=0.0,
-                    cached=True,
-                )
-            return {
-                "image_data_url": image_data_url,
-                "image_url": image_url,
-                "provider": "openai",
-                "note": "캐시된 결과 재사용",
-                "prompt": cached_snapshot["prompt"],
-            }
-        # 파일이 사라졌으면 캐시 미스로 떨어져 OpenAI 호출 분기로 이어진다.
+    cache_snapshot = await find_cache_snapshot(
+        image_hash=image_hash,
+        preset_id=preset.id,
+        instruction_hash=instruction_hash,
+        model=model,
+        prompt_version=prompt_version,
+    )
+    cache_result = await cached_response(
+        cache_snapshot,
+        user_id=user_id,
+        user_copy=stored_user_copy,
+        has_logo=has_logo,
+        logo_position=stored_logo_position,
+    )
+    if cache_result is not None:
+        return cache_result
+    # 캐시 행이 없거나 파일이 사라졌으면 캐시 미스로 떨어져 OpenAI 호출 분기로 이어진다.
 
     # 3) 캐시 미스: pending 행 먼저 만든 뒤 OpenAI 호출. 실패해도 흔적 남기기 위함.
     generation_id = new_generation_id()
