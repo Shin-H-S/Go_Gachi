@@ -75,7 +75,7 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
     assert total_usage_count == 2
 
 
-def test_generate_stores_user_copy_and_logo_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generate_stores_logo_metadata_without_overlay(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _fake_call(**kwargs: object) -> str:
         return TINY_PNG_B64
 
@@ -112,11 +112,89 @@ def test_generate_stores_user_copy_and_logo_metadata(monkeypatch: pytest.MonkeyP
     user_copy, has_logo, logo_position, instruction_hash, logo_storage_key = asyncio.run(
         _db_state()
     )
-    assert user_copy == "lemonade menu copy"
+    assert user_copy is None
     assert has_logo is True
     assert logo_position == "bottom_right"
     assert instruction_hash != crud.instruction_sha256("bright mood")
     assert logo_storage_key is None
+
+
+def test_generate_stores_rendered_user_copy(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fake_call(**kwargs: object) -> str:
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    expected_copy = (
+        "오늘 놓치기 아까운 딸기 케이크 6,500원\n"
+        "카페에서 즐기는 신선한 메뉴를 더 맛있게 전해드려요.\n"
+        "지금 방문해보세요"
+    )
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": "bright mood",
+            "userCopy": "딸기 케이크 6500원",
+            "copyMode": "rewrite",
+            "textOverlayEnabled": True,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["copy"] == {
+        "headline": "오늘 놓치기 아까운 딸기 케이크 6,500원",
+        "subcopy": "카페에서 즐기는 신선한 메뉴를 더 맛있게 전해드려요.",
+        "cta": "지금 방문해보세요",
+        "copyMode": "rewrite",
+    }
+
+    async def _saved_user_copy() -> str | None:
+        async with async_session_scope() as db:
+            result = await db.execute(select(Generation.user_copy))
+            return result.scalar_one()
+
+    assert asyncio.run(_saved_user_copy()) == expected_copy
+
+
+def test_generate_cache_hit_stores_rendered_user_copy(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fake_call(**kwargs: object) -> str:
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    payload = {
+        "imageDataUrl": TINY_PNG_DATA_URL,
+        "presetId": "instagram",
+        "detailType": "square_feed",
+        "userPrompt": "bright mood",
+        "userCopy": "라떼 4500원",
+        "copyMode": "polish",
+        "textOverlayEnabled": True,
+    }
+    first = client.post("/api/generate", json=payload)
+    second = client.post("/api/generate", json=payload)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert second.json()["note"] == "캐시된 결과 재사용"
+
+    async def _db_state() -> list[tuple[str, str | None]]:
+        async with async_session_scope() as db:
+            result = await db.execute(
+                select(Generation.status, Generation.user_copy).order_by(Generation.id)
+            )
+            return list(result.all())
+
+    rows = asyncio.run(_db_state())
+    assert rows == [
+        ("success", "라떼 4,500원\n카페에서 더 맛있게 즐겨보세요."),
+        ("cached", "라떼 4,500원\n카페에서 더 맛있게 즐겨보세요."),
+    ]
 
 
 def test_generate_stores_blank_user_copy_as_none(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -134,6 +212,37 @@ def test_generate_stores_blank_user_copy_as_none(monkeypatch: pytest.MonkeyPatch
             "detailType": "square_feed",
             "userPrompt": "bright mood",
             "userCopy": "   ",
+        },
+    )
+
+    assert response.status_code == 200
+
+    async def _saved_user_copy() -> str | None:
+        async with async_session_scope() as db:
+            result = await db.execute(select(Generation.user_copy))
+            return result.scalar_one()
+
+    assert asyncio.run(_saved_user_copy()) is None
+
+
+def test_generate_ignores_user_copy_when_text_overlay_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _fake_call(**kwargs: object) -> str:
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": "bright mood",
+            "userCopy": "이미지에 합성하지 않는 문구",
+            "textOverlayEnabled": False,
         },
     )
 
