@@ -92,6 +92,7 @@ def test_result_context_uses_trimmed_prompt_upload_hash_and_selected_preset() ->
         "  make this menu look bright  ",
         format_label,
         str(detail["label"]),
+        ad_copy_prompt="  Headline: Fresh coffee  ",
     )
 
     assert context == {
@@ -100,20 +101,41 @@ def test_result_context_uses_trimmed_prompt_upload_hash_and_selected_preset() ->
         "targetWidth": detail["size"][0],
         "targetHeight": detail["size"][1],
         "prompt": "make this menu look bright",
+        "adCopyPrompt": "Headline: Fresh coffee",
+        "textOverlayEnabled": True,
+        "logoUploadHash": None,
         "uploadHash": hashlib.sha256(image_bytes).hexdigest(),
     }
 
 
-def test_result_context_requires_upload_and_prompt() -> None:
+def test_result_context_requires_upload_only() -> None:
     work_state = import_frontend_module("frontend.work.state")
     format_label, detail = first_format_and_detail(work_state.FORMAT_OPTIONS)
     uploaded_file = SimpleNamespace(getvalue=lambda: b"uploaded image")
 
     assert work_state.build_result_context(None, "prompt", format_label, detail["label"]) is None
-    assert (
-        work_state.build_result_context(uploaded_file, "   ", format_label, detail["label"])
-        is None
+    context = work_state.build_result_context(uploaded_file, "   ", format_label, detail["label"])
+
+    assert context is not None
+    assert context["prompt"] == ""
+
+
+def test_result_context_tracks_logo_upload_hash() -> None:
+    work_state = import_frontend_module("frontend.work.state")
+    format_label, detail = first_format_and_detail(work_state.FORMAT_OPTIONS)
+    uploaded_file = SimpleNamespace(getvalue=lambda: b"uploaded image")
+    logo_file = SimpleNamespace(getvalue=lambda: b"logo image")
+
+    context = work_state.build_result_context(
+        uploaded_file,
+        "prompt",
+        format_label,
+        str(detail["label"]),
+        logo_file=logo_file,
     )
+
+    assert context is not None
+    assert context["logoUploadHash"] == hashlib.sha256(b"logo image").hexdigest()
 
 
 def test_sync_result_state_clears_stale_generated_result(monkeypatch) -> None:

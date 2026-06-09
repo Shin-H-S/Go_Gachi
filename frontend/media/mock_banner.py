@@ -17,6 +17,7 @@ def create_mock_banner(
     prompt: str,
     format_label: str,
     detail_label: str,
+    text_overlay_enabled: bool = True,
 ) -> bytes:
     width, height = get_detail_size(format_label, detail_label)
     scale = min(width, height) / 1080
@@ -54,30 +55,31 @@ def create_mock_banner(
     title_font = load_font(max(34, int(58 * scale)), bold=True)
     body_font = load_font(max(22, int(34 * scale)), bold=False)
 
-    text_x = margin
-    text_y = int(height * 0.10)
-    text_width = int(width * 0.78)
-    cursor_y = draw_wrapped_text(
-        draw,
-        (text_x, text_y),
-        "프롬프트 기반 미리보기",
-        title_font,
-        "#202725",
-        text_width,
-        int(8 * scale),
-        2,
-    )
-    cursor_y += int(18 * scale)
-    draw_wrapped_text(
-        draw,
-        (text_x, cursor_y),
-        prompt,
-        body_font,
-        "#202725",
-        text_width,
-        int(8 * scale),
-        3,
-    )
+    if text_overlay_enabled:
+        text_x = margin
+        text_y = int(height * 0.10)
+        text_width = int(width * 0.78)
+        cursor_y = draw_wrapped_text(
+            draw,
+            (text_x, text_y),
+            "프롬프트 기반 미리보기",
+            title_font,
+            "#202725",
+            text_width,
+            int(8 * scale),
+            2,
+        )
+        cursor_y += int(18 * scale)
+        draw_wrapped_text(
+            draw,
+            (text_x, cursor_y),
+            prompt,
+            body_font,
+            "#202725",
+            text_width,
+            int(8 * scale),
+            3,
+        )
 
     draw.text(
         (margin, height - int(42 * scale)),

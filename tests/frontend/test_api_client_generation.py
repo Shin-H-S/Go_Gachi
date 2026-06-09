@@ -52,7 +52,15 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             ),
             "presetId": "instagram",
             "detailType": "square_feed",
-            "userPrompt": "광고 유형: 정사각형 피드\n제품이 크게 보여요",
+            "userPrompt": (
+                "광고 유형: 정사각형 피드\n\n"
+                "이미지 요청:\n제품이 크게 보여요\n\n"
+                "광고 문구: 자동 생성 요청"
+            ),
+            "copyMode": "preserve",
+            "textOverlayEnabled": True,
+            "logoDataUrl": None,
+            "logoPosition": "bottom_right",
             "targetWidth": 1080,
             "targetHeight": 1080,
         },
@@ -88,6 +96,128 @@ def test_request_backend_attaches_authorization_header_when_token_given(
     )
 
     assert captured_headers == {"Authorization": "Bearer fake-jwt-token"}
+
+
+def test_request_backend_sends_copy_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured_json: dict[str, object] = {}
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        captured_json.update(json)
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    api_client.request_backend(
+        uploaded_file,
+        "오늘만 할인",
+        "인스타그램",
+        "정사각형 피드",
+        copy_mode="polish",
+    )
+
+    assert captured_json["copyMode"] == "polish"
+
+
+def test_request_backend_sends_logo_data_url_when_logo_uploaded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_json: dict[str, object] = {}
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        captured_json.update(json)
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    logo_file = SimpleNamespace(type="image/png", getvalue=lambda: b"logo-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    api_client.request_backend(
+        uploaded_file,
+        "따뜻한 배경으로",
+        "인스타그램",
+        "정사각형 피드",
+        logo_file=logo_file,
+    )
+
+    assert captured_json["logoDataUrl"] == (
+        f"data:image/png;base64,{base64.b64encode(b'logo-image').decode('ascii')}"
+    )
+    assert captured_json["logoPosition"] == "bottom_right"
+
+
+def test_request_backend_sends_null_logo_data_url_without_logo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_json: dict[str, object] = {}
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        captured_json.update(json)
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    api_client.request_backend(
+        uploaded_file,
+        "따뜻한 배경으로",
+        "인스타그램",
+        "정사각형 피드",
+    )
+
+    assert captured_json["logoDataUrl"] is None
+
+
+def test_request_backend_combines_image_prompt_and_ad_copy_separately(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_json: dict[str, object] = {}
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        captured_json.update(json)
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    api_client.request_backend(
+        uploaded_file,
+        "따뜻한 배경으로",
+        "인스타그램",
+        "정사각형 피드",
+        ad_copy_prompt="헤드라인: 오늘만 할인",
+        copy_mode="polish",
+    )
+
+    assert captured_json["userPrompt"] == (
+        "광고 유형: 정사각형 피드\n\n"
+        "이미지 요청:\n따뜻한 배경으로\n\n"
+        "광고 문구:\n헤드라인: 오늘만 할인"
+    )
 
 
 def test_request_backend_uses_default_local_backend_url(

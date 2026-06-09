@@ -47,8 +47,29 @@ def data_url_to_bytes(data_url: str) -> bytes:
     return base64.b64decode(encoded)
 
 
-def build_user_prompt(prompt: str, detail_label: str) -> str:
-    return f"광고 유형: {detail_label}\n{prompt.strip()}"
+def build_user_prompt(
+    prompt: str,
+    detail_label: str,
+    *,
+    ad_copy_prompt: str = "",
+    text_overlay_enabled: bool = True,
+) -> str:
+    parts = [f"광고 유형: {detail_label}"]
+    clean_prompt = prompt.strip()
+    clean_ad_copy = ad_copy_prompt.strip()
+
+    if clean_prompt:
+        parts.append(f"이미지 요청:\n{clean_prompt}")
+
+    if text_overlay_enabled:
+        if clean_ad_copy:
+            parts.append(f"광고 문구:\n{clean_ad_copy}")
+        else:
+            parts.append("광고 문구: 자동 생성 요청")
+    else:
+        parts.append("광고 문구: 포함하지 않음")
+
+    return "\n\n".join(parts)
 
 
 def _auth_headers(access_token: str) -> dict[str, str]:
@@ -132,13 +153,27 @@ def request_backend(
     format_label: str,
     detail_label: str,
     access_token: str = "",
+    text_overlay_enabled: bool = True,
+    copy_mode: str = "preserve",
+    ad_copy_prompt: str = "",
+    logo_file=None,
+    logo_position: str = "bottom_right",
 ) -> bytes:
     target_size = get_detail_size(format_label, detail_label)
     payload = {
         "imageDataUrl": file_to_data_url(uploaded_file),
         "presetId": FORMAT_OPTIONS[format_label]["value"],
         "detailType": get_detail_id(format_label, detail_label),
-        "userPrompt": build_user_prompt(prompt, detail_label),
+        "userPrompt": build_user_prompt(
+            prompt,
+            detail_label,
+            ad_copy_prompt=ad_copy_prompt,
+            text_overlay_enabled=text_overlay_enabled,
+        ),
+        "copyMode": copy_mode,
+        "textOverlayEnabled": text_overlay_enabled,
+        "logoDataUrl": file_to_data_url(logo_file) if logo_file else None,
+        "logoPosition": logo_position,
         "targetWidth": target_size[0],
         "targetHeight": target_size[1],
     }

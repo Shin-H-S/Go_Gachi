@@ -11,6 +11,7 @@ from frontend.work.components import (
     render_generation_lock_css,
     render_header,
 )
+from frontend.work.copy_controls import render_copy_controls
 from frontend.work.generation import handle_generation_request
 from frontend.work.preview import render_image_preview, render_preview_shell
 from frontend.work.state import build_result_context, get_selected_channel, sync_result_state
@@ -43,6 +44,15 @@ def render_work_page() -> None:
                 label_visibility="collapsed",
             )
             uploaded_file = get_primary_uploaded_file(uploaded_files)
+
+        with st.container(border=True, key="left-logo-section"):
+            st.markdown('<p class="section-label">로고 업로드</p>', unsafe_allow_html=True)
+            logo_file = st.file_uploader(
+                "로고 이미지 업로드",
+                accept_multiple_files=False,
+                key="logo_upload",
+                label_visibility="collapsed",
+            )
 
         with st.container(border=True, key="left-channel-section"):
             st.markdown('<p class="section-label">광고 채널 선택</p>', unsafe_allow_html=True)
@@ -83,8 +93,13 @@ def render_work_page() -> None:
                     "따뜻한 색감으로 만들어줘\n"
                     "미니멀하고 프리미엄한 배경으로"
                 ),
-                height=150,
+                height=120,
+                key="image_prompt",
                 label_visibility="collapsed",
+            )
+            ad_copy_prompt, text_overlay_enabled, copy_mode = render_copy_controls(
+                format_label,
+                detail_label,
             )
 
             current_result_context = build_result_context(
@@ -92,6 +107,9 @@ def render_work_page() -> None:
                 prompt,
                 format_label,
                 detail_label,
+                ad_copy_prompt=ad_copy_prompt,
+                text_overlay_enabled=text_overlay_enabled,
+                logo_file=logo_file,
             )
             sync_result_state(current_result_context)
 
@@ -125,7 +143,7 @@ def render_work_page() -> None:
         if "result_bytes" not in st.session_state and "save_clicked" in locals() and save_clicked:
             st.info("저장할 결과 이미지를 먼저 만들어주세요.")
 
-    is_generating = bool(generate and uploaded_file and prompt.strip())
+    is_generating = bool(generate and uploaded_file)
 
     if is_generating:
         render_generation_lock_css()
@@ -169,8 +187,12 @@ def render_work_page() -> None:
     handle_generation_request(
         generate=generate,
         uploaded_file=uploaded_file,
+        logo_file=logo_file,
         prompt=prompt,
+        ad_copy_prompt=ad_copy_prompt,
         format_label=format_label,
         detail_label=detail_label,
         current_result_context=current_result_context,
+        text_overlay_enabled=text_overlay_enabled,
+        copy_mode=copy_mode,
     )

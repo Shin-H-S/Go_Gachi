@@ -11,19 +11,32 @@ def clear_result_state() -> None:
     st.session_state.pop("result_context", None)
 
 
-def build_result_context(uploaded_file, prompt: str, format_label: str, detail_label: str):
+def build_result_context(
+    uploaded_file,
+    prompt: str,
+    format_label: str,
+    detail_label: str,
+    *,
+    ad_copy_prompt: str = "",
+    text_overlay_enabled: bool = True,
+    logo_file=None,
+):
     """생성 결과가 어떤 입력 조건에서 만들어졌는지 비교할 키를 만든다."""
-    if not uploaded_file or not prompt.strip():
+    if not uploaded_file:
         return None
 
     target_size = get_detail_size(format_label, detail_label)
     upload_hash = hashlib.sha256(uploaded_file.getvalue()).hexdigest()
+    logo_upload_hash = hashlib.sha256(logo_file.getvalue()).hexdigest() if logo_file else None
     return {
         "presetId": FORMAT_OPTIONS[format_label]["value"],
         "detailType": get_detail_id(format_label, detail_label),
         "targetWidth": target_size[0],
         "targetHeight": target_size[1],
         "prompt": prompt.strip(),
+        "adCopyPrompt": ad_copy_prompt.strip(),
+        "textOverlayEnabled": text_overlay_enabled,
+        "logoUploadHash": logo_upload_hash,
         "uploadHash": upload_hash,
     }
 
