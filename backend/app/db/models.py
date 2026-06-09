@@ -24,9 +24,7 @@ class Folder(Base):
     """사용자가 생성한 광고 이미지 정리용 폴더."""
 
     __tablename__ = "folders"
-    __table_args__ = (
-        UniqueConstraint("user_id", "name", name="uq_folders_user_id_name"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_folders_user_id_name"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(64), index=True)
@@ -66,6 +64,13 @@ class Generation(Base):
     user_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     folder_id: Mapped[int | None] = mapped_column(
         ForeignKey("folders.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    # 같은 사진을 재수정해 새 결과를 만들 때 부모 generations.id를 가리킨다.
+    # 부모가 삭제되면 자식의 parent_id는 NULL로 떨어진다(ON DELETE SET NULL).
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("generations.id", ondelete="SET NULL"),
         index=True,
         nullable=True,
     )
