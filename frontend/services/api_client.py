@@ -15,7 +15,7 @@ __all__ = [
     "BACKEND_URL",
     "DEFAULT_BACKEND_URL",
     "FRONTEND_USE_MOCK",
-    "build_feedback",
+    "build_user_prompt",
     "create_my_folder",
     "data_url_to_bytes",
     "file_to_data_url",
@@ -47,7 +47,7 @@ def data_url_to_bytes(data_url: str) -> bytes:
     return base64.b64decode(encoded)
 
 
-def build_feedback(prompt: str, detail_label: str) -> str:
+def build_user_prompt(prompt: str, detail_label: str) -> str:
     return f"광고 유형: {detail_label}\n{prompt.strip()}"
 
 
@@ -138,7 +138,7 @@ def request_backend(
         "imageDataUrl": file_to_data_url(uploaded_file),
         "presetId": FORMAT_OPTIONS[format_label]["value"],
         "detailType": get_detail_id(format_label, detail_label),
-        "feedback": build_feedback(prompt, detail_label),
+        "userPrompt": build_user_prompt(prompt, detail_label),
         "targetWidth": target_size[0],
         "targetHeight": target_size[1],
     }

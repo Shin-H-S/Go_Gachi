@@ -7,7 +7,7 @@ from frontend.media.mock_banner import create_mock_banner
 from frontend.services.api_client import (
     BACKEND_URL,
     FRONTEND_USE_MOCK,
-    build_feedback,
+    build_user_prompt,
     request_backend,
 )
 
@@ -32,7 +32,7 @@ def handle_generation_request(
                 if FRONTEND_USE_MOCK:
                     result_bytes = create_mock_banner(
                         image_bytes=uploaded_file.getvalue(),
-                        prompt=build_feedback(prompt.strip(), detail_label),
+                        prompt=build_user_prompt(prompt.strip(), detail_label),
                         format_label=format_label,
                         detail_label=detail_label,
                     )
