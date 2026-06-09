@@ -74,6 +74,68 @@ def test_my_generations_hides_image_url_when_output_file_is_missing() -> None:
     assert items["missing-file"]["image_url"] is None
 
 
+def test_my_generations_supports_page_and_total_count() -> None:
+    user = _user("user-page-check")
+
+    async def _override_user() -> AuthUser:
+        return user
+
+    async def _seed() -> None:
+        async with async_session_scope() as db:
+            for idx in range(12):
+                await crud.create_pending_generation(
+                    db,
+                    request_id=f"api-page-{idx:02d}",
+                    image_hash=f"api-page-hash-{idx:02d}",
+                    preset_id="instagram",
+                    instruction_hash=f"api-page-instruction-{idx:02d}",
+                    prompt_version="prompt-v-test",
+                    model="model-test",
+                    original_path=None,
+                    prompt=None,
+                    user_id=user.id,
+                )
+            await crud.create_pending_generation(
+                db,
+                request_id="api-page-other",
+                image_hash="api-page-hash-other",
+                preset_id="instagram",
+                instruction_hash="api-page-instruction-other",
+                prompt_version="prompt-v-test",
+                model="model-test",
+                original_path=None,
+                prompt=None,
+                user_id="other-user",
+            )
+
+    asyncio.run(_seed())
+    app.dependency_overrides[get_current_user] = _override_user
+    try:
+        first = client.get("/api/auth/me/generations")
+        second = client.get("/api/auth/me/generations?page=2")
+        empty = client.get("/api/auth/me/generations?page=3")
+        invalid = client.get("/api/auth/me/generations?page=0")
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert first.status_code == 200
+    assert first.json()["count"] == 10
+    assert first.json()["total_count"] == 12
+    assert [item["request_id"] for item in first.json()["items"]] == [
+        f"api-page-{idx:02d}" for idx in range(11, 1, -1)
+    ]
+    assert second.status_code == 200
+    assert second.json()["count"] == 2
+    assert second.json()["total_count"] == 12
+    assert [item["request_id"] for item in second.json()["items"]] == [
+        "api-page-01",
+        "api-page-00",
+    ]
+    assert empty.status_code == 200
+    assert empty.json() == {"items": [], "count": 0, "total_count": 12}
+    assert invalid.status_code == 422
+
+
 def test_my_folders_can_be_created_and_assigned_to_generation() -> None:
     user = _user("user-folder-check")
     settings = get_settings()

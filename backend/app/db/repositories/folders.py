@@ -1,20 +1,27 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models import Folder, Generation
 
 
 async def list_user_generations(
-    db: AsyncSession, user_id: str, *, limit: int = 50
+    db: AsyncSession, user_id: str, *, limit: int = 10, offset: int = 0
 ) -> list[Generation]:
     stmt = (
         select(Generation)
         .where(Generation.user_id == user_id)
         .order_by(Generation.created_at.desc(), Generation.id.desc())
         .limit(limit)
+        .offset(offset)
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def count_user_generations(db: AsyncSession, user_id: str) -> int:
+    stmt = select(func.count()).select_from(Generation).where(Generation.user_id == user_id)
+    result = await db.execute(stmt)
+    return int(result.scalar_one())
 
 
 async def create_folder(db: AsyncSession, *, user_id: str, name: str) -> Folder:
