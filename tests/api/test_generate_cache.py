@@ -15,7 +15,7 @@ from tests.api.helpers import TINY_PNG_B64, TINY_PNG_DATA_URL, client, force_ope
 
 
 def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+    async def _fake_call(**kwargs: object) -> str:
         return TINY_PNG_B64
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
@@ -76,7 +76,7 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_generate_stores_user_copy_and_logo_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+    async def _fake_call(**kwargs: object) -> str:
         return TINY_PNG_B64
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
@@ -120,7 +120,7 @@ def test_generate_stores_user_copy_and_logo_metadata(monkeypatch: pytest.MonkeyP
 
 
 def test_generate_stores_blank_user_copy_as_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+    async def _fake_call(**kwargs: object) -> str:
         return TINY_PNG_B64
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)

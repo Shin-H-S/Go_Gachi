@@ -50,21 +50,21 @@ async def edit_image(
         target_width=target_width,
         target_height=target_height,
     )
-    clean_user_copy = (user_copy or "").strip() or None
-    user_prompt_parts = [user_prompt]
+    clean_user_copy: str | None = (user_copy or "").strip() or None
+    user_prompt_parts: list[str] = [user_prompt]
     if clean_user_copy:
         user_prompt_parts.append(f"Ad copy to place in the image: {clean_user_copy}")
-    user_prompt_for_generation = "\n".join(
+    user_prompt_for_generation: str = "\n".join(
         part.strip() for part in user_prompt_parts if part.strip()
     )
-    generation_user_prompt = user_prompt_with_context(
+    generation_user_prompt: str = user_prompt_with_context(
         user_prompt_for_generation,
         target_size,
         selected_detail,
         resize_mode,
     )
-    has_logo = bool(logo_data_url and logo_data_url.strip())
-    stored_logo_position = logo_position if has_logo else None
+    has_logo: bool = bool(logo_data_url and logo_data_url.strip())
+    stored_logo_position: str | None = logo_position if has_logo else None
 
     if settings.image_provider == "mock":
         # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
