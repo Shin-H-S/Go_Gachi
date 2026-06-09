@@ -61,6 +61,7 @@ async def edit_image(
         resize_mode,
     )
     clean_user_copy: str | None = (user_copy or "").strip() or None
+    stored_user_copy: str | None = _rendered_copy_text(text_copy)
     has_logo: bool = bool(logo_data_url and logo_data_url.strip())
     stored_logo_position: str | None = logo_position if has_logo else None
     cache_instruction = _cache_instruction(
@@ -151,7 +152,7 @@ async def edit_image(
                     image_url=None,
                     prompt=cached_snapshot["prompt"],
                     user_id=user_id,
-                    user_copy=clean_user_copy,
+                    user_copy=stored_user_copy,
                     has_logo=has_logo,
                     logo_position=stored_logo_position,
                     logo_image_hash=None,
@@ -202,7 +203,7 @@ async def edit_image(
             original_path=str(original_path),
             prompt=prompt,
             user_id=user_id,
-            user_copy=clean_user_copy,
+            user_copy=stored_user_copy,
             has_logo=has_logo,
             logo_position=stored_logo_position,
             logo_image_hash=None,
@@ -319,6 +320,16 @@ async def edit_image(
         "note": None,
         "prompt": prompt,
     }
+
+
+def _rendered_copy_text(text_copy: AdCopy | None) -> str | None:
+    """이미지에 실제로 합성되는 광고 문구를 DB 저장용 문자열로 만든다."""
+    if text_copy is None:
+        return None
+
+    lines = [text_copy.headline, text_copy.subcopy, text_copy.cta]
+    rendered = "\n".join(line.strip() for line in lines if line and line.strip())
+    return rendered or None
 
 
 def _cache_instruction(
