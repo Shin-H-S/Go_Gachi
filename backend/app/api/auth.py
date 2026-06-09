@@ -9,8 +9,9 @@ import base64
 import logging
 import mimetypes
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 
@@ -19,10 +20,11 @@ from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Folder, Generation
-from backend.app.services.storage_url import output_url_if_exists_async
+from backend.app.services.storage_url import output_url_if_exists_async, upload_url_if_exists_async
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
+PAGE_SIZE = 10
 
 
 class FolderCreateRequest(BaseModel):
@@ -55,12 +57,19 @@ async def _upload_item(row: Generation, used_count: int) -> dict[str, object] | 
     if row.original_path is None:
         return None
 
+    original_image_url = await upload_url_if_exists_async(row.original_path)
+    if original_image_url is None:
+        return None
+
     image_data_url = await _file_to_image_data_url(Path(row.original_path))
     if image_data_url is None:
         return None
 
     return {
         "upload_id": row.image_hash,
+        # /me/generations의 original_image_url과 같은 의미(업로드 원본 URL). 필드명 통일.
+        "original_image_url": original_image_url,
+        # DEPRECATED: 프론트가 original_image_url로 전환되면 후속 PR에서 제거.
         "image_data_url": image_data_url,
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "used_count": used_count,
@@ -87,6 +96,7 @@ async def read_me(user: AuthUser = Depends(get_current_user)) -> dict[str, str |
 @router.get("/me/generations")
 async def read_my_generations(
     user: AuthUser = Depends(get_current_user),
+    page: Annotated[int, Query(ge=1)] = 1,
 ) -> dict[str, object]:
     """현재 로그인한 사용자가 만든 생성 기록을 최신순으로 반환한다 ("내 작업 기록").
 
@@ -96,11 +106,16 @@ async def read_my_generations(
         dict: items(생성 기록 리스트)와 count(개수).
     """
     # DB에는 환경별 호스트를 저장하지 않고, 응답할 때 /outputs/... 경로를 만든다.
+    offset = (page - 1) * PAGE_SIZE
     async with async_session_scope() as db:
-        rows = await crud.list_user_generations(db, user.id)
+        rows = await crud.list_user_generations(db, user.id, limit=PAGE_SIZE, offset=offset)
+        total = await crud.count_user_generations(db, user.id)
 
     image_urls = await asyncio.gather(
         *(output_url_if_exists_async(row.output_path) for row in rows)
+    )
+    upload_urls = await asyncio.gather(
+        *(upload_url_if_exists_async(row.original_path) for row in rows)
     )
     items = [
         {
@@ -109,12 +124,19 @@ async def read_my_generations(
             "folder_id": row.folder_id,
             "status": row.status,
             "image_url": image_url,
+            "original_image_url": upload_url,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         }
-        for row, image_url in zip(rows, image_urls, strict=True)
+        for row, image_url, upload_url in zip(rows, image_urls, upload_urls, strict=True)
     ]
-    logger.info("my generations listed user_id=%s count=%d", short_id(user.id), len(items))
-    return {"items": items, "count": len(items)}
+    logger.info(
+        "my generations listed user_id=%s page=%d count=%d total=%d",
+        short_id(user.id),
+        page,
+        len(items),
+        total,
+    )
+    return {"items": items, "count": len(items), "total_count": total}
 
 
 @router.get("/me/folders")

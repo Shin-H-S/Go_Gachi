@@ -9,8 +9,10 @@ from backend.app.core.config import Settings
 from backend.app.core.logging_utils import short_id
 from backend.app.core.presets import Preset, PresetDetail
 from backend.app.core.prompts import PROMPT_VERSION, build_prompt
+from backend.app.core.text_layouts import find_text_layout
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
+from backend.app.services.copywriting import AdCopy
 from backend.app.services.generation_files import file_to_data_url, new_generation_id
 from backend.app.services.generation_inputs import target_size_or_detail, user_prompt_with_context
 from backend.app.services.image_processing import normalize_for_openai, render_target_png
@@ -18,6 +20,7 @@ from backend.app.services.image_types import ResizeMode
 from backend.app.services.image_validation import parse_image
 from backend.app.services.openai_images import call_openai_edit
 from backend.app.services.storage_url import output_url
+from backend.app.services.text_overlay import render_text_overlay
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +36,10 @@ async def edit_image(
     resize_mode: ResizeMode = "cover",
     settings: Settings,
     user_id: str | None = None,
+    user_copy: str | None = None,
+    logo_data_url: str | None = None,
+    logo_position: str | None = None,
+    text_copy: AdCopy | None = None,
 ) -> dict[str, str | None]:
     """설정된 provider에 따라 mock 반환 또는 OpenAI 이미지 편집을 수행한다.
 
@@ -47,16 +54,29 @@ async def edit_image(
         target_width=target_width,
         target_height=target_height,
     )
-    generation_user_prompt = user_prompt_with_context(
+    generation_user_prompt: str = user_prompt_with_context(
         user_prompt,
         target_size,
         selected_detail,
         resize_mode,
     )
+    clean_user_copy: str | None = (user_copy or "").strip() or None
+    has_logo: bool = bool(logo_data_url and logo_data_url.strip())
+    stored_logo_position: str | None = logo_position if has_logo else None
+    cache_instruction = _cache_instruction(
+        generation_user_prompt,
+        text_copy,
+        user_copy=clean_user_copy,
+        has_logo=has_logo,
+        logo_position=stored_logo_position,
+    )
 
     if settings.image_provider == "mock":
         # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
         target_png = render_target_png(uploaded.content, target_size, resize_mode)
+        if text_copy:
+            layout = find_text_layout(preset.id, selected_detail.id)
+            target_png = render_text_overlay(target_png, text_copy, layout, settings)
         encoded = base64.b64encode(target_png).decode("ascii")
         return {
             "image_data_url": f"data:image/png;base64,{encoded}",
@@ -72,7 +92,7 @@ async def edit_image(
 
     prompt = build_prompt(preset, generation_user_prompt, selected_detail)
     image_hash = crud.image_sha256(uploaded.content)
-    instruction_hash = crud.instruction_sha256(generation_user_prompt)
+    instruction_hash = crud.instruction_sha256(cache_instruction)
     model = settings.openai_image_model
     prompt_version = PROMPT_VERSION
 
@@ -131,6 +151,11 @@ async def edit_image(
                     image_url=None,
                     prompt=cached_snapshot["prompt"],
                     user_id=user_id,
+                    user_copy=clean_user_copy,
+                    has_logo=has_logo,
+                    logo_position=stored_logo_position,
+                    logo_image_hash=None,
+                    logo_storage_key=None,
                 )
                 await crud.record_usage(
                     db,
@@ -177,6 +202,11 @@ async def edit_image(
             original_path=str(original_path),
             prompt=prompt,
             user_id=user_id,
+            user_copy=clean_user_copy,
+            has_logo=has_logo,
+            logo_position=stored_logo_position,
+            logo_image_hash=None,
+            logo_storage_key=None,
         )
     logger.debug(
         "generation pending generation_id=%s model=%s prompt_version=%s",
@@ -225,6 +255,15 @@ async def edit_image(
             target_size,
             resize_mode,
         )
+        if text_copy:
+            layout = find_text_layout(preset.id, selected_detail.id)
+            target_png = await asyncio.to_thread(
+                render_text_overlay,
+                target_png,
+                text_copy,
+                layout,
+                settings,
+            )
         await asyncio.to_thread(output_path.write_bytes, target_png)
     except Exception as exc:
         # OpenAI 호출/응답 디코딩/파일 저장 중 하나라도 실패하면 failed로 남긴다.
@@ -280,3 +319,37 @@ async def edit_image(
         "note": None,
         "prompt": prompt,
     }
+
+
+def _cache_instruction(
+    generation_user_prompt: str,
+    text_copy: AdCopy | None,
+    *,
+    user_copy: str | None = None,
+    has_logo: bool = False,
+    logo_position: str | None = None,
+) -> str:
+    """캐시 키에 텍스트 후처리 결과까지 반영한다.
+
+    OpenAI에 보내는 프롬프트에는 텍스트 합성 지시를 넣지 않지만, 저장 파일에는 텍스트가
+    들어갈 수 있으므로 캐시 키에는 문구/모드를 포함해야 서로 다른 결과가 섞이지 않는다.
+    """
+    if text_copy is None and not user_copy and not has_logo:
+        return generation_user_prompt
+
+    parts = [generation_user_prompt]
+    if user_copy:
+        parts.extend(["[User copy metadata]", user_copy])
+    if text_copy:
+        parts.extend(
+            [
+                "[Text overlay]",
+                f"copyMode={text_copy.mode}",
+                f"headline={text_copy.headline or ''}",
+                f"subcopy={text_copy.subcopy or ''}",
+                f"cta={text_copy.cta or ''}",
+            ]
+        )
+    if has_logo:
+        parts.extend(["[Logo metadata]", f"logoPosition={logo_position or ''}"])
+    return "\n".join(parts)

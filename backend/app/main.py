@@ -15,7 +15,8 @@ from backend.app.core.config import get_settings
 from backend.app.core.logging_config import setup_logging
 from backend.app.core.logging_utils import short_id
 from backend.app.core.presets import default_preset, get_presets
-from backend.app.schemas import ConfigResponse, GenerateRequest, GenerateResponse
+from backend.app.schemas import ConfigResponse, CopyResponse, GenerateRequest, GenerateResponse
+from backend.app.services.copywriting import build_ad_copy
 from backend.app.services.image_edit import edit_image
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,14 @@ app.mount(
     "/outputs",
     StaticFiles(directory=str(_static_output_dir)),
     name="outputs",
+)
+
+_static_upload_dir = get_settings().upload_dir
+_static_upload_dir.mkdir(parents=True, exist_ok=True)
+app.mount(
+    "/uploads",
+    StaticFiles(directory=str(_static_upload_dir)),
+    name="uploads",
 )
 
 
@@ -126,6 +135,14 @@ async def generate(
         short_id(user.id) if user else "-",
     )
 
+    ad_copy = None
+    copy_info = None
+    if request.text_overlay_enabled:
+        # V3 텍스트 합성 전 단계: 사용자 요청을 광고 문구 구조로 먼저 정리한다.
+        copy_source = (request.user_copy or "").strip() or request.user_prompt
+        ad_copy = build_ad_copy(copy_source, request.copy_mode)
+        copy_info = CopyResponse(**ad_copy.model_dump())
+
     try:
         # 이미지 검증, mock/openai 분기, 외부 API 호출은 service 계층에 위임한다.
         result = await edit_image(
@@ -139,6 +156,10 @@ async def generate(
             settings=settings,
             # 로그인했으면 생성 기록에 소유자로 남긴다(비로그인이면 None).
             user_id=user.id if user else None,
+            user_copy=request.user_copy,
+            logo_data_url=request.logo_data_url,
+            logo_position=request.logo_position,
+            text_copy=ad_copy,
         )
     except ValueError as exc:
         # 사용자 입력 문제는 프론트가 처리할 수 있게 400으로 돌려준다.
@@ -163,6 +184,7 @@ async def generate(
         imageUrl=result.get("image_url"),
         provider=result["provider"] or settings.image_provider,
         preset=preset,
+        copy=copy_info,
         note=result["note"],
         # production에서는 내부 프롬프트 노출을 막고, local/dev에서는 디버깅용으로 유지한다.
         prompt=result["prompt"] if settings.app_env != "production" else None,

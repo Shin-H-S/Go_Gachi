@@ -2,6 +2,7 @@ import asyncio
 import base64
 from io import BytesIO
 
+import pytest
 from PIL import Image
 from sqlalchemy import func, select
 
@@ -148,6 +149,32 @@ def test_generate_rejects_unknown_logo_position() -> None:
     assert response.status_code == 422
 
 
+def test_generate_rejects_too_long_user_copy() -> None:
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "userCopy": "a" * 301,
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_generate_rejects_too_long_logo_data_url() -> None:
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "logoDataUrl": "a" * 8_000_001,
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_render_target_png_contain_preserves_full_image() -> None:
     source = Image.new("RGB", (4, 8), "#ffffff")
     for y in range(8):
@@ -168,7 +195,9 @@ def test_render_target_png_contain_preserves_full_image() -> None:
         assert image.getpixel((5, 0)) == (0, 128, 0)
 
 
-def test_generate_normalizes_uploaded_image_before_openai(monkeypatch) -> None:
+def test_generate_normalizes_uploaded_image_before_openai(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     source = Image.new("CMYK", (3, 2), (0, 128, 128, 0))
     source_buffer = BytesIO()
     source.save(source_buffer, format="JPEG")
@@ -177,7 +206,7 @@ def test_generate_normalizes_uploaded_image_before_openai(monkeypatch) -> None:
     )
     captured: dict[str, image_edit.UploadedImage] = {}
 
-    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+    async def _fake_call(**kwargs: object) -> str:
         captured["uploaded"] = kwargs["uploaded"]
         return TINY_PNG_B64
 

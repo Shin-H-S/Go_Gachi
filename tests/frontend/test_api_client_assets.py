@@ -23,6 +23,9 @@ def test_to_backend_asset_url_normalizes_relative_backend_paths(
     assert api_client.to_backend_asset_url("/outputs/result.png") == (
         "https://backend.example/api-root/outputs/result.png"
     )
+    assert api_client.to_backend_asset_url("/uploads/original.png") == (
+        "https://backend.example/api-root/uploads/original.png"
+    )
     assert api_client.to_backend_asset_url("outputs/result.png") == (
         "https://backend.example/api-root/outputs/result.png"
     )

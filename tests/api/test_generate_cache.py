@@ -7,14 +7,15 @@ import pytest
 from sqlalchemy import func, select
 
 from backend.app.core.presets import default_preset
+from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import ApiUsage, Generation
 from backend.app.services import generation_service, image_edit
-from tests.api.helpers import TINY_PNG_B64, TINY_PNG_DATA_URL, force_openai_mode
+from tests.api.helpers import TINY_PNG_B64, TINY_PNG_DATA_URL, client, force_openai_mode
 
 
 def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+    async def _fake_call(**kwargs: object) -> str:
         return TINY_PNG_B64
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
@@ -72,3 +73,75 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
     assert Path(generation_rows[0].original_path).read_bytes() == base64.b64decode(TINY_PNG_B64)
     assert cached_usage_count == 1
     assert total_usage_count == 2
+
+
+def test_generate_stores_user_copy_and_logo_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fake_call(**kwargs: object) -> str:
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": "bright mood",
+            "userCopy": "lemonade menu copy",
+            "logoDataUrl": TINY_PNG_DATA_URL,
+            "logoPosition": "bottom_right",
+        },
+    )
+
+    assert response.status_code == 200
+
+    async def _db_state() -> tuple[str | None, bool, str | None, str, str | None]:
+        async with async_session_scope() as db:
+            result = await db.execute(select(Generation))
+            generation = result.scalar_one()
+            return (
+                generation.user_copy,
+                generation.has_logo,
+                generation.logo_position,
+                generation.instruction_hash,
+                generation.logo_storage_key,
+            )
+
+    user_copy, has_logo, logo_position, instruction_hash, logo_storage_key = asyncio.run(
+        _db_state()
+    )
+    assert user_copy == "lemonade menu copy"
+    assert has_logo is True
+    assert logo_position == "bottom_right"
+    assert instruction_hash != crud.instruction_sha256("bright mood")
+    assert logo_storage_key is None
+
+
+def test_generate_stores_blank_user_copy_as_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fake_call(**kwargs: object) -> str:
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": "bright mood",
+            "userCopy": "   ",
+        },
+    )
+
+    assert response.status_code == 200
+
+    async def _saved_user_copy() -> str | None:
+        async with async_session_scope() as db:
+            result = await db.execute(select(Generation.user_copy))
+            return result.scalar_one()
+
+    assert asyncio.run(_saved_user_copy()) is None
