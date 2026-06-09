@@ -64,10 +64,12 @@ async def create_pending_generation(
     original_path: str | None,
     prompt: str | None,
     user_id: str | None = None,
+    parent_id: int | None = None,
 ) -> Generation:
     generation = Generation(
         request_id=request_id,
         user_id=user_id,
+        parent_id=parent_id,
         image_hash=image_hash,
         preset_id=preset_id,
         instruction_hash=instruction_hash,
@@ -130,10 +132,12 @@ async def create_cached_generation(
     image_url: str | None,
     prompt: str | None,
     user_id: str | None = None,
+    parent_id: int | None = None,
 ) -> Generation:
     generation = Generation(
         request_id=request_id,
         user_id=user_id,
+        parent_id=parent_id,
         image_hash=image_hash,
         preset_id=preset_id,
         instruction_hash=instruction_hash,
