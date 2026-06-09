@@ -70,6 +70,11 @@ async def create_pending_generation(
     original_path: str | None,
     prompt: str | None,
     user_id: str | None = None,
+    user_copy: str | None = None,
+    has_logo: bool = False,
+    logo_position: str | None = None,
+    logo_image_hash: str | None = None,
+    logo_storage_key: str | None = None,
     parent_id: int | None = None,
 ) -> Generation:
     """OpenAI 호출 전 'pending' 행을 먼저 만들어 실패해도 흔적이 남게 한다."""
@@ -86,6 +91,11 @@ async def create_pending_generation(
         output_path=None,
         image_url=None,
         prompt=prompt,
+        user_copy=user_copy,
+        has_logo=has_logo,
+        logo_position=logo_position,
+        logo_image_hash=logo_image_hash,
+        logo_storage_key=logo_storage_key,
         status="pending",
         error_message=None,
     )
@@ -141,6 +151,11 @@ async def create_cached_generation(
     image_url: str | None,
     prompt: str | None,
     user_id: str | None = None,
+    user_copy: str | None = None,
+    has_logo: bool = False,
+    logo_position: str | None = None,
+    logo_image_hash: str | None = None,
+    logo_storage_key: str | None = None,
     parent_id: int | None = None,
 ) -> Generation:
     """캐시 hit을 'cached' 행으로 남긴다. user_id·parent_id는 이번 요청 값을 저장한다."""
@@ -157,6 +172,11 @@ async def create_cached_generation(
         output_path=output_path,
         image_url=image_url,
         prompt=prompt,
+        user_copy=user_copy,
+        has_logo=has_logo,
+        logo_position=logo_position,
+        logo_image_hash=logo_image_hash,
+        logo_storage_key=logo_storage_key,
         status="cached",
         error_message=None,
     )

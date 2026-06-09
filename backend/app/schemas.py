@@ -36,7 +36,8 @@ class GenerateRequest(BaseModel):
     user_prompt: str = Field(default="", alias="userPrompt")
     copy_mode: CopyMode = Field(default="preserve", alias="copyMode")
     text_overlay_enabled: bool = Field(default=False, alias="textOverlayEnabled")
-    logo_data_url: str | None = Field(default=None, alias="logoDataUrl")
+    user_copy: str | None = Field(default=None, alias="userCopy", max_length=300)
+    logo_data_url: str | None = Field(default=None, alias="logoDataUrl", max_length=8_000_000)
     logo_position: LogoPosition = Field(default="bottom_right", alias="logoPosition")
     parent_request_id: str | None = Field(default=None, alias="parentRequestId")
     target_width: int | None = Field(default=None, alias="targetWidth", ge=1, le=4096)
@@ -49,6 +50,7 @@ class GenerateRequest(BaseModel):
         if (self.target_width is None) != (self.target_height is None):
             raise ValueError("targetWidth와 targetHeight는 함께 전달해야 합니다.")
         return self
+
 
 class CopyResponse(BaseModel):
     """V3 문구 처리 결과. 실제 문구 생성/합성 작업에서 채워진다."""

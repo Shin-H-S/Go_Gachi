@@ -88,6 +88,11 @@ class Generation(Base):
     # 프론트가 결과를 가져갈 정적 URL 또는 외부 저장소 URL (다음 주 GCS 이전 시 사용).
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    user_copy: Mapped[str | None] = mapped_column(Text, nullable=True)
+    has_logo: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    logo_position: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    logo_image_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    logo_storage_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # pending / success / failed / cached 중 하나.
     status: Mapped[str] = mapped_column(String(30), index=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
