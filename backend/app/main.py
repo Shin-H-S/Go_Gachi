@@ -56,6 +56,14 @@ app.mount(
     name="outputs",
 )
 
+_static_upload_dir = get_settings().upload_dir
+_static_upload_dir.mkdir(parents=True, exist_ok=True)
+app.mount(
+    "/uploads",
+    StaticFiles(directory=str(_static_upload_dir)),
+    name="uploads",
+)
+
 
 @app.get("/")
 async def root() -> dict[str, str]:

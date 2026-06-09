@@ -23,7 +23,10 @@ def test_my_generations_hides_image_url_when_output_file_is_missing() -> None:
     settings = get_settings()
     existing_output = settings.output_dir / "existing-result.png"
     missing_output = settings.output_dir / "missing-result.png"
+    existing_upload = settings.upload_dir / "existing-original.png"
+    missing_upload = settings.upload_dir / "missing-original.png"
     existing_output.write_bytes(b"png")
+    existing_upload.write_bytes(b"png")
 
     async def _override_user() -> AuthUser:
         return user
@@ -38,7 +41,7 @@ def test_my_generations_hides_image_url_when_output_file_is_missing() -> None:
                 instruction_hash="instruction-existing",
                 prompt_version="prompt-v-test",
                 model="model-test",
-                original_path=None,
+                original_path=str(existing_upload),
                 prompt=None,
                 user_id=user.id,
             )
@@ -53,7 +56,7 @@ def test_my_generations_hides_image_url_when_output_file_is_missing() -> None:
                 instruction_hash="instruction-missing",
                 prompt_version="prompt-v-test",
                 model="model-test",
-                original_path=None,
+                original_path=str(missing_upload),
                 prompt=None,
                 user_id=user.id,
             )
@@ -71,7 +74,9 @@ def test_my_generations_hides_image_url_when_output_file_is_missing() -> None:
     assert response.status_code == 200
     items = {item["request_id"]: item for item in response.json()["items"]}
     assert items["existing-file"]["image_url"] == "/outputs/existing-result.png"
+    assert items["existing-file"]["original_image_url"] == "/uploads/existing-original.png"
     assert items["missing-file"]["image_url"] is None
+    assert items["missing-file"]["original_image_url"] is None
 
 
 def test_my_generations_supports_page_and_total_count() -> None:
@@ -238,4 +243,5 @@ def test_my_uploads_returns_unique_original_images_as_data_urls() -> None:
     assert body["count"] == 1
     assert body["items"][0]["upload_id"] == "same-menu-hash"
     assert body["items"][0]["used_count"] == 2
+    assert body["items"][0]["original_image_url"] == "/uploads/original-menu.png"
     assert body["items"][0]["image_data_url"].startswith("data:image/png;base64,")

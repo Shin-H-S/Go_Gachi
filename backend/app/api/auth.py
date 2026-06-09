@@ -20,7 +20,7 @@ from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Folder, Generation
-from backend.app.services.storage_url import output_url_if_exists_async
+from backend.app.services.storage_url import output_url_if_exists_async, upload_url_if_exists_async
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
@@ -57,12 +57,19 @@ async def _upload_item(row: Generation, used_count: int) -> dict[str, object] | 
     if row.original_path is None:
         return None
 
+    original_image_url = await upload_url_if_exists_async(row.original_path)
+    if original_image_url is None:
+        return None
+
     image_data_url = await _file_to_image_data_url(Path(row.original_path))
     if image_data_url is None:
         return None
 
     return {
         "upload_id": row.image_hash,
+        # /me/generations의 original_image_url과 같은 의미(업로드 원본 URL). 필드명 통일.
+        "original_image_url": original_image_url,
+        # DEPRECATED: 프론트가 original_image_url로 전환되면 후속 PR에서 제거.
         "image_data_url": image_data_url,
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "used_count": used_count,
@@ -107,6 +114,9 @@ async def read_my_generations(
     image_urls = await asyncio.gather(
         *(output_url_if_exists_async(row.output_path) for row in rows)
     )
+    upload_urls = await asyncio.gather(
+        *(upload_url_if_exists_async(row.original_path) for row in rows)
+    )
     items = [
         {
             "request_id": row.request_id,
@@ -114,9 +124,10 @@ async def read_my_generations(
             "folder_id": row.folder_id,
             "status": row.status,
             "image_url": image_url,
+            "original_image_url": upload_url,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         }
-        for row, image_url in zip(rows, image_urls, strict=True)
+        for row, image_url, upload_url in zip(rows, image_urls, upload_urls, strict=True)
     ]
     logger.info(
         "my generations listed user_id=%s page=%d count=%d total=%d",
