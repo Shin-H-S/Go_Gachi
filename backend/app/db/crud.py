@@ -1,4 +1,5 @@
 from backend.app.db.repositories.folders import (
+    count_user_generations,
     create_folder,
     get_user_folder,
     list_user_folders,
@@ -26,6 +27,7 @@ from backend.app.db.repositories.usage import record_usage, usage_summary
 
 __all__ = [
     "VALID_ROLES",
+    "count_user_generations",
     "create_cached_generation",
     "create_folder",
     "create_pending_generation",
