@@ -132,7 +132,7 @@ async def generate(
             image_data_url=request.image_data_url,
             preset=preset,
             detail=detail,
-            feedback=request.feedback,
+            user_prompt=request.user_prompt,
             target_width=request.target_width,
             target_height=request.target_height,
             resize_mode=request.resize_mode,

@@ -14,15 +14,15 @@ def image_sha256(file_bytes: bytes) -> str:
     return hashlib.sha256(file_bytes).hexdigest()
 
 
-def normalize_instruction(feedback: str | None) -> str:
-    if not feedback:
+def normalize_instruction(user_prompt: str | None) -> str:
+    if not user_prompt:
         return ""
-    stripped = feedback.strip()
+    stripped = user_prompt.strip()
     return _WHITESPACE_RE.sub(" ", stripped) if stripped else ""
 
 
-def instruction_sha256(feedback: str | None) -> str:
-    normalized = normalize_instruction(feedback)
+def instruction_sha256(user_prompt: str | None) -> str:
+    normalized = normalize_instruction(user_prompt)
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 

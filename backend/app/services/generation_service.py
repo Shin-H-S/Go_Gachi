@@ -12,7 +12,7 @@ from backend.app.core.prompts import PROMPT_VERSION, build_prompt
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.services.generation_files import file_to_data_url, new_generation_id
-from backend.app.services.generation_inputs import feedback_with_context, target_size_or_detail
+from backend.app.services.generation_inputs import target_size_or_detail, user_prompt_with_context
 from backend.app.services.image_processing import normalize_for_openai, render_target_png
 from backend.app.services.image_types import ResizeMode
 from backend.app.services.image_validation import parse_image
@@ -26,7 +26,7 @@ async def edit_image(
     *,
     image_data_url: str,
     preset: Preset,
-    feedback: str,
+    user_prompt: str,
     detail: PresetDetail | None = None,
     target_width: int | None = None,
     target_height: int | None = None,
@@ -51,12 +51,14 @@ async def edit_image(
         target_height=target_height,
     )
     clean_user_copy = user_copy.strip() if user_copy else None
-    feedback_parts = [feedback]
+    user_prompt_parts = [user_prompt]
     if clean_user_copy:
-        feedback_parts.append(f"User copy: {clean_user_copy}")
-    feedback_for_generation = "\n".join(part.strip() for part in feedback_parts if part.strip())
-    generation_feedback = feedback_with_context(
-        feedback_for_generation,
+        user_prompt_parts.append(f"User copy: {clean_user_copy}")
+    user_prompt_for_generation = "\n".join(
+        part.strip() for part in user_prompt_parts if part.strip()
+    )
+    generation_user_prompt = user_prompt_with_context(
+        user_prompt_for_generation,
         target_size,
         selected_detail,
         resize_mode,
@@ -80,9 +82,9 @@ async def edit_image(
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY가 설정되지 않았습니다.")
 
-    prompt = build_prompt(preset, generation_feedback, selected_detail)
+    prompt = build_prompt(preset, generation_user_prompt, selected_detail)
     image_hash = crud.image_sha256(uploaded.content)
-    instruction_hash = crud.instruction_sha256(generation_feedback)
+    instruction_hash = crud.instruction_sha256(generation_user_prompt)
     model = settings.openai_image_model
     prompt_version = PROMPT_VERSION
 

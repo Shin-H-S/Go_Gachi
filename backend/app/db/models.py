@@ -71,7 +71,7 @@ class Generation(Base):
     image_hash: Mapped[str] = mapped_column(String(64), index=True)
     # develop의 프리셋 ID (예: "instagram_feed_square"). 이전 placement 칼럼을 대체.
     preset_id: Mapped[str] = mapped_column(String(80), index=True)
-    # 사용자 추가 지시문(feedback) 정규화 후 SHA256. 같은 사진이라도 지시가 다르면 캐시 분리.
+    # 사용자 요청(userPrompt) 정규화 후 SHA256. 같은 사진이라도 요청이 다르면 캐시 분리.
     instruction_hash: Mapped[str] = mapped_column(String(64), index=True)
     prompt_version: Mapped[str] = mapped_column(String(80), index=True)
     model: Mapped[str] = mapped_column(String(120), index=True)

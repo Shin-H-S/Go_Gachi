@@ -26,7 +26,7 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
         image_edit.edit_image(
             image_data_url=TINY_PNG_DATA_URL,
             preset=preset,
-            feedback="밝게 해주세요",
+            user_prompt="밝게 해주세요",
             settings=real_settings,
         )
     )
@@ -34,7 +34,7 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
         image_edit.edit_image(
             image_data_url=TINY_PNG_DATA_URL,
             preset=preset,
-            feedback="밝게 해주세요",
+            user_prompt="밝게 해주세요",
             settings=real_settings,
         )
     )
@@ -88,7 +88,7 @@ def test_generate_stores_user_copy_and_logo_metadata(monkeypatch: pytest.MonkeyP
             "imageDataUrl": TINY_PNG_DATA_URL,
             "presetId": "instagram",
             "detailType": "square_feed",
-            "feedback": "bright mood",
+            "userPrompt": "bright mood",
             "userCopy": "lemonade menu copy",
             "logoDataUrl": TINY_PNG_DATA_URL,
             "logoPosition": "bottom_right",

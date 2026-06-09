@@ -24,14 +24,19 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 ## Generate Request
 
 현재 스키마는 JSON 요청만 사용합니다.
-업종, 분위기, 광고 유형, 목적 등 세분화된 프롬프트 변수는 이후 API 버전업에서 추가할 예정입니다.
+V3 요청 필드는 먼저 계약만 확장했으며, 실제 문구/로고 합성은 후속 기능 브랜치에서 연결합니다.
 
 ```json
 {
   "imageDataUrl": "data:image/png;base64,...",
   "presetId": "instagram",
   "detailType": "story_image",
-  "feedback": "광고 유형: 스토리 이미지\n밝고 따뜻한 카페 광고 느낌으로 만들어줘",
+  "userPrompt": "광고 유형: 스토리 이미지\n오늘 아메리카노 2,500원",
+  "copyMode": "preserve",
+  "textOverlayEnabled": false,
+  "logoDataUrl": null,
+  "logoPosition": "bottom_right",
+  "parentRequestId": null,
   "targetWidth": 1080,
   "targetHeight": 1920,
   "resizeMode": "cover"
@@ -43,7 +48,12 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
   입력 이미지를 PNG/RGB로 정규화합니다.
 - `presetId`: `GET /api/config`에서 받은 프리셋 ID. 생략하면 기본 프리셋 사용
 - `detailType`: 프리셋 안의 상세 광고 유형 ID. 채널·상세 유형별 전용 프롬프트를 고르는 데 사용
-- `feedback`: 사용자 추가 요청 문구
+- `userPrompt`: V3 사용자 요청/광고 문구입니다.
+- `copyMode`: 문구 처리 방식. `preserve`, `polish`, `rewrite` 중 하나이며 기본값은 `preserve`입니다.
+- `textOverlayEnabled`: 텍스트 후처리 합성 사용 여부입니다. 현재 브랜치에서는 스키마만 열어둡니다.
+- `logoDataUrl`: 로고 합성에 사용할 JPG, PNG, WEBP data URL입니다. 현재 브랜치에서는 스키마만 열어둡니다.
+- `logoPosition`: 로고 위치. `top_left`, `top_right`, `bottom_left`, `bottom_right`, `center_bottom` 중 하나이며 기본값은 `bottom_right`입니다.
+- `parentRequestId`: 수정 이력 연결용 부모 생성 ID입니다. 현재 브랜치에서는 스키마만 열어둡니다.
 - `targetWidth`, `targetHeight`: 사용자가 선택한 상세 광고 규격의 최종 출력 픽셀 크기.
   둘 중 하나만 보낼 수 없으며, 생략하면 선택한 상세 광고 유형의 기본 크기를 사용합니다.
 - `resizeMode`: 최종 후처리 방식. 기본값은 `cover`입니다.
@@ -62,6 +72,9 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
     "id": "instagram",
     "label": "인스타그램"
   },
+  "copy": null,
+  "logo": null,
+  "revision": null,
   "note": null,
   "prompt": null
 }
@@ -70,6 +83,7 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 - `prompt`: `APP_ENV=production`에서는 내부 프롬프트 보호를 위해 `null`로 응답합니다.
   `local`/`dev` 환경에서는 디버깅을 위해 생성에 사용한 프롬프트가 포함될 수 있습니다.
 - 응답 `imageDataUrl`의 PNG는 `targetWidth` x `targetHeight` 크기로 후처리되어 반환됩니다.
+- `copy`, `logo`, `revision`: V3 후속 브랜치에서 문구/로고/수정 이력 처리 결과를 채울 예정입니다.
 
 ## Upload Policy
 

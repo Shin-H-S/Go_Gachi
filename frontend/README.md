@@ -67,7 +67,7 @@ FRONTEND_CONFIG_SOURCE=auto
 현재 백엔드 MVP에서 우선 연동할 API는 아래와 같습니다.
 
 - `GET /api/config`: 광고 프리셋 목록 조회
-- `POST /api/generate`: `imageDataUrl`, `presetId`, `detailType`, `feedback`, `targetWidth`, `targetHeight`를 전달해 생성 요청
+- `POST /api/generate`: `imageDataUrl`, `presetId`, `detailType`, `userPrompt`, `targetWidth`, `targetHeight`를 전달해 생성 요청
 
 `detailType`은 사용자가 선택한 상세 광고 유형 ID입니다.
 `targetWidth`와 `targetHeight`는 사용자가 선택한 상세 광고 유형의 최종 다운로드 크기입니다.

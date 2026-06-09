@@ -22,7 +22,7 @@ def test_generate_mock_mode_succeeds_without_db_record() -> None:
         json={
             "imageDataUrl": TINY_PNG_DATA_URL,
             "presetId": None,
-            "feedback": "",
+            "userPrompt": "",
             "targetWidth": 1200,
             "targetHeight": 900,
         },
@@ -46,7 +46,7 @@ def test_generate_mock_mode_succeeds_without_db_record() -> None:
 def test_generate_rejects_invalid_image_data_url() -> None:
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": "not-a-data-url", "presetId": None, "feedback": ""},
+        json={"imageDataUrl": "not-a-data-url", "presetId": None, "userPrompt": ""},
     )
 
     assert response.status_code == 400
@@ -59,7 +59,7 @@ def test_generate_rejects_unknown_preset_id() -> None:
         json={
             "imageDataUrl": TINY_PNG_DATA_URL,
             "presetId": "unknown_preset",
-            "feedback": "",
+            "userPrompt": "",
         },
     )
 
@@ -74,7 +74,7 @@ def test_generate_rejects_unknown_detail_type() -> None:
             "imageDataUrl": TINY_PNG_DATA_URL,
             "presetId": "instagram",
             "detailType": "unknown_detail",
-            "feedback": "",
+            "userPrompt": "",
         },
     )
 
@@ -88,7 +88,7 @@ def test_generate_rejects_incomplete_target_size() -> None:
         json={
             "imageDataUrl": TINY_PNG_DATA_URL,
             "presetId": None,
-            "feedback": "",
+            "userPrompt": "",
             "targetWidth": 1200,
         },
     )
@@ -103,6 +103,45 @@ def test_generate_rejects_unknown_resize_mode() -> None:
             "imageDataUrl": TINY_PNG_DATA_URL,
             "presetId": "instagram",
             "resizeMode": "stretch",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_generate_rejects_legacy_feedback_field() -> None:
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "feedback": "legacy field",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_generate_rejects_unknown_copy_mode() -> None:
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "copyMode": "aggressive",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_generate_rejects_unknown_logo_position() -> None:
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "logoPosition": "middle_somewhere",
         },
     )
 
@@ -150,7 +189,7 @@ def test_generate_normalizes_uploaded_image_before_openai(monkeypatch) -> None:
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": data_url, "presetId": None, "feedback": ""},
+        json={"imageDataUrl": data_url, "presetId": None, "userPrompt": ""},
     )
 
     assert response.status_code == 200

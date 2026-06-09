@@ -52,7 +52,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             ),
             "presetId": "instagram",
             "detailType": "square_feed",
-            "feedback": "광고 유형: 정사각형 피드\n제품이 크게 보여요",
+            "userPrompt": "광고 유형: 정사각형 피드\n제품이 크게 보여요",
             "targetWidth": 1080,
             "targetHeight": 1080,
         },

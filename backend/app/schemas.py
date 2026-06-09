@@ -7,6 +7,14 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from backend.app.core.presets import Preset
 
 ResizeMode = Literal["cover", "contain"]
+CopyMode = Literal["preserve", "polish", "rewrite"]
+LogoPosition = Literal[
+    "top_left",
+    "top_right",
+    "bottom_left",
+    "bottom_right",
+    "center_bottom",
+]
 
 
 class ConfigResponse(BaseModel):
@@ -20,13 +28,18 @@ class ConfigResponse(BaseModel):
 class GenerateRequest(BaseModel):
     """이미지 생성 요청 본문."""
 
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
     image_data_url: str = Field(alias="imageDataUrl")
     preset_id: str | None = Field(default=None, alias="presetId")
     detail_type: str | None = Field(default=None, alias="detailType")
-    feedback: str = ""
+    user_prompt: str = Field(default="", alias="userPrompt")
+    copy_mode: CopyMode = Field(default="preserve", alias="copyMode")
+    text_overlay_enabled: bool = Field(default=False, alias="textOverlayEnabled")
     user_copy: str | None = Field(default=None, alias="userCopy")
     logo_data_url: str | None = Field(default=None, alias="logoDataUrl")
-    logo_position: str | None = Field(default="bottom_right", alias="logoPosition")
+    logo_position: LogoPosition = Field(default="bottom_right", alias="logoPosition")
+    parent_request_id: str | None = Field(default=None, alias="parentRequestId")
     target_width: int | None = Field(default=None, alias="targetWidth", ge=1, le=4096)
     target_height: int | None = Field(default=None, alias="targetHeight", ge=1, le=4096)
     resize_mode: ResizeMode = Field(default="cover", alias="resizeMode")
@@ -39,6 +52,33 @@ class GenerateRequest(BaseModel):
         return self
 
 
+class CopyResponse(BaseModel):
+    """V3 문구 처리 결과. 실제 문구 생성/합성 작업에서 채워진다."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    headline: str | None = None
+    subcopy: str | None = None
+    cta: str | None = None
+    mode: CopyMode | None = Field(default=None, alias="copyMode")
+
+
+class LogoResponse(BaseModel):
+    """V3 로고 합성 결과. 로고 기능이 꺼져 있으면 used=false로 내려갈 수 있다."""
+
+    used: bool = False
+    position: LogoPosition | None = None
+
+
+class RevisionResponse(BaseModel):
+    """V3 수정 이력 정보. 최초 생성이면 parentRequestId는 null이다."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    parent_request_id: str | None = Field(default=None, alias="parentRequestId")
+    revision_number: int | None = Field(default=None, alias="revisionNumber")
+
+
 class GenerateResponse(BaseModel):
     """이미지 생성 응답 본문."""
 
@@ -49,5 +89,8 @@ class GenerateResponse(BaseModel):
     image_url: str | None = Field(default=None, alias="imageUrl")
     provider: str
     preset: Preset
+    copy_info: CopyResponse | None = Field(default=None, alias="copy")
+    logo_info: LogoResponse | None = Field(default=None, alias="logo")
+    revision_info: RevisionResponse | None = Field(default=None, alias="revision")
     note: str | None = None
     prompt: str | None = None
