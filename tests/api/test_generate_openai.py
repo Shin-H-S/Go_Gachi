@@ -20,7 +20,7 @@ def test_generate_hides_prompt_in_production(monkeypatch: pytest.MonkeyPatch) ->
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "userPrompt": ""},
     )
     body = response.json()
 
@@ -45,7 +45,7 @@ def test_generate_openai_result_matches_target_size(monkeypatch: pytest.MonkeyPa
             "imageDataUrl": TINY_PNG_DATA_URL,
             "presetId": "instagram",
             "detailType": "story_image",
-            "feedback": "밝게",
+            "userPrompt": "밝게",
             "targetWidth": 1080,
             "targetHeight": 1920,
         },
@@ -61,6 +61,40 @@ def test_generate_openai_result_matches_target_size(monkeypatch: pytest.MonkeyPa
     assert captured_call["api_size"] == "1024x1536"
 
 
+def test_generate_uses_user_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": "V3 userPrompt 문구",
+            "copyMode": "polish",
+            "textOverlayEnabled": True,
+            "logoDataUrl": TINY_PNG_DATA_URL,
+            "logoPosition": "top_right",
+            "parentRequestId": "parent-generation-id",
+            "targetWidth": 1080,
+            "targetHeight": 1080,
+        },
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert "V3 userPrompt 문구" in body["prompt"]
+    assert body["copy"] is None
+    assert body["logo"] is None
+    assert body["revision"] is None
+
+
 def test_generate_exposes_prompt_in_local(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
         return TINY_PNG_B64
@@ -71,7 +105,7 @@ def test_generate_exposes_prompt_in_local(monkeypatch: pytest.MonkeyPatch) -> No
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "userPrompt": ""},
     )
     body = response.json()
 

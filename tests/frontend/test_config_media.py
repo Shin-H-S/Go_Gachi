@@ -100,15 +100,15 @@ def test_image_utils_builds_preview_canvas_and_data_url() -> None:
     assert bytes_to_data_url(b"abc") == "data:image/png;base64,YWJj"
 
 
-def test_api_client_converts_uploads_and_feedback() -> None:
-    from frontend.api_client import build_feedback, data_url_to_bytes, file_to_data_url
+def test_api_client_converts_uploads_and_user_prompt() -> None:
+    from frontend.api_client import build_user_prompt, data_url_to_bytes, file_to_data_url
 
     uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"image-bytes")
     data_url = file_to_data_url(uploaded_file)
 
     assert data_url == _data_url(b"image-bytes")
     assert data_url_to_bytes(data_url) == b"image-bytes"
-    assert build_feedback("  show it bigger  ", "Square feed") == (
+    assert build_user_prompt("  show it bigger  ", "Square feed") == (
         "광고 유형: Square feed\nshow it bigger"
     )
 

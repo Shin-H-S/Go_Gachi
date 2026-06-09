@@ -36,7 +36,7 @@ def test_app_delegates_split_module_responsibilities() -> None:
     assert defined_functions.isdisjoint(
         {
             "add_css",
-            "build_feedback",
+            "build_user_prompt",
             "create_mock_banner",
             "data_url_to_bytes",
             "file_to_data_url",

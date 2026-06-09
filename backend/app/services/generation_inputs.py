@@ -16,8 +16,8 @@ def target_size_or_detail(
     return TargetSize(width=target_width, height=target_height)
 
 
-def feedback_with_context(
-    feedback: str,
+def user_prompt_with_context(
+    user_prompt: str,
     target_size: TargetSize,
     detail: PresetDetail | None,
     resize_mode: ResizeMode,
@@ -34,7 +34,7 @@ def feedback_with_context(
     if detail:
         context_parts.append(f"Selected detail type: {detail.id} ({detail.label}).")
 
-    clean_feedback = (feedback or "").strip()
-    if clean_feedback:
-        context_parts.append(clean_feedback)
+    clean_user_prompt = (user_prompt or "").strip()
+    if clean_user_prompt:
+        context_parts.append(clean_user_prompt)
     return "\n".join(context_parts)

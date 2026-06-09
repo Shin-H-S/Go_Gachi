@@ -15,7 +15,7 @@ def test_generate_returns_503_when_openai_key_missing(
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "userPrompt": ""},
     )
 
     assert response.status_code == 503
@@ -33,7 +33,7 @@ def test_generate_returns_503_when_provider_fails(
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "userPrompt": ""},
     )
 
     assert response.status_code == 503
@@ -61,7 +61,7 @@ def test_generate_returns_503_when_network_fails(
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "userPrompt": ""},
     )
 
     assert response.status_code == 503
@@ -95,7 +95,7 @@ def test_generate_returns_503_when_openai_result_is_empty(
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "userPrompt": ""},
     )
 
     assert response.status_code == 503
@@ -113,7 +113,7 @@ def test_generate_returns_503_when_openai_result_base64_is_invalid(
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "userPrompt": ""},
     )
 
     assert response.status_code == 503
@@ -133,7 +133,7 @@ def test_generate_returns_503_when_openai_result_is_not_image(
 
     response = client.post(
         "/api/generate",
-        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "feedback": ""},
+        json={"imageDataUrl": TINY_PNG_DATA_URL, "presetId": None, "userPrompt": ""},
     )
 
     assert response.status_code == 503

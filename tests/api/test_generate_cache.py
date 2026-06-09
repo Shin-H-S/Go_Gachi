@@ -25,7 +25,7 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
         image_edit.edit_image(
             image_data_url=TINY_PNG_DATA_URL,
             preset=preset,
-            feedback="밝게 해주세요",
+            user_prompt="밝게 해주세요",
             settings=real_settings,
         )
     )
@@ -33,7 +33,7 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
         image_edit.edit_image(
             image_data_url=TINY_PNG_DATA_URL,
             preset=preset,
-            feedback="밝게 해주세요",
+            user_prompt="밝게 해주세요",
             settings=real_settings,
         )
     )
