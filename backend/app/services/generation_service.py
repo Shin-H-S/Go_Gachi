@@ -50,10 +50,10 @@ async def edit_image(
         target_width=target_width,
         target_height=target_height,
     )
-    clean_user_copy = user_copy.strip() if user_copy else None
+    clean_user_copy = (user_copy or "").strip() or None
     user_prompt_parts = [user_prompt]
     if clean_user_copy:
-        user_prompt_parts.append(f"User copy: {clean_user_copy}")
+        user_prompt_parts.append(f"Ad copy to place in the image: {clean_user_copy}")
     user_prompt_for_generation = "\n".join(
         part.strip() for part in user_prompt_parts if part.strip()
     )

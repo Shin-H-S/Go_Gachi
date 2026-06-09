@@ -148,6 +148,32 @@ def test_generate_rejects_unknown_logo_position() -> None:
     assert response.status_code == 422
 
 
+def test_generate_rejects_too_long_user_copy() -> None:
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "userCopy": "a" * 301,
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_generate_rejects_too_long_logo_data_url() -> None:
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "logoDataUrl": "a" * 8_000_001,
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_render_target_png_contain_preserves_full_image() -> None:
     source = Image.new("RGB", (4, 8), "#ffffff")
     for y in range(8):

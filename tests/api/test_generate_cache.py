@@ -117,3 +117,31 @@ def test_generate_stores_user_copy_and_logo_metadata(monkeypatch: pytest.MonkeyP
     assert logo_position == "bottom_right"
     assert instruction_hash != crud.instruction_sha256("bright mood")
     assert logo_storage_key is None
+
+
+def test_generate_stores_blank_user_copy_as_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": "bright mood",
+            "userCopy": "   ",
+        },
+    )
+
+    assert response.status_code == 200
+
+    async def _saved_user_copy() -> str | None:
+        async with async_session_scope() as db:
+            result = await db.execute(select(Generation.user_copy))
+            return result.scalar_one()
+
+    assert asyncio.run(_saved_user_copy()) is None
