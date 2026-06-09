@@ -64,6 +64,11 @@ async def create_pending_generation(
     original_path: str | None,
     prompt: str | None,
     user_id: str | None = None,
+    user_copy: str | None = None,
+    has_logo: bool = False,
+    logo_position: str | None = None,
+    logo_image_hash: str | None = None,
+    logo_storage_key: str | None = None,
 ) -> Generation:
     generation = Generation(
         request_id=request_id,
@@ -77,6 +82,11 @@ async def create_pending_generation(
         output_path=None,
         image_url=None,
         prompt=prompt,
+        user_copy=user_copy,
+        has_logo=has_logo,
+        logo_position=logo_position,
+        logo_image_hash=logo_image_hash,
+        logo_storage_key=logo_storage_key,
         status="pending",
         error_message=None,
     )
@@ -130,6 +140,11 @@ async def create_cached_generation(
     image_url: str | None,
     prompt: str | None,
     user_id: str | None = None,
+    user_copy: str | None = None,
+    has_logo: bool = False,
+    logo_position: str | None = None,
+    logo_image_hash: str | None = None,
+    logo_storage_key: str | None = None,
 ) -> Generation:
     generation = Generation(
         request_id=request_id,
@@ -143,6 +158,11 @@ async def create_cached_generation(
         output_path=output_path,
         image_url=image_url,
         prompt=prompt,
+        user_copy=user_copy,
+        has_logo=has_logo,
+        logo_position=logo_position,
+        logo_image_hash=logo_image_hash,
+        logo_storage_key=logo_storage_key,
         status="cached",
         error_message=None,
     )

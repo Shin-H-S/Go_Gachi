@@ -139,6 +139,9 @@ async def generate(
             settings=settings,
             # 로그인했으면 생성 기록에 소유자로 남긴다(비로그인이면 None).
             user_id=user.id if user else None,
+            user_copy=request.user_copy,
+            logo_data_url=request.logo_data_url,
+            logo_position=request.logo_position,
         )
     except ValueError as exc:
         # 사용자 입력 문제는 프론트가 처리할 수 있게 400으로 돌려준다.

@@ -33,6 +33,9 @@ async def edit_image(
     resize_mode: ResizeMode = "cover",
     settings: Settings,
     user_id: str | None = None,
+    user_copy: str | None = None,
+    logo_data_url: str | None = None,
+    logo_position: str | None = None,
 ) -> dict[str, str | None]:
     """설정된 provider에 따라 mock 반환 또는 OpenAI 이미지 편집을 수행한다.
 
@@ -47,12 +50,19 @@ async def edit_image(
         target_width=target_width,
         target_height=target_height,
     )
+    clean_user_copy = user_copy.strip() if user_copy else None
+    feedback_parts = [feedback]
+    if clean_user_copy:
+        feedback_parts.append(f"User copy: {clean_user_copy}")
+    feedback_for_generation = "\n".join(part.strip() for part in feedback_parts if part.strip())
     generation_feedback = feedback_with_context(
-        feedback,
+        feedback_for_generation,
         target_size,
         selected_detail,
         resize_mode,
     )
+    has_logo = bool(logo_data_url and logo_data_url.strip())
+    stored_logo_position = logo_position if has_logo else None
 
     if settings.image_provider == "mock":
         # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
@@ -131,6 +141,11 @@ async def edit_image(
                     image_url=None,
                     prompt=cached_snapshot["prompt"],
                     user_id=user_id,
+                    user_copy=clean_user_copy,
+                    has_logo=has_logo,
+                    logo_position=stored_logo_position,
+                    logo_image_hash=None,
+                    logo_storage_key=None,
                 )
                 await crud.record_usage(
                     db,
@@ -177,6 +192,11 @@ async def edit_image(
             original_path=str(original_path),
             prompt=prompt,
             user_id=user_id,
+            user_copy=clean_user_copy,
+            has_logo=has_logo,
+            logo_position=stored_logo_position,
+            logo_image_hash=None,
+            logo_storage_key=None,
         )
     logger.debug(
         "generation pending generation_id=%s model=%s prompt_version=%s",
