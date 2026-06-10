@@ -29,7 +29,7 @@ def handle_generation_request(
     format_label: str,
     detail_label: str,
     current_result_context,
-    text_overlay_enabled: bool,
+    ad_copy_enabled: bool,
     copy_mode: str,
 ) -> None:
     if generate:
@@ -39,18 +39,18 @@ def handle_generation_request(
             try:
                 time.sleep(1.2)
                 if FRONTEND_USE_MOCK:
-                    mock_copy = ad_copy_prompt.strip() if text_overlay_enabled else ""
+                    mock_copy = ad_copy_prompt.strip() if ad_copy_enabled else ""
                     result = GenerationResult(
                         image_bytes=create_mock_banner(
                             image_bytes=uploaded_file.getvalue(),
                             prompt=mock_copy,
                             format_label=format_label,
                             detail_label=detail_label,
-                            text_overlay_enabled=text_overlay_enabled,
+                            ad_copy_enabled=ad_copy_enabled,
                         ),
                         copy=(
                             _mock_copy_info(mock_copy, copy_mode)
-                            if text_overlay_enabled and mock_copy
+                            if ad_copy_enabled and mock_copy
                             else None
                         ),
                     )
@@ -63,7 +63,7 @@ def handle_generation_request(
                         format_label,
                         detail_label,
                         access_token=access_token,
-                        text_overlay_enabled=text_overlay_enabled,
+                        ad_copy_enabled=ad_copy_enabled,
                         copy_mode=copy_mode,
                         ad_copy_prompt=ad_copy_prompt,
                         logo_file=logo_file,

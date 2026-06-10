@@ -35,6 +35,7 @@ def test_cache_instruction_includes_text_and_logo_metadata() -> None:
         user_copy="라떼 4500원",
         has_logo=True,
         logo_position="bottom_right",
+        logo_image_hash="abc123",
     )
 
     assert "[User copy metadata]\n라떼 4500원" in result
@@ -42,3 +43,4 @@ def test_cache_instruction_includes_text_and_logo_metadata() -> None:
     assert "headline=라떼 4,500원" in result
     assert "subcopy=카페에서 더 맛있게 즐겨보세요." in result
     assert "[Logo metadata]\nlogoPosition=bottom_right" in result
+    assert "logoImageHash=abc123" in result

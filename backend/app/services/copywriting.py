@@ -1,7 +1,6 @@
 """V3 광고 문구 처리 서비스.
 
-이미지 합성 전 단계에서 사용자 요청을 광고 문구 구조로 정리한다.
-실제 텍스트 렌더링은 후속 overlay_text 모듈에서 담당한다.
+OpenAI 문구 생성이 불가능한 mock/대체 경로에서 이미지 프롬프트에 넣을 광고 문구를 만든다.
 """
 
 import re
@@ -15,7 +14,7 @@ _PRICE_RE = re.compile(r"(?P<number>\d{4,})(?P<unit>\s*원)")
 
 
 class AdCopy(BaseModel):
-    """후처리 합성에 사용할 광고 문구 구조."""
+    """이미지 생성 프롬프트에 전달할 광고 문구 구조."""
 
     headline: str | None = None
     subcopy: str | None = None
@@ -66,7 +65,7 @@ def _rewrite_copy(text: str, copy_mode: CopyMode) -> AdCopy:
 
 
 def build_ad_copy(user_prompt: str, copy_mode: CopyMode) -> AdCopy:
-    """사용자 요청과 copyMode를 합성용 광고 문구로 변환한다."""
+    """사용자 요청과 copyMode를 이미지 프롬프트용 광고 문구로 변환한다."""
     text = _user_copy_text(user_prompt)
     if not text:
         return _fallback_copy(copy_mode)

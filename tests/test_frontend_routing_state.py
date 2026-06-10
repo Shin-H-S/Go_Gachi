@@ -104,7 +104,7 @@ def test_result_context_uses_trimmed_prompt_upload_hash_and_selected_preset() ->
         "prompt": "make this menu look bright",
         "adCopyPrompt": "Headline: Fresh coffee",
         "copyMode": "polish",
-        "textOverlayEnabled": True,
+        "adCopyEnabled": True,
         "logoUploadHash": None,
         "uploadHash": hashlib.sha256(image_bytes).hexdigest(),
     }

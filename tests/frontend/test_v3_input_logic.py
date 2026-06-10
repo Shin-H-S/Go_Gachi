@@ -48,7 +48,7 @@ def _capture_generate_payload(monkeypatch, *, result_payload: dict[str, object] 
     return captured_json
 
 
-def test_1_text_overlay_disabled_skips_user_copy_and_forces_preserve_mode(
+def test_1_ad_copy_disabled_skips_user_copy_and_forces_preserve_mode(
     monkeypatch,
 ) -> None:
     captured_json = _capture_generate_payload(monkeypatch)
@@ -60,13 +60,13 @@ def test_1_text_overlay_disabled_skips_user_copy_and_forces_preserve_mode(
         "제품은 크게 보여줘",
         format_label,
         detail_label,
-        text_overlay_enabled=False,
+        ad_copy_enabled=False,
         copy_mode="preserve",
         ad_copy_prompt="이미지에 들어가면 안 되는 문구",
     )
 
     assert result.image_bytes == b"result"
-    assert captured_json["textOverlayEnabled"] is False
+    assert captured_json["adCopyEnabled"] is False
     assert captured_json["userCopy"] == ""
     assert captured_json["copyMode"] == "preserve"
 
@@ -120,10 +120,10 @@ def test_4_rewrite_mode_sends_user_copy_and_keeps_rewritten_copy_response(
         detail_label,
         ad_copy_prompt="딸기 케이크 6500원",
         copy_mode="rewrite",
-        text_overlay_enabled=True,
+        ad_copy_enabled=True,
     )
 
-    assert captured_json["textOverlayEnabled"] is True
+    assert captured_json["adCopyEnabled"] is True
     assert captured_json["userCopy"] == "딸기 케이크 6500원"
     assert captured_json["copyMode"] == "rewrite"
     assert result.copy == rewritten_copy
@@ -159,7 +159,7 @@ def test_3_logo_upload_is_optional_and_serialized_as_data_url(monkeypatch) -> No
     assert captured_json_without_logo["logoDataUrl"] is None
 
 
-def test_1_to_3_result_context_tracks_copy_mode_text_overlay_and_logo_hash() -> None:
+def test_1_to_3_result_context_tracks_copy_mode_ad_copy_and_logo_hash() -> None:
     uploaded_file = SimpleNamespace(getvalue=lambda: b"source-image")
     logo_file = SimpleNamespace(getvalue=lambda: b"logo-image")
     format_label, detail_label = _labels_for_instagram_square()
@@ -171,7 +171,7 @@ def test_1_to_3_result_context_tracks_copy_mode_text_overlay_and_logo_hash() -> 
         detail_label,
         ad_copy_prompt="  헤드라인: 오늘의 메뉴  ",
         copy_mode="polish",
-        text_overlay_enabled=True,
+        ad_copy_enabled=True,
         logo_file=logo_file,
     )
 
@@ -179,5 +179,5 @@ def test_1_to_3_result_context_tracks_copy_mode_text_overlay_and_logo_hash() -> 
     assert context["prompt"] == "제품 중앙 배치"
     assert context["adCopyPrompt"] == "헤드라인: 오늘의 메뉴"
     assert context["copyMode"] == "polish"
-    assert context["textOverlayEnabled"] is True
+    assert context["adCopyEnabled"] is True
     assert context["logoUploadHash"] == hashlib.sha256(b"logo-image").hexdigest()

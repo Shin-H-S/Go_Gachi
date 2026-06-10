@@ -20,7 +20,7 @@ def build_result_context(
     *,
     ad_copy_prompt: str = "",
     copy_mode: str = "preserve",
-    text_overlay_enabled: bool = True,
+    ad_copy_enabled: bool = True,
     logo_file=None,
 ):
     """생성 결과가 어떤 입력 조건에서 만들어졌는지 비교할 키를 만든다."""
@@ -38,7 +38,7 @@ def build_result_context(
         "prompt": prompt.strip(),
         "adCopyPrompt": ad_copy_prompt.strip(),
         "copyMode": copy_mode,
-        "textOverlayEnabled": text_overlay_enabled,
+        "adCopyEnabled": ad_copy_enabled,
         "logoUploadHash": logo_upload_hash,
         "uploadHash": upload_hash,
     }

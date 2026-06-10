@@ -11,6 +11,7 @@ from backend.app.core.prompts import (
     build_user_prompt,
     merge_image_prompt,
 )
+from backend.app.services.copywriting import AdCopy
 from backend.app.services.image_edit import parse_image
 
 
@@ -36,11 +37,32 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
 
     assert "thumbnail readability" in presets["baemin"].channel_prompt
     assert "nearby shop owner" in presets["daangn"].channel_prompt
-    assert "story stickers or text" in (
+    assert "readable ad copy or platform elements" in (
         presets["instagram"].find_detail("story_image").prompt_hint
     )
     assert "seasonal offer" in presets["daangn"].find_detail("discount_event").prompt_hint
-    assert PROMPT_VERSION == "2026-06-06-v1-system-user-prompt-builder"
+    assert PROMPT_VERSION == "2026-06-10-v2-ai-copy-in-image-prompt"
+
+
+def test_presets_do_not_conflict_with_image_copy_prompting() -> None:
+    """프리셋은 채널 스타일만 담당하고, 텍스트 허용/금지는 prompts.py가 조건부로 담당한다."""
+    forbidden_phrases = (
+        "do not generate text",
+        "do not generate people, hands, text",
+        "do not generate people, hands, typography",
+        "reserve natural empty space for future text placement",
+        "preserve layout flexibility for downstream processing",
+        "price tags",
+        "advertising graphics",
+    )
+
+    for preset in get_presets().values():
+        prompt = f"{preset.prompt_hint} {preset.channel_prompt}".lower()
+        for detail in preset.details:
+            prompt += f" {detail.prompt_hint.lower()}"
+
+        for phrase in forbidden_phrases:
+            assert phrase not in prompt
 
 
 def test_load_env_uses_only_root_env(monkeypatch, tmp_path) -> None:
@@ -122,6 +144,36 @@ def test_prompt_builder_splits_system_and_user_prompt() -> None:
     assert merged_prompt.startswith("[System instructions]")
     assert "[User request]" in merged_prompt
     assert merged_prompt.endswith("make it brighter")
+
+
+def test_prompt_with_image_copy_asks_image_model_to_render_ad_copy() -> None:
+    preset = get_presets()["instagram"]
+    detail = preset.find_detail("square_feed")
+    image_copy = AdCopy(
+        headline="오늘 아메리카노 2,500원",
+        subcopy="카페에서 더 맛있게 즐겨보세요.",
+        cta=None,
+        mode="polish",
+    )
+
+    prompt = build_prompt(preset, "따뜻한 광고 이미지", detail, image_copy=image_copy)
+
+    assert "integrated typography" in prompt
+    assert "Ad copy to render exactly in the image" in prompt
+    assert 'Headline: "오늘 아메리카노 2,500원"' in prompt
+    assert "Do not add, draw, render, or imitate any text" not in prompt
+
+
+def test_prompt_with_logo_allows_only_provided_logo_reference() -> None:
+    preset = get_presets()["instagram"]
+    detail = preset.find_detail("square_feed")
+
+    prompt = build_prompt(preset, "깔끔하게", detail, logo_position="bottom_right")
+
+    assert "second reference image contains the shop logo" in prompt
+    assert "bottom right" in prompt
+    assert "except for the provided logo reference" in prompt
+    assert "Do not add unrelated logos" in prompt
 
 
 def test_empty_user_prompt_keeps_safe_default_instruction() -> None:

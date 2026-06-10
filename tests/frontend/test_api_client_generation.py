@@ -60,7 +60,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             ),
             "userCopy": "",
             "copyMode": "preserve",
-            "textOverlayEnabled": True,
+            "adCopyEnabled": True,
             "logoDataUrl": None,
             "logoPosition": "bottom_right",
             "targetWidth": 1080,
@@ -224,7 +224,7 @@ def test_request_backend_sends_image_prompt_and_user_copy_separately(
     assert captured_json["userCopy"] == "헤드라인: 오늘만 할인"
 
 
-def test_request_backend_keeps_user_copy_empty_when_text_overlay_disabled(
+def test_request_backend_keeps_user_copy_empty_when_ad_copy_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured_json: dict[str, object] = {}
@@ -248,10 +248,10 @@ def test_request_backend_keeps_user_copy_empty_when_text_overlay_disabled(
         "인스타그램",
         "정사각형 피드",
         ad_copy_prompt="이미지에 들어가면 안 되는 문구",
-        text_overlay_enabled=False,
+        ad_copy_enabled=False,
     )
 
-    assert captured_json["textOverlayEnabled"] is False
+    assert captured_json["adCopyEnabled"] is False
     assert captured_json["userCopy"] == ""
 
 

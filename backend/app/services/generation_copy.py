@@ -20,8 +20,9 @@ def cache_instruction(
     user_copy: str | None = None,
     has_logo: bool = False,
     logo_position: str | None = None,
+    logo_image_hash: str | None = None,
 ) -> str:
-    """캐시 키에 텍스트 후처리 결과와 로고 메타데이터를 반영한다."""
+    """캐시 키에 광고 문구와 로고 reference 정보를 반영한다."""
     if text_copy is None and not user_copy and not has_logo:
         return generation_user_prompt
 
@@ -39,5 +40,11 @@ def cache_instruction(
             ]
         )
     if has_logo:
-        parts.extend(["[Logo metadata]", f"logoPosition={logo_position or ''}"])
+        parts.extend(
+            [
+                "[Logo metadata]",
+                f"logoPosition={logo_position or ''}",
+                f"logoImageHash={logo_image_hash or ''}",
+            ]
+        )
     return "\n".join(parts)

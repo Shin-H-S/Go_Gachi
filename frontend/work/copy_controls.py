@@ -59,10 +59,10 @@ def render_copy_controls(
     detail_label: str,
     image_prompt: str = "",
 ) -> tuple[str, bool, str]:
-    text_overlay_enabled = st.checkbox(
+    ad_copy_enabled = st.checkbox(
         "광고 문구 포함",
         value=True,
-        key="text_overlay_enabled",
+        key="ad_copy_enabled",
     )
     raw_prompt = st.text_area(
         "광고 문구",
@@ -71,12 +71,12 @@ def render_copy_controls(
             "비워두면 자동 문구 생성을 요청합니다."
         ),
         height=150,
-        disabled=not text_overlay_enabled,
+        disabled=not ad_copy_enabled,
         key="ad_copy_prompt",
         help="비워두면 이미지 생성 시 자동 문구 생성을 요청합니다.",
         label_visibility="collapsed",
     )
-    if text_overlay_enabled:
+    if ad_copy_enabled:
         st.button(
             "광고 문구 자동 생성",
             key="auto_copy_generate",
@@ -88,7 +88,7 @@ def render_copy_controls(
         if auto_copy_status:
             st.info(auto_copy_status)
 
-    prompt = raw_prompt if text_overlay_enabled else ""
+    prompt = raw_prompt if ad_copy_enabled else ""
     copy_mode_labels = [label for label, _mode in COPY_MODE_OPTIONS]
     copy_mode_by_label = dict(COPY_MODE_OPTIONS)
     copy_mode_label = st.radio(
@@ -97,10 +97,10 @@ def render_copy_controls(
         index=0,
         horizontal=False,
         key="copy_mode_label",
-        disabled=not text_overlay_enabled,
+        disabled=not ad_copy_enabled,
     )
     copy_mode = copy_mode_by_label.get(copy_mode_label, "preserve")
-    if not text_overlay_enabled:
+    if not ad_copy_enabled:
         copy_mode = "preserve"
-    return prompt, text_overlay_enabled, copy_mode
+    return prompt, ad_copy_enabled, copy_mode
 
