@@ -31,4 +31,6 @@ def force_openai_mode(
     real_settings = get_settings()
     monkeypatch.setattr(real_settings, "image_provider", "openai")
     monkeypatch.setattr(real_settings, "openai_api_key", api_key)
+    # 테스트는 디스크 기반 동작을 가정하므로 storage_backend를 local로 고정한다.
+    monkeypatch.setattr(real_settings, "storage_backend", "local")
     return real_settings

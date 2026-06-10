@@ -16,11 +16,11 @@ from backend.app.services.generation_cache import cached_response, find_cache_sn
 from backend.app.services.generation_copy import cache_instruction, rendered_copy_text
 from backend.app.services.generation_files import new_generation_id
 from backend.app.services.generation_inputs import target_size_or_detail, user_prompt_with_context
+from backend.app.services.generation_storage import prepare_storage, save_output
 from backend.app.services.image_processing import normalize_for_openai, render_target_png
 from backend.app.services.image_types import ResizeMode
 from backend.app.services.image_validation import parse_image
 from backend.app.services.openai_images import call_openai_edit
-from backend.app.services.storage import get_storage
 from backend.app.services.storage_url import output_url
 from backend.app.services.text_overlay import render_text_overlay
 
@@ -129,37 +129,12 @@ async def edit_image(
         selected_detail.id,
         short_id(user_id),
     )
-    storage = get_storage(settings)
-    output_storage_path = storage.output_path(generation_id)
-    if settings.storage_backend == "r2":
-        original_storage_path = storage.original_path(
-            image_hash=image_hash,
-            extension=uploaded.extension,
-            generation_id=generation_id,
-        )
-        if not await storage.exists(original_storage_path):
-            await storage.write_bytes(
-                original_storage_path,
-                body=uploaded.content,
-                content_type=uploaded.mime_type,
-            )
-    else:
-        # local 모드: 디스크에 저장. 같은 image_hash의 원본이 이미 있으면 그 경로를 재사용한다.
-        async with async_session_scope() as db:
-            old_path = await crud.find_original_path(db, image_hash=image_hash)
-        if old_path:
-            original_storage_path = old_path
-        else:
-            original_storage_path = storage.original_path(
-                image_hash=image_hash,
-                extension=uploaded.extension,
-                generation_id=generation_id,
-            )
-            await storage.write_bytes(
-                original_storage_path,
-                body=uploaded.content,
-                content_type=uploaded.mime_type,
-            )
+    paths = await prepare_storage(
+        generation_id=generation_id,
+        image_hash=image_hash,
+        uploaded=uploaded,
+        settings=settings,
+    )
 
     async with async_session_scope() as db:
         await crud.create_pending_generation(
@@ -170,7 +145,7 @@ async def edit_image(
             instruction_hash=instruction_hash,
             prompt_version=prompt_version,
             model=model,
-            original_path=original_storage_path,
+            original_path=paths.original_path,
             prompt=prompt,
             user_id=user_id,
             user_copy=stored_user_copy,
@@ -235,11 +210,7 @@ async def edit_image(
                 layout,
                 settings,
             )
-        await storage.write_bytes(
-            output_storage_path,
-            body=target_png,
-            content_type="image/png",
-        )
+        await save_output(output_path=paths.output_path, body=target_png, settings=settings)
     except Exception as exc:
         # OpenAI 호출/응답 디코딩/파일 저장 중 하나라도 실패하면 failed로 남긴다.
         logger.exception("generation failed generation_id=%s", generation_id)
@@ -264,12 +235,12 @@ async def edit_image(
     # 4) 성공: 파일 저장 → DB success 갱신 → 사용량 기록.
     # 응답에는 외부 접근 URL(local: /outputs/..., r2: public URL)을 함께 내려준다.
     # DB에는 환경별 절대 URL을 박지 않고 path/key만 저장한다.
-    image_url = output_url(output_storage_path)
+    image_url = output_url(paths.output_path)
     async with async_session_scope() as db:
         await crud.mark_generation_success(
             db,
             request_id=generation_id,
-            output_path=output_storage_path,
+            output_path=paths.output_path,
             image_url=None,
         )
         await crud.record_usage(

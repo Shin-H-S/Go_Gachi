@@ -256,7 +256,7 @@ async def test_create_cached_generation_stores_parent_id(
     assert cached.parent_id == parent.id
 
 
-async def test_find_cached_generation_ignores_failed_and_missing_files(
+async def test_find_cached_generation_ignores_failed_rows(
     db_session: AsyncSession,
     tmp_dir: Path,
 ) -> None:
@@ -307,10 +307,11 @@ async def test_find_cached_generation_ignores_failed_and_missing_files(
         model="gpt-image-2",
     )
 
-    assert cached is None
+    assert cached is not None
+    assert cached.request_id == "req-missing"
 
 
-async def test_find_cached_generation_falls_back_to_existing_file(
+async def test_list_cached_generations_returns_candidates_latest_first(
     db_session: AsyncSession,
     tmp_dir: Path,
 ) -> None:
@@ -355,7 +356,7 @@ async def test_find_cached_generation_falls_back_to_existing_file(
     )
     await db_session.commit()
 
-    cached = await crud.find_cached_generation(
+    cached_rows = await crud.list_cached_generations(
         db_session,
         image_hash="h1",
         preset_id="instagram_feed_square",
@@ -364,5 +365,4 @@ async def test_find_cached_generation_falls_back_to_existing_file(
         model="gpt-image-2",
     )
 
-    assert cached is not None
-    assert cached.request_id == "req-older"
+    assert [row.request_id for row in cached_rows] == ["req-newer", "req-older"]
