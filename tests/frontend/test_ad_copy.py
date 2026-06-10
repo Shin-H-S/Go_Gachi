@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from frontend.work.copy import COPY_MODE_OPTIONS
+from frontend.work.copy import COPY_MODE_LABELS, COPY_MODE_OPTIONS, copy_mode_label
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 COPY_SOURCE = ROOT_DIR / "frontend" / "work" / "copy.py"
@@ -20,4 +20,11 @@ def test_copy_mode_options_use_backend_values_and_korean_labels() -> None:
         ("자연스럽게 다듬기", "polish"),
         ("홍보 문구로 바꾸기", "rewrite"),
     )
+
+
+def test_copy_mode_labels_are_derived_from_options() -> None:
+    assert COPY_MODE_LABELS == {mode: label for label, mode in COPY_MODE_OPTIONS}
+    assert copy_mode_label("polish") == "자연스럽게 다듬기"
+    assert copy_mode_label("custom") == "custom"
+    assert copy_mode_label(None) == "문구"
 

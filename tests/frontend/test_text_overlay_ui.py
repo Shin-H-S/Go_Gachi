@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from frontend import api_client
+from frontend.work import copy_controls
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 WORK_PAGE = ROOT_DIR / "frontend" / "pages" / "work.py"
@@ -21,6 +22,34 @@ class FakeResponse:
 
     def json(self) -> dict[str, object]:
         return self.payload
+
+
+class FakeCopyControlStreamlit:
+    def __init__(self, *, checkbox_value: bool) -> None:
+        self.checkbox_value = checkbox_value
+        self.session_state = {"auto_copy_status": "old status"}
+        self.text_area_calls: list[dict[str, object]] = []
+        self.button_calls: list[dict[str, object]] = []
+        self.radio_calls: list[dict[str, object]] = []
+        self.info_messages: list[str] = []
+
+    def checkbox(self, *args, **kwargs) -> bool:
+        return self.checkbox_value
+
+    def text_area(self, *args, **kwargs) -> str:
+        self.text_area_calls.append({"args": args, "kwargs": kwargs})
+        return "직접 입력한 문구"
+
+    def button(self, *args, **kwargs) -> bool:
+        self.button_calls.append({"args": args, "kwargs": kwargs})
+        return False
+
+    def radio(self, *args, **kwargs) -> str:
+        self.radio_calls.append({"args": args, "kwargs": kwargs})
+        return "그대로 사용"
+
+    def info(self, message: str) -> None:
+        self.info_messages.append(message)
 
 
 def _keyword(call: ast.Call, name: str) -> ast.keyword | None:
@@ -105,6 +134,27 @@ def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
     assert prompt_text_area is not None
     assert "request_auto_copy" in source
     assert "build_auto_copy" not in source
+
+
+def test_copy_controls_hide_copy_inputs_when_text_overlay_is_unchecked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_st = FakeCopyControlStreamlit(checkbox_value=False)
+    monkeypatch.setattr(copy_controls, "st", fake_st)
+
+    prompt, text_overlay_enabled, copy_mode = copy_controls.render_copy_controls(
+        "인스타그램",
+        "정사각형 피드",
+        "밝은 배경",
+    )
+
+    assert prompt == ""
+    assert text_overlay_enabled is False
+    assert copy_mode == "preserve"
+    assert fake_st.text_area_calls == []
+    assert fake_st.button_calls == []
+    assert fake_st.radio_calls == []
+    assert "auto_copy_status" not in fake_st.session_state
 
 
 def test_copy_controls_render_manual_copy_mode_selector() -> None:
