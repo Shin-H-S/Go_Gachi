@@ -1,5 +1,6 @@
 """generations 테이블 CRUD. 상태 전이: pending → success/failed, 캐시 hit는 cached로 별도 행."""
 
+import asyncio
 import hashlib
 import re
 from pathlib import Path
@@ -53,8 +54,30 @@ async def find_cached_generation(
     )
     result = await db.execute(stmt)
     for generation in result.scalars():
-        if generation.output_path and Path(generation.output_path).exists():
+        if generation.output_path and await asyncio.to_thread(Path(generation.output_path).exists):
             return generation
+    return None
+
+
+async def find_original_path(
+    db: AsyncSession,
+    *,
+    image_hash: str,
+) -> str | None:
+    """같은 이미지 해시의 기존 원본 파일이 남아 있으면 그 경로를 돌려준다."""
+    stmt = (
+        select(Generation.original_path)
+        .where(Generation.image_hash == image_hash)
+        .where(Generation.original_path.is_not(None))
+        .order_by(Generation.created_at.desc(), Generation.id.desc())
+    )
+    result = await db.execute(stmt)
+    for path in result.scalars():
+        if not path:
+            continue
+        exists = await asyncio.to_thread(Path(path).is_file)
+        if exists:
+            return path
     return None
 
 

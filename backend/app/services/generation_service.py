@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import logging
+from pathlib import Path
 
 from backend.app.core.config import Settings
 from backend.app.core.logging_utils import short_id
@@ -128,9 +129,14 @@ async def edit_image(
     )
     await asyncio.to_thread(settings.upload_dir.mkdir, parents=True, exist_ok=True)
     await asyncio.to_thread(settings.output_dir.mkdir, parents=True, exist_ok=True)
-    original_path = settings.upload_dir / f"{generation_id}.{uploaded.extension}"
     output_path = settings.output_dir / f"{generation_id}.png"
-    await asyncio.to_thread(original_path.write_bytes, uploaded.content)
+    async with async_session_scope() as db:
+        old_path = await crud.find_original_path(db, image_hash=image_hash)
+    if old_path:
+        original_path = Path(old_path)
+    else:
+        original_path = settings.upload_dir / f"{generation_id}.{uploaded.extension}"
+        await asyncio.to_thread(original_path.write_bytes, uploaded.content)
 
     async with async_session_scope() as db:
         await crud.create_pending_generation(
