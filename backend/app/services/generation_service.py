@@ -9,7 +9,6 @@ from backend.app.core.config import Settings
 from backend.app.core.logging_utils import short_id
 from backend.app.core.presets import Preset, PresetDetail
 from backend.app.core.prompts import PROMPT_VERSION, build_prompt
-from backend.app.core.text_layouts import find_text_layout
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.services.copywriting import AdCopy
@@ -22,7 +21,6 @@ from backend.app.services.image_types import ResizeMode
 from backend.app.services.image_validation import parse_image
 from backend.app.services.openai_images import call_openai_edit
 from backend.app.services.storage_url import output_url
-from backend.app.services.text_overlay import render_text_overlay
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +48,11 @@ async def edit_image(
     """
     # provider와 무관하게 먼저 입력 이미지를 검증해 프론트 오류를 빠르게 돌려준다.
     uploaded = parse_image(image_data_url, settings.max_upload_bytes)
+    logo_uploaded = (
+        parse_image(logo_data_url, settings.max_upload_bytes)
+        if logo_data_url and logo_data_url.strip()
+        else None
+    )
     selected_detail = detail or preset.default_detail()
     target_size = target_size_or_detail(
         detail=selected_detail,
@@ -64,7 +67,10 @@ async def edit_image(
     )
     clean_user_copy: str | None = (user_copy or "").strip() or None
     stored_user_copy: str | None = rendered_copy_text(text_copy)
-    has_logo: bool = bool(logo_data_url and logo_data_url.strip())
+    logo_image_hash: str | None = (
+        crud.image_sha256(logo_uploaded.content) if logo_uploaded else None
+    )
+    has_logo: bool = logo_uploaded is not None
     stored_logo_position: str | None = logo_position if has_logo else None
     cache_input = cache_instruction(
         generation_user_prompt,
@@ -72,14 +78,12 @@ async def edit_image(
         user_copy=clean_user_copy,
         has_logo=has_logo,
         logo_position=stored_logo_position,
+        logo_image_hash=logo_image_hash,
     )
 
     if settings.image_provider == "mock":
         # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
         target_png = render_target_png(uploaded.content, target_size, resize_mode)
-        if text_copy:
-            layout = find_text_layout(preset.id, selected_detail.id)
-            target_png = render_text_overlay(target_png, text_copy, layout, settings)
         encoded = base64.b64encode(target_png).decode("ascii")
         return {
             "image_data_url": f"data:image/png;base64,{encoded}",
@@ -93,7 +97,13 @@ async def edit_image(
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY가 설정되지 않았습니다.")
 
-    prompt = build_prompt(preset, generation_user_prompt, selected_detail)
+    prompt = build_prompt(
+        preset,
+        generation_user_prompt,
+        selected_detail,
+        image_copy=text_copy,
+        logo_position=stored_logo_position,
+    )
     image_hash = crud.image_sha256(uploaded.content)
     instruction_hash = crud.instruction_sha256(cache_input)
     model = settings.openai_image_model
@@ -112,6 +122,7 @@ async def edit_image(
         user_copy=stored_user_copy,
         has_logo=has_logo,
         logo_position=stored_logo_position,
+        logo_image_hash=logo_image_hash,
     )
     if cache_result is not None:
         return cache_result
@@ -153,7 +164,7 @@ async def edit_image(
             user_copy=stored_user_copy,
             has_logo=has_logo,
             logo_position=stored_logo_position,
-            logo_image_hash=None,
+            logo_image_hash=logo_image_hash,
             logo_storage_key=None,
         )
     logger.debug(
@@ -165,6 +176,9 @@ async def edit_image(
 
     try:
         openai_uploaded = await asyncio.to_thread(normalize_for_openai, uploaded)
+        openai_logo_uploaded = (
+            await asyncio.to_thread(normalize_for_openai, logo_uploaded) if logo_uploaded else None
+        )
         logger.debug(
             "OpenAI image input prepared generation_id=%s original_mime=%s "
             "original_format=%s original_mode=%s original_size=%sx%s "
@@ -183,14 +197,36 @@ async def edit_image(
             openai_uploaded.info.height,
             len(openai_uploaded.content),
         )
+        if openai_logo_uploaded:
+            logger.debug(
+                "OpenAI logo reference prepared generation_id=%s original_mime=%s "
+                "original_format=%s original_mode=%s original_size=%sx%s "
+                "normalized_mime=%s normalized_format=%s normalized_mode=%s "
+                "normalized_size=%sx%s normalized_bytes=%s logo_hash=%s",
+                generation_id,
+                logo_uploaded.mime_type,
+                logo_uploaded.info.format,
+                logo_uploaded.info.mode,
+                logo_uploaded.info.width,
+                logo_uploaded.info.height,
+                openai_logo_uploaded.mime_type,
+                openai_logo_uploaded.info.format,
+                openai_logo_uploaded.info.mode,
+                openai_logo_uploaded.info.width,
+                openai_logo_uploaded.info.height,
+                len(openai_logo_uploaded.content),
+                short_id(logo_image_hash),
+            )
         logger.debug(
-            "openai call started generation_id=%s model=%s api_size=%s",
+            "openai call started generation_id=%s model=%s api_size=%s reference_images=%s",
             generation_id,
             model,
             selected_detail.api_size,
+            1 if openai_logo_uploaded else 0,
         )
         b64_json = await call_openai_edit(
             uploaded=openai_uploaded,
+            reference_images=[openai_logo_uploaded] if openai_logo_uploaded else None,
             api_size=selected_detail.api_size,
             prompt=prompt,
             settings=settings,
@@ -203,15 +239,6 @@ async def edit_image(
             target_size,
             resize_mode,
         )
-        if text_copy:
-            layout = find_text_layout(preset.id, selected_detail.id)
-            target_png = await asyncio.to_thread(
-                render_text_overlay,
-                target_png,
-                text_copy,
-                layout,
-                settings,
-            )
         await asyncio.to_thread(output_path.write_bytes, target_png)
     except Exception as exc:
         # OpenAI 호출/응답 디코딩/파일 저장 중 하나라도 실패하면 failed로 남긴다.

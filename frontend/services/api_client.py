@@ -141,14 +141,14 @@ def request_backend(
     format_label: str,
     detail_label: str,
     access_token: str = "",
-    text_overlay_enabled: bool = True,
+    ad_copy_enabled: bool = True,
     copy_mode: str = "preserve",
     ad_copy_prompt: str = "",
     logo_file=None,
     logo_position: str = "bottom_right",
 ) -> GenerationResult:
     target_size = get_detail_size(format_label, detail_label)
-    user_copy = ad_copy_prompt.strip() if text_overlay_enabled else ""
+    user_copy = ad_copy_prompt.strip() if ad_copy_enabled else ""
     payload = {
         "imageDataUrl": file_to_data_url(uploaded_file),
         "presetId": FORMAT_OPTIONS[format_label]["value"],
@@ -156,7 +156,7 @@ def request_backend(
         "userPrompt": build_user_prompt(prompt, detail_label),
         "userCopy": user_copy,
         "copyMode": copy_mode,
-        "textOverlayEnabled": text_overlay_enabled,
+        "adCopyEnabled": ad_copy_enabled,
         "logoDataUrl": file_to_data_url(logo_file) if logo_file else None,
         "logoPosition": logo_position,
         "targetWidth": target_size[0],

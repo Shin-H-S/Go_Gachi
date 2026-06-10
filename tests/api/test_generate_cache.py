@@ -10,7 +10,8 @@ from backend.app.core.presets import default_preset
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import ApiUsage, Generation
-from backend.app.services import generation_service, image_edit
+from backend.app.services import generation_service, image_edit, openai_copy
+from backend.app.services.copywriting import AdCopy
 from tests.api.helpers import TINY_PNG_B64, TINY_PNG_DATA_URL, client, force_openai_mode
 
 
@@ -118,8 +119,11 @@ def test_generate_reuses_original_file_for_same_image(
     assert Path(original_paths[0]).exists()
 
 
-def test_generate_stores_logo_metadata_without_overlay(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generate_stores_logo_reference_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured_call: dict[str, object] = {}
+
     async def _fake_call(**kwargs: object) -> str:
+        captured_call.update(kwargs)
         return TINY_PNG_B64
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
@@ -140,7 +144,7 @@ def test_generate_stores_logo_metadata_without_overlay(monkeypatch: pytest.Monke
 
     assert response.status_code == 200
 
-    async def _db_state() -> tuple[str | None, bool, str | None, str, str | None]:
+    async def _db_state() -> tuple[str | None, bool, str | None, str | None, str, str | None]:
         async with async_session_scope() as db:
             result = await db.execute(select(Generation))
             generation = result.scalar_one()
@@ -148,25 +152,42 @@ def test_generate_stores_logo_metadata_without_overlay(monkeypatch: pytest.Monke
                 generation.user_copy,
                 generation.has_logo,
                 generation.logo_position,
+                generation.logo_image_hash,
                 generation.instruction_hash,
                 generation.logo_storage_key,
             )
 
-    user_copy, has_logo, logo_position, instruction_hash, logo_storage_key = asyncio.run(
-        _db_state()
-    )
+    (
+        user_copy,
+        has_logo,
+        logo_position,
+        logo_image_hash,
+        instruction_hash,
+        logo_storage_key,
+    ) = asyncio.run(_db_state())
     assert user_copy is None
     assert has_logo is True
     assert logo_position == "bottom_right"
+    assert logo_image_hash == crud.image_sha256(base64.b64decode(TINY_PNG_B64))
     assert instruction_hash != crud.instruction_sha256("bright mood")
     assert logo_storage_key is None
+    assert len(captured_call["reference_images"]) == 1
 
 
 def test_generate_stores_rendered_user_copy(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _fake_call(**kwargs: object) -> str:
         return TINY_PNG_B64
 
+    async def _fake_copy(**kwargs: object) -> AdCopy:
+        return AdCopy(
+            headline="오늘 놓치기 아까운 딸기 케이크 6,500원",
+            subcopy="카페에서 즐기는 신선한 메뉴를 더 맛있게 전해드려요.",
+            cta="지금 방문해보세요",
+            mode="rewrite",
+        )
+
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    monkeypatch.setattr(openai_copy, "call_openai_copy", _fake_copy)
     force_openai_mode(monkeypatch)
 
     expected_copy = (
@@ -183,7 +204,7 @@ def test_generate_stores_rendered_user_copy(monkeypatch: pytest.MonkeyPatch) -> 
             "userPrompt": "bright mood",
             "userCopy": "딸기 케이크 6500원",
             "copyMode": "rewrite",
-            "textOverlayEnabled": True,
+            "adCopyEnabled": True,
         },
     )
 
@@ -207,7 +228,16 @@ def test_generate_cache_hit_stores_rendered_user_copy(monkeypatch: pytest.Monkey
     async def _fake_call(**kwargs: object) -> str:
         return TINY_PNG_B64
 
+    async def _fake_copy(**kwargs: object) -> AdCopy:
+        return AdCopy(
+            headline="라떼 4,500원",
+            subcopy="카페에서 더 맛있게 즐겨보세요.",
+            cta=None,
+            mode="polish",
+        )
+
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    monkeypatch.setattr(openai_copy, "call_openai_copy", _fake_copy)
     force_openai_mode(monkeypatch)
 
     payload = {
@@ -217,7 +247,7 @@ def test_generate_cache_hit_stores_rendered_user_copy(monkeypatch: pytest.Monkey
         "userPrompt": "bright mood",
         "userCopy": "라떼 4500원",
         "copyMode": "polish",
-        "textOverlayEnabled": True,
+        "adCopyEnabled": True,
     }
     first = client.post("/api/generate", json=payload)
     second = client.post("/api/generate", json=payload)
@@ -268,7 +298,7 @@ def test_generate_stores_blank_user_copy_as_none(monkeypatch: pytest.MonkeyPatch
     assert asyncio.run(_saved_user_copy()) is None
 
 
-def test_generate_ignores_user_copy_when_text_overlay_disabled(
+def test_generate_ignores_user_copy_when_ad_copy_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def _fake_call(**kwargs: object) -> str:
@@ -285,7 +315,7 @@ def test_generate_ignores_user_copy_when_text_overlay_disabled(
             "detailType": "square_feed",
             "userPrompt": "bright mood",
             "userCopy": "이미지에 합성하지 않는 문구",
-            "textOverlayEnabled": False,
+            "adCopyEnabled": False,
         },
     )
 

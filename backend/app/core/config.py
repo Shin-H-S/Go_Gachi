@@ -89,11 +89,6 @@ class Settings(BaseModel):
     supabase_anon_key: str = ""
     supabase_jwt_secret: str = ""
 
-    # 텍스트 합성 폰트는 브랜드 톤 결정 전까지 환경변수로만 받는다.
-    # 값이 없으면 런타임에서 찾을 수 있는 시스템 폰트/기본 폰트로만 시도한다.
-    text_font_regular_path: Path | None = None
-    text_font_bold_path: Path | None = None
-
 
 @lru_cache
 def get_settings() -> Settings:
@@ -135,8 +130,6 @@ def get_settings() -> Settings:
         supabase_url=os.getenv("SUPABASE_URL", ""),
         supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
         supabase_jwt_secret=os.getenv("SUPABASE_JWT_SECRET", ""),
-        text_font_regular_path=_optional_path("TEXT_FONT_REGULAR_PATH"),
-        text_font_bold_path=_optional_path("TEXT_FONT_BOLD_PATH"),
     )
 
 
@@ -161,11 +154,3 @@ def _database_url_from_env() -> str:
             )
 
     return database_url
-
-
-def _optional_path(env_name: str) -> Path | None:
-    """비어 있는 경로 환경변수는 None으로 취급한다."""
-    import os
-
-    value = os.getenv(env_name, "").strip()
-    return Path(value) if value else None

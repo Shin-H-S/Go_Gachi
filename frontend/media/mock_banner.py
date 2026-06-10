@@ -17,7 +17,7 @@ def create_mock_banner(
     prompt: str,
     format_label: str,
     detail_label: str,
-    text_overlay_enabled: bool = True,
+    ad_copy_enabled: bool = True,
 ) -> bytes:
     width, height = get_detail_size(format_label, detail_label)
     scale = min(width, height) / 1080
@@ -55,7 +55,7 @@ def create_mock_banner(
     title_font = load_font(max(34, int(58 * scale)), bold=True)
     body_font = load_font(max(22, int(34 * scale)), bold=False)
 
-    if text_overlay_enabled:
+    if ad_copy_enabled:
         text_x = margin
         text_y = int(height * 0.10)
         text_width = int(width * 0.78)

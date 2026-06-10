@@ -25,7 +25,7 @@ GCP/Cloud Run 배포를 우선 지원하지만, 테스트와 검증을 위해 �
 
 현재 스키마는 JSON 요청만 사용합니다.
 V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy`)까지 응답합니다.
-`textOverlayEnabled=true`이면 문구 처리 결과를 최종 이미지 위에 후처리 합성합니다.
+`adCopyEnabled=true`이면 문구 처리 결과를 이미지 생성 프롬프트에 포함해 광고 이미지 안에 함께 생성합니다.
 로고 합성은 후속 기능 브랜치에서 연결합니다.
 
 ```json
@@ -35,7 +35,7 @@ V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy
   "detailType": "story_image",
   "userPrompt": "광고 유형: 스토리 이미지\n오늘 아메리카노 2,500원",
   "copyMode": "preserve",
-  "textOverlayEnabled": false,
+  "adCopyEnabled": false,
   "logoDataUrl": null,
   "logoPosition": "bottom_right",
   "parentRequestId": null,
@@ -52,8 +52,8 @@ V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy
 - `detailType`: 프리셋 안의 상세 광고 유형 ID. 채널·상세 유형별 전용 프롬프트를 고르는 데 사용
 - `userPrompt`: V3 사용자 요청/광고 문구입니다.
 - `copyMode`: 문구 처리 방식. `preserve`, `polish`, `rewrite` 중 하나이며 기본값은 `preserve`입니다.
-- `textOverlayEnabled`: 텍스트 후처리 합성 사용 여부입니다. true이면 `copy` 응답을 구성하고 최종 PNG에 문구를 합성합니다.
-- `logoDataUrl`: 로고 합성에 사용할 JPG, PNG, WEBP data URL입니다. 현재 브랜치에서는 스키마만 열어둡니다.
+- `adCopyEnabled`: 광고 문구 사용 여부입니다. true이면 `copy` 응답을 구성하고 이미지 생성 프롬프트에 문구를 포함합니다.
+- `logoDataUrl`: 로고 반영에 사용할 JPG, PNG, WEBP data URL입니다. 값이 있으면 메뉴 이미지와 함께 OpenAI 이미지 편집 API의 reference image로 전달합니다.
 - `logoPosition`: 로고 위치. `top_left`, `top_right`, `bottom_left`, `bottom_right`, `center_bottom` 중 하나이며 기본값은 `bottom_right`입니다.
 - `parentRequestId`: 수정 이력 연결용 부모 생성 ID입니다. 현재 브랜치에서는 스키마만 열어둡니다.
 - `targetWidth`, `targetHeight`: 사용자가 선택한 상세 광고 규격의 최종 출력 픽셀 크기.
@@ -85,18 +85,15 @@ V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy
 - `prompt`: `APP_ENV=production`에서는 내부 프롬프트 보호를 위해 `null`로 응답합니다.
   `local`/`dev` 환경에서는 디버깅을 위해 생성에 사용한 프롬프트가 포함될 수 있습니다.
 - 응답 `imageDataUrl`의 PNG는 `targetWidth` x `targetHeight` 크기로 후처리되어 반환됩니다.
-- `copy`: `textOverlayEnabled=true`일 때 문구 처리 결과를 내려줍니다. 이 문구는 `config/text_layouts.json` 규칙에 따라 최종 이미지에 합성됩니다.
-- `logo`, `revision`: V3 후속 브랜치에서 로고/수정 이력 처리 결과를 채울 예정입니다.
+- `copy`: `adCopyEnabled=true`일 때 문구 처리 결과를 내려줍니다. OpenAI 생성 경로에서는 이 문구를 이미지 생성 프롬프트에 포함합니다.
+- `logo`: 로고 이미지를 요청에 포함한 경우 사용 여부와 위치를 내려줍니다.
+- `revision`: V3 후속 브랜치에서 수정 이력 처리 결과를 채울 예정입니다.
 
-## Text Overlay
+## Copy Composition
 
-- 문구 생성은 `backend/app/services/copywriting.py`에서 담당합니다.
-- 문구 배치는 `config/text_layouts.json`에서 채널/상세 유형별로 관리합니다.
-- 실제 이미지 합성은 `backend/app/services/text_overlay.py`에서 수행합니다.
-- 폰트는 아직 브랜드 정책을 확정하지 않았으므로 `TEXT_FONT_REGULAR_PATH`,
-  `TEXT_FONT_BOLD_PATH` 환경변수로 경로만 열어둡니다. 값이 없으면 서버에서 찾을 수 있는
-  시스템 폰트 또는 Pillow 기본 폰트를 사용하며, 한글 품질은 폰트 확정 후 보강합니다.
-- 포함된 폰트와 라이선스 정책은 `backend/app/assets/fonts/README.md`에서 관리합니다.
+- 문구 생성은 `backend/app/services/openai_copy.py`에서 OpenAI 텍스트 모델을 우선 사용합니다.
+- OpenAI 키가 없거나 mock 모드이면 `backend/app/services/copywriting.py`의 기본 규칙으로 대체합니다.
+- OpenAI 이미지 생성 경로에서는 생성된 문구를 최종 이미지 프롬프트에 포함해 한 번에 광고 이미지를 만듭니다.
 
 ## Upload Policy
 
@@ -121,11 +118,10 @@ backend/
   app/core/config.py          환경변수 기반 런타임 설정
   app/core/presets.py         config/presets.json 로딩
   app/core/prompts.py         이미지 편집 프롬프트 조립
-  app/core/text_layouts.py    config/text_layouts.json 로딩
   app/services/image_edit.py          기존 import 호환용 이미지 생성 진입점
   app/services/generation_service.py  이미지 생성 전체 흐름 조립
-  app/services/copywriting.py         사용자 문구를 합성용 광고 문구로 정리
-  app/services/text_overlay.py        광고 문구를 최종 PNG에 합성
+  app/services/openai_copy.py         OpenAI 텍스트 모델로 광고 문구 생성/수정
+  app/services/copywriting.py         mock/대체 경로용 광고 문구 정리
   app/services/image_validation.py    업로드 이미지 검증
   app/services/image_processing.py    OpenAI 입력 정규화와 최종 리사이즈
   app/services/openai_images.py       OpenAI Images API 호출
