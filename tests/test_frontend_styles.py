@@ -26,3 +26,13 @@ def test_segmented_control_grid_does_not_assume_three_presets() -> None:
 
     assert "repeat(3" not in styles
     assert "auto-fit" in styles
+
+
+def test_copy_mode_radio_heading_is_plain_text_not_button_like() -> None:
+    styles = STYLE_WORK_SELECTION_FILE.read_text(encoding="utf-8")
+
+    assert ".st-key-copy_mode_label" in styles
+    assert 'label:not([data-baseweb="radio"])' in styles
+    assert "border: 0 !important;" in styles
+    assert "background: #ffffff !important;" in styles
+    assert "font-size: 15px !important;" in styles

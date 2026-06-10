@@ -7,6 +7,7 @@ FRONTEND_MYPAGE_PAGE = ROOT_DIR / "frontend" / "pages" / "mypage.py"
 FRONTEND_ROUTER = ROOT_DIR / "frontend" / "core" / "router.py"
 FRONTEND_API_CLIENT = ROOT_DIR / "frontend" / "services" / "api_client.py"
 FRONTEND_MYPAGE_CARD = ROOT_DIR / "frontend" / "mypage" / "generation_card.py"
+FRONTEND_MYPAGE_VIEWS = ROOT_DIR / "frontend" / "mypage" / "views.py"
 FRONTEND_MYPAGE_SIDEBAR = ROOT_DIR / "frontend" / "mypage" / "sidebar.py"
 FRONTEND_STYLES = ROOT_DIR / "frontend" / "styles.py"
 STYLE_MYPAGE_FILE = ROOT_DIR / "frontend" / "css" / "mypage.py"
@@ -66,6 +67,29 @@ def test_mypage_api_and_styles_are_registered() -> None:
     assert "MYPAGE_LAYOUT_CSS" in mypage_composer
     assert ".mypage-shell" in layout_styles
     assert ".mypage-card-grid" in card_styles
+
+
+def test_mypage_generations_api_accepts_page_query() -> None:
+    api_source = FRONTEND_API_CLIENT.read_text(encoding="utf-8")
+
+    assert "def request_my_generations(access_token: str, page: int = 1)" in api_source
+    assert 'f"/api/auth/me/generations?page={page}"' in api_source
+
+
+def test_mypage_loads_generation_pages_and_uses_total_count() -> None:
+    page_source = FRONTEND_MYPAGE_PAGE.read_text(encoding="utf-8")
+
+    assert "def _load_generation_pages(access_token: str)" in page_source
+    assert "total_count" in page_source
+    assert "request_my_generations(access_token, page=page)" in page_source
+
+
+def test_mypage_views_render_collection_status_and_pagination() -> None:
+    views_source = FRONTEND_MYPAGE_VIEWS.read_text(encoding="utf-8")
+
+    assert "render_pagination_controls(" in views_source
+    assert "page_status_text(" in views_source
+    assert "mypage-list-status" in views_source
 
 
 def test_generation_folder_select_assigns_without_extra_button() -> None:

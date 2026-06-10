@@ -1,4 +1,5 @@
 import base64
+from dataclasses import dataclass
 
 import httpx
 
@@ -10,17 +11,21 @@ from frontend.core.config import (
     get_detail_id,
     get_detail_size,
 )
+from frontend.services.copy_client import request_auto_copy
+from frontend.services.prompting import build_user_prompt
 
 __all__ = [
     "BACKEND_URL",
     "DEFAULT_BACKEND_URL",
     "FRONTEND_USE_MOCK",
+    "GenerationResult",
     "build_user_prompt",
     "create_my_folder",
     "data_url_to_bytes",
     "file_to_data_url",
     "move_generation_to_folder",
     "request_asset_bytes",
+    "request_auto_copy",
     "request_me",
     "request_backend",
     "request_my_folders",
@@ -28,6 +33,12 @@ __all__ = [
     "request_my_uploads",
     "to_backend_asset_url",
 ]
+
+
+@dataclass(frozen=True)
+class GenerationResult:
+    image_bytes: bytes
+    copy: dict[str, object] | None = None
 
 
 def file_to_data_url(uploaded_file) -> str:
@@ -45,10 +56,6 @@ def data_url_to_bytes(data_url: str) -> bytes:
         raise ValueError("백엔드 응답 imageDataUrl은 base64 데이터 URL이어야 합니다.")
 
     return base64.b64decode(encoded)
-
-
-def build_user_prompt(prompt: str, detail_label: str) -> str:
-    return f"광고 유형: {detail_label}\n{prompt.strip()}"
 
 
 def _auth_headers(access_token: str) -> dict[str, str]:
@@ -69,8 +76,10 @@ def request_me(access_token: str) -> dict:
     return _get_json("/api/auth/me", access_token)
 
 
-def request_my_generations(access_token: str) -> dict:
-    return _get_json("/api/auth/me/generations", access_token)
+def request_my_generations(access_token: str, page: int = 1) -> dict:
+    page = max(1, int(page))
+    path = "/api/auth/me/generations" if page == 1 else f"/api/auth/me/generations?page={page}"
+    return _get_json(path, access_token)
 
 
 def request_my_folders(access_token: str) -> dict:
@@ -132,13 +141,24 @@ def request_backend(
     format_label: str,
     detail_label: str,
     access_token: str = "",
-) -> bytes:
+    text_overlay_enabled: bool = True,
+    copy_mode: str = "preserve",
+    ad_copy_prompt: str = "",
+    logo_file=None,
+    logo_position: str = "bottom_right",
+) -> GenerationResult:
     target_size = get_detail_size(format_label, detail_label)
+    user_copy = ad_copy_prompt.strip() if text_overlay_enabled else ""
     payload = {
         "imageDataUrl": file_to_data_url(uploaded_file),
         "presetId": FORMAT_OPTIONS[format_label]["value"],
         "detailType": get_detail_id(format_label, detail_label),
         "userPrompt": build_user_prompt(prompt, detail_label),
+        "userCopy": user_copy,
+        "copyMode": copy_mode,
+        "textOverlayEnabled": text_overlay_enabled,
+        "logoDataUrl": file_to_data_url(logo_file) if logo_file else None,
+        "logoPosition": logo_position,
         "targetWidth": target_size[0],
         "targetHeight": target_size[1],
     }
@@ -161,4 +181,7 @@ def request_backend(
     if not image_data_url:
         raise ValueError("백엔드 응답에 imageDataUrl이 없습니다.")
 
-    return data_url_to_bytes(image_data_url)
+    return GenerationResult(
+        image_bytes=data_url_to_bytes(image_data_url),
+        copy=data.get("copy"),
+    )

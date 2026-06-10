@@ -42,10 +42,25 @@ def render_account_settings(profile: dict) -> None:
     views.render_account_settings(profile)
 
 
+def _load_generation_pages(access_token: str) -> tuple[list[dict], int]:
+    generations: list[dict] = []
+    page = 1
+    total_count = 0
+    while True:
+        payload = request_my_generations(access_token, page=page)
+        items = list(payload.get("items", []))
+        if page == 1:
+            total_count = int(payload.get("total_count") or len(items))
+        generations.extend(items)
+        if not items or len(generations) >= total_count:
+            return generations, total_count
+        page += 1
+
+
 def _load_mypage_data(access_token: str) -> tuple[dict, list[dict], list[dict], list[dict]]:
     profile = request_me(access_token)
     folders = list(request_my_folders(access_token).get("items", []))
-    generations = list(request_my_generations(access_token).get("items", []))
+    generations, total_count = _load_generation_pages(access_token)
     uploads = list(request_my_uploads(access_token).get("items", []))
     return profile, folders, generations, uploads
 

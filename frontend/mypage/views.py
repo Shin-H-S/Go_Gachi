@@ -5,12 +5,74 @@ import streamlit as st
 from frontend.auth.session import clear_auth_session
 from frontend.core.router import navigate_to
 from frontend.mypage.components import render_generation_grid
+from frontend.mypage.pagination import page_status_text, paginate_items
 from frontend.mypage.state import filter_generations, format_date, profile_name
-from frontend.services.api_client import data_url_to_bytes
+from frontend.services.api_client import data_url_to_bytes, to_backend_asset_url
+
+GENERATION_PAGE_SIZE = 9
+UPLOAD_PAGE_SIZE = 8
+
+
+def _page_key(scope: str) -> str:
+    safe_scope = scope.replace(":", "_").replace("/", "_")
+    return f"mypage_page_{safe_scope}"
+
+
+def _current_page(scope: str) -> int:
+    try:
+        return int(st.session_state.get(_page_key(scope), 1))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _render_collection_status(total_items: int, current_page: int, total_pages: int) -> None:
+    status = page_status_text(
+        total_items=total_items,
+        current_page=current_page,
+        total_pages=total_pages,
+    )
+    st.markdown(
+        f'<div class="mypage-list-status">{escape(status)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_pagination_controls(scope: str, current_page: int, total_pages: int) -> None:
+    if total_pages <= 1:
+        return
+    previous_col, status_col, next_col = st.columns([0.24, 0.52, 0.24], gap="small")
+    key = _page_key(scope)
+    with previous_col:
+        if st.button(
+            "이전", disabled=current_page <= 1, key=f"{key}-prev", use_container_width=True
+        ):
+            st.session_state[key] = max(1, current_page - 1)
+            st.rerun()
+    with status_col:
+        st.markdown(
+            f'<div class="mypage-pagination-status">{current_page} / {total_pages}</div>',
+            unsafe_allow_html=True,
+        )
+    with next_col:
+        if st.button(
+            "다음",
+            disabled=current_page >= total_pages,
+            key=f"{key}-next",
+            use_container_width=True,
+        ):
+            st.session_state[key] = min(total_pages, current_page + 1)
+            st.rerun()
 
 
 def render_recent_work(generations: list[dict], folders: list[dict], access_token: str) -> None:
-    render_generation_grid(generations, folders, access_token)
+    items, current_page, total_pages = paginate_items(
+        generations,
+        _current_page("recent"),
+        GENERATION_PAGE_SIZE,
+    )
+    _render_collection_status(len(generations), current_page, total_pages)
+    render_generation_grid(items, folders, access_token)
+    render_pagination_controls("recent", current_page, total_pages)
 
 
 def render_folder_view(
@@ -19,7 +81,15 @@ def render_folder_view(
     folders: list[dict],
     access_token: str,
 ) -> None:
-    render_generation_grid(filter_generations(generations, view), folders, access_token)
+    filtered = filter_generations(generations, view)
+    items, current_page, total_pages = paginate_items(
+        filtered,
+        _current_page(view),
+        GENERATION_PAGE_SIZE,
+    )
+    _render_collection_status(len(filtered), current_page, total_pages)
+    render_generation_grid(items, folders, access_token)
+    render_pagination_controls(view, current_page, total_pages)
 
 
 def render_uploads(uploads: list[dict]) -> None:
@@ -34,12 +104,22 @@ def render_uploads(uploads: list[dict]) -> None:
             unsafe_allow_html=True,
         )
         return
+    total_uploads = len(uploads)
+    visible_uploads, current_page, total_pages = paginate_items(
+        uploads,
+        _current_page("uploads"),
+        UPLOAD_PAGE_SIZE,
+    )
+    _render_collection_status(total_uploads, current_page, total_pages)
     columns = st.columns(4, gap="medium")
-    for index, item in enumerate(uploads):
+    for index, item in enumerate(visible_uploads):
+        image_url = to_backend_asset_url(item.get("original_image_url"))
         image_data_url = str(item.get("image_data_url") or "")
         with columns[index % 4]:
             with st.container(border=True):
-                if image_data_url:
+                if image_url:
+                    st.image(image_url, use_container_width=True)
+                elif image_data_url:
                     st.image(data_url_to_bytes(image_data_url), use_container_width=True)
                 else:
                     st.markdown(
@@ -58,6 +138,7 @@ def render_uploads(uploads: list[dict]) -> None:
                     """,
                     unsafe_allow_html=True,
                 )
+    render_pagination_controls("uploads", current_page, total_pages)
 
 
 def render_account_settings(profile: dict) -> None:
