@@ -35,7 +35,7 @@ class GenerateRequest(BaseModel):
     detail_type: str | None = Field(default=None, alias="detailType")
     user_prompt: str = Field(default="", alias="userPrompt")
     copy_mode: CopyMode = Field(default="preserve", alias="copyMode")
-    text_overlay_enabled: bool = Field(default=False, alias="textOverlayEnabled")
+    ad_copy_enabled: bool = Field(default=False, alias="adCopyEnabled")
     user_copy: str | None = Field(default=None, alias="userCopy", max_length=300)
     logo_data_url: str | None = Field(default=None, alias="logoDataUrl", max_length=8_000_000)
     logo_position: LogoPosition = Field(default="bottom_right", alias="logoPosition")
@@ -64,7 +64,7 @@ class CopyGenerateRequest(BaseModel):
 
 
 class CopyResponse(BaseModel):
-    """V3 문구 처리 결과. 실제 문구 생성/합성 작업에서 채워진다."""
+    """V3 문구 처리 결과. 이미지 프롬프트에 포함할 광고 문구를 담는다."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -75,7 +75,7 @@ class CopyResponse(BaseModel):
 
 
 class LogoResponse(BaseModel):
-    """V3 로고 합성 결과. 로고 기능이 꺼져 있으면 used=false로 내려갈 수 있다."""
+    """V3 로고 반영 결과. 로고 기능이 꺼져 있으면 used=false로 내려갈 수 있다."""
 
     used: bool = False
     position: LogoPosition | None = None

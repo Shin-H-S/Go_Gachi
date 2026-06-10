@@ -59,13 +59,13 @@ def render_copy_controls(
     detail_label: str,
     image_prompt: str = "",
 ) -> tuple[str, bool, str]:
-    text_overlay_enabled = st.checkbox(
+    ad_copy_enabled = st.checkbox(
         "광고 문구 포함",
         value=True,
-        key="text_overlay_enabled",
+        key="ad_copy_enabled",
     )
 
-    if not text_overlay_enabled:
+    if not ad_copy_enabled:
         st.session_state.pop("auto_copy_status", None)
         return "", False, "preserve"
 
@@ -102,5 +102,5 @@ def render_copy_controls(
         key="copy_mode_label",
     )
     copy_mode = copy_mode_by_label.get(copy_mode_label, "preserve")
-    return prompt, text_overlay_enabled, copy_mode
+    return prompt, ad_copy_enabled, copy_mode
 

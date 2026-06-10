@@ -34,12 +34,37 @@ def _extract_b64_json(payload: object) -> str:
 async def call_openai_edit(
     *,
     uploaded: UploadedImage,
+    reference_images: list[UploadedImage] | None = None,
     api_size: str,
     prompt: str,
     settings: Settings,
 ) -> str:
     """OpenAI Images Edit API를 호출하고 결과 base64 문자열을 돌려준다."""
     start = time.perf_counter()
+    images = [uploaded, *(reference_images or [])]
+    files: dict[str, tuple[str, bytes, str]] | list[tuple[str, tuple[str, bytes, str]]]
+    if len(images) == 1:
+        files = {
+            "image": (
+                f"menu.{uploaded.extension}",
+                uploaded.content,
+                uploaded.mime_type,
+            )
+        }
+    else:
+        # OpenAI Images Edit API는 다중 reference 이미지를 image[] multipart 필드로 받는다.
+        files = [
+            (
+                "image[]",
+                (
+                    f"image-{index}.{image.extension}",
+                    image.content,
+                    image.mime_type,
+                ),
+            )
+            for index, image in enumerate(images, start=1)
+        ]
+
     try:
         async with httpx.AsyncClient(timeout=120) as client:
             # OpenAI Images Edit API는 이미지 파일을 multipart/form-data로 받는다.
@@ -53,20 +78,15 @@ async def call_openai_edit(
                     "quality": settings.openai_image_quality,
                     "output_format": "png",
                 },
-                files={
-                    "image": (
-                        f"menu.{uploaded.extension}",
-                        uploaded.content,
-                        uploaded.mime_type,
-                    )
-                },
+                files=files,
             )
     except httpx.HTTPError as exc:
         # 네트워크 실패·타임아웃·DNS 등은 사용자 잘못이 아니라 외부 의존성 문제다.
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
-            "OpenAI image edit connection failed model=%s took=%.1fms error=%s",
+            "OpenAI image edit connection failed model=%s image_count=%s took=%.1fms error=%s",
             settings.openai_image_model,
+            len(images),
             elapsed_ms,
             type(exc).__name__,
         )
@@ -88,10 +108,11 @@ async def call_openai_edit(
             if isinstance(error, dict):
                 message = str(error.get("message") or message)
         logger.warning(
-            "OpenAI image edit failed status=%s model=%s took=%.1fms "
+            "OpenAI image edit failed status=%s model=%s image_count=%s took=%.1fms "
             "openai_request_id=%s message=%s",
             response.status_code,
             settings.openai_image_model,
+            len(images),
             elapsed_ms,
             openai_request_id or "-",
             message,
@@ -99,9 +120,11 @@ async def call_openai_edit(
         raise RuntimeError(message)
 
     logger.info(
-        "OpenAI image edit finished status=%s model=%s took=%.1fms openai_request_id=%s",
+        "OpenAI image edit finished status=%s model=%s image_count=%s took=%.1fms "
+        "openai_request_id=%s",
         response.status_code,
         settings.openai_image_model,
+        len(images),
         elapsed_ms,
         openai_request_id or "-",
     )

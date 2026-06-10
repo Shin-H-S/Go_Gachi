@@ -94,7 +94,7 @@ def render_work_page() -> None:
                 key="image_prompt",
                 label_visibility="collapsed",
             )
-            ad_copy_prompt, text_overlay_enabled, copy_mode = render_copy_controls(
+            ad_copy_prompt, ad_copy_enabled, copy_mode = render_copy_controls(
                 format_label,
                 detail_label,
                 prompt,
@@ -107,7 +107,7 @@ def render_work_page() -> None:
                 detail_label,
                 ad_copy_prompt=ad_copy_prompt,
                 copy_mode=copy_mode,
-                text_overlay_enabled=text_overlay_enabled,
+                ad_copy_enabled=ad_copy_enabled,
                 logo_file=logo_file,
             )
             sync_result_state(current_result_context)
@@ -194,6 +194,6 @@ def render_work_page() -> None:
         format_label=format_label,
         detail_label=detail_label,
         current_result_context=current_result_context,
-        text_overlay_enabled=text_overlay_enabled,
+        ad_copy_enabled=ad_copy_enabled,
         copy_mode=copy_mode,
     )

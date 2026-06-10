@@ -1,4 +1,4 @@
-"""Cloud Run에서 실행되는 FastAPI 진입점."""
+"""FastAPI 진입점."""
 
 import logging
 from collections.abc import AsyncIterator
@@ -21,15 +21,15 @@ from backend.app.schemas import (
     CopyResponse,
     GenerateRequest,
     GenerateResponse,
+    LogoResponse,
 )
-from backend.app.services.copywriting import build_ad_copy
 from backend.app.services.image_edit import edit_image
+from backend.app.services.openai_copy import generate_ad_copy
 
 logger = logging.getLogger(__name__)
 IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
     "이미지 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
 )
-AUTO_COPY_UNAVAILABLE_MESSAGE = "자동 광고 문구 생성 백엔드 기능이 아직 준비되지 않았습니다."
 
 
 @asynccontextmanager
@@ -54,7 +54,7 @@ if get_settings().app_env != "production":
     app.include_router(internal_router)
 
 # 생성된 이미지를 /outputs/... 경로로 프론트에 내려주기 위해 outputs 폴더를 정적 파일로 노출한다.
-# 운영(Cloud Run) 환경에서는 컨테이너 디스크가 휘발성이므로 추후 GCS URL로 대체하는 것이 권장된다.
+# 운영 환경은 컨테이너 디스크가 휘발성이라 STORAGE_BACKEND=r2로 외부 스토리지 사용을 권장한다.
 _static_output_dir = get_settings().output_dir
 _static_output_dir.mkdir(parents=True, exist_ok=True)
 app.mount(
@@ -74,7 +74,7 @@ app.mount(
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    # Cloud Run 기본 URL로 접속했을 때 서비스가 살아있는지 빠르게 확인한다.
+    # 운영 URL로 접속했을 때 서비스가 살아있는지 빠르게 확인한다.
     return {"service": "Cafe Ad Maker V1", "status": "ok"}
 
 
@@ -113,14 +113,42 @@ async def generate_copy(
     request: CopyGenerateRequest,
     user: AuthUser | None = Depends(get_optional_user),
 ) -> CopyResponse:
+    settings = get_settings()
+    presets = get_presets()
+    preset = presets.get(request.preset_id) if request.preset_id else default_preset()
+    if preset is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"지원하지 않는 presetId입니다: {request.preset_id}",
+        )
+    detail = (
+        preset.find_detail(request.detail_type) if request.detail_type else preset.default_detail()
+    )
+    if detail is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"지원하지 않는 detailType입니다: {request.detail_type}",
+        )
     logger.info(
         "auto copy requested preset=%s detail=%s mode=%s user_id=%s",
-        request.preset_id or "-",
-        request.detail_type or "-",
+        preset.id,
+        detail.id,
         request.copy_mode,
         short_id(user.id) if user else "-",
     )
-    raise HTTPException(status_code=501, detail=AUTO_COPY_UNAVAILABLE_MESSAGE)
+    try:
+        ad_copy = await generate_ad_copy(
+            settings=settings,
+            preset=preset,
+            detail=detail,
+            user_prompt=request.user_prompt,
+            user_copy="",
+            copy_mode=request.copy_mode,
+        )
+    except RuntimeError as exc:
+        logger.exception("auto copy generation failed")
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return CopyResponse(**ad_copy.model_dump())
 
 
 @app.post("/api/generate", response_model=GenerateResponse, response_model_by_alias=True)
@@ -159,11 +187,22 @@ async def generate(
 
     ad_copy = None
     copy_info = None
-    if request.text_overlay_enabled:
-        # userPrompt는 이미지 생성 방향, userCopy는 이미지 위에 들어갈 실제 문구로 분리한다.
-        # userCopy가 비어 있으면 build_ad_copy가 카페 광고 기본 문구를 만든다.
+    if request.ad_copy_enabled:
+        # userPrompt는 이미지 생성 방향, userCopy는 이미지에 넣을 실제 문구로 분리한다.
+        # userCopy가 비어 있으면 텍스트 AI가 userPrompt/채널 맥락을 보고 광고 문구를 만든다.
         copy_source = request.user_copy or ""
-        ad_copy = build_ad_copy(copy_source, request.copy_mode)
+        try:
+            ad_copy = await generate_ad_copy(
+                settings=settings,
+                preset=preset,
+                detail=detail,
+                user_prompt=request.user_prompt,
+                user_copy=copy_source,
+                copy_mode=request.copy_mode,
+            )
+        except RuntimeError as exc:
+            logger.exception("copy generation failed")
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         copy_info = CopyResponse(**ad_copy.model_dump())
 
     try:
@@ -208,6 +247,11 @@ async def generate(
         provider=result["provider"] or settings.image_provider,
         preset=preset,
         copy=copy_info,
+        logo=(
+            LogoResponse(used=True, position=request.logo_position)
+            if request.logo_data_url and request.logo_data_url.strip()
+            else None
+        ),
         note=result["note"],
         # production에서는 내부 프롬프트 노출을 막고, local/dev에서는 디버깅용으로 유지한다.
         prompt=result["prompt"] if settings.app_env != "production" else None,

@@ -56,7 +56,7 @@ def _keyword(call: ast.Call, name: str) -> ast.keyword | None:
     return next((keyword for keyword in call.keywords if keyword.arg == name), None)
 
 
-def test_copy_controls_render_text_overlay_checkbox_checked_by_default() -> None:
+def test_copy_controls_render_ad_copy_checkbox_checked_by_default() -> None:
     tree = ast.parse(COPY_CONTROLS.read_text(encoding="utf-8"))
     checkbox_calls = [
         node
@@ -66,19 +66,19 @@ def test_copy_controls_render_text_overlay_checkbox_checked_by_default() -> None
         and node.func.attr == "checkbox"
     ]
 
-    text_overlay_call = next(
+    ad_copy_call = next(
         (
             call
             for call in checkbox_calls
             if (_keyword(call, "key") is not None)
             and isinstance(_keyword(call, "key").value, ast.Constant)
-            and _keyword(call, "key").value.value == "text_overlay_enabled"
+            and _keyword(call, "key").value.value == "ad_copy_enabled"
         ),
         None,
     )
 
-    assert text_overlay_call is not None
-    default_value = _keyword(text_overlay_call, "value")
+    assert ad_copy_call is not None
+    default_value = _keyword(ad_copy_call, "value")
     assert isinstance(default_value, ast.keyword)
     assert isinstance(default_value.value, ast.Constant)
     assert default_value.value.value is True
@@ -223,7 +223,7 @@ def test_work_page_displays_result_inclusion_summary() -> None:
     assert "render_result_summary(" in work_source
 
 
-def test_request_backend_sends_text_overlay_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_request_backend_sends_ad_copy_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     captured_json: dict[str, object] = {}
 
     def fake_post(
@@ -244,12 +244,12 @@ def test_request_backend_sends_text_overlay_disabled(monkeypatch: pytest.MonkeyP
         "",
         "인스타그램",
         "정사각형 피드",
-        text_overlay_enabled=False,
+        ad_copy_enabled=False,
     )
 
     assert result.image_bytes == b"result"
     assert captured_json["imageDataUrl"] == (
         f"data:image/png;base64,{base64.b64encode(b'source-image').decode('ascii')}"
     )
-    assert captured_json["textOverlayEnabled"] is False
+    assert captured_json["adCopyEnabled"] is False
     assert captured_json["userCopy"] == ""

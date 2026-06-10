@@ -172,9 +172,11 @@ def test_auto_copy_generate_endpoint_is_backend_owned_contract() -> None:
             "copyMode": "rewrite",
         },
     )
+    body = response.json()
 
-    assert response.status_code == 501
-    assert "자동 광고 문구 생성" in response.json()["detail"]
+    assert response.status_code == 200
+    assert body["headline"]
+    assert body["copyMode"] == "rewrite"
 
 
 def test_generate_rejects_too_long_logo_data_url() -> None:

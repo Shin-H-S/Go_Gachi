@@ -16,7 +16,7 @@ def render_result_summary(result_context: dict[str, object] | None) -> None:
     if not result_context:
         return
 
-    has_ad_copy = bool(result_context.get("textOverlayEnabled"))
+    has_ad_copy = bool(result_context.get("adCopyEnabled"))
     has_logo = bool(result_context.get("logoUploadHash"))
     ad_copy_label = "광고 문구 포함" if has_ad_copy else "광고 문구 미포함"
     logo_label = "로고 포함" if has_logo else "로고 미포함"

@@ -14,7 +14,7 @@ def test_result_summary_renders_ad_copy_and_logo_included(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     monkeypatch.setattr("frontend.work.result_summary.st", fake_st)
 
-    render_result_summary({"textOverlayEnabled": True, "logoUploadHash": "logo-hash"})
+    render_result_summary({"adCopyEnabled": True, "logoUploadHash": "logo-hash"})
 
     html = "".join(fake_st.markdowns)
     assert "result-summary-panel" in html
@@ -26,7 +26,7 @@ def test_result_summary_renders_ad_copy_and_logo_excluded(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     monkeypatch.setattr("frontend.work.result_summary.st", fake_st)
 
-    render_result_summary({"textOverlayEnabled": False, "logoUploadHash": None})
+    render_result_summary({"adCopyEnabled": False, "logoUploadHash": None})
 
     html = "".join(fake_st.markdowns)
     assert "광고 문구 미포함" in html
