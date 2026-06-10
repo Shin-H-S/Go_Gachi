@@ -27,7 +27,7 @@ Python 3.11.14
 Cloud Run runtime entrypoint:
 
 ```text
-uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8080}
+uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}
 ```
 
 운영 런타임 환경변수는 Cloud Run / Cloud Build에서 주입합니다. 로컬 검증 시에는
