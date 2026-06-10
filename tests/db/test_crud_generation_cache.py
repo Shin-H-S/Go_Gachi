@@ -48,6 +48,55 @@ async def test_find_cached_generation_returns_success_with_existing_file(
     assert cached.image_url == "/outputs/result.png"
 
 
+async def test_find_original_path_returns_existing_file(
+    db_session: AsyncSession,
+    tmp_dir: Path,
+) -> None:
+    original_file = tmp_dir / "original.png"
+    original_file.write_bytes(b"png")
+
+    await crud.create_pending_generation(
+        db_session,
+        request_id="req-original",
+        image_hash="h-original",
+        preset_id="instagram_feed_square",
+        instruction_hash=crud.instruction_sha256(""),
+        prompt_version="v1",
+        model="gpt-image-2",
+        original_path=str(original_file),
+        prompt="prompt",
+    )
+    await db_session.commit()
+
+    original_path = await crud.find_original_path(db_session, image_hash="h-original")
+
+    assert original_path == str(original_file)
+
+
+async def test_find_original_path_ignores_missing_file(
+    db_session: AsyncSession,
+    tmp_dir: Path,
+) -> None:
+    missing_file = tmp_dir / "missing-original.png"
+
+    await crud.create_pending_generation(
+        db_session,
+        request_id="req-missing-original",
+        image_hash="h-original",
+        preset_id="instagram_feed_square",
+        instruction_hash=crud.instruction_sha256(""),
+        prompt_version="v1",
+        model="gpt-image-2",
+        original_path=str(missing_file),
+        prompt="prompt",
+    )
+    await db_session.commit()
+
+    original_path = await crud.find_original_path(db_session, image_hash="h-original")
+
+    assert original_path is None
+
+
 async def test_create_pending_generation_stores_generation_metadata(
     db_session: AsyncSession,
     tmp_dir: Path,
