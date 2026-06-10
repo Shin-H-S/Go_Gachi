@@ -4,6 +4,22 @@ MYPAGE_CARDS_CSS = """
     margin-top: 8px;
 }
 
+.mypage-list-status {
+    margin: 2px 0 14px;
+    color: #606b67;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.mypage-pagination-status {
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    color: #606b67;
+    font-size: 13px;
+    font-weight: 900;
+}
+
 .mypage-empty-thumb {
     aspect-ratio: 4 / 3;
     display: grid;

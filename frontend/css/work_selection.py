@@ -57,6 +57,24 @@ div[role="radiogroup"] label {
     min-height: 40px;
 }
 
+.st-key-copy_mode_label div[data-testid="stRadio"] > label:not([data-baseweb="radio"]) {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    color: var(--ink) !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+}
+
+.st-key-copy_mode_label div[data-testid="stRadio"] > label:not([data-baseweb="radio"]) * {
+    color: var(--ink) !important;
+    -webkit-text-fill-color: var(--ink) !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+}
+
 div[data-testid="stRadio"] label[data-baseweb="radio"] input[type="radio"] {
     accent-color: #ff5a5f !important;
 }

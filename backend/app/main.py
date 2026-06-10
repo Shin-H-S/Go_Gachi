@@ -15,7 +15,13 @@ from backend.app.core.config import get_settings
 from backend.app.core.logging_config import setup_logging
 from backend.app.core.logging_utils import short_id
 from backend.app.core.presets import default_preset, get_presets
-from backend.app.schemas import ConfigResponse, CopyResponse, GenerateRequest, GenerateResponse
+from backend.app.schemas import (
+    ConfigResponse,
+    CopyGenerateRequest,
+    CopyResponse,
+    GenerateRequest,
+    GenerateResponse,
+)
 from backend.app.services.copywriting import build_ad_copy
 from backend.app.services.image_edit import edit_image
 
@@ -23,6 +29,7 @@ logger = logging.getLogger(__name__)
 IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
     "이미지 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
 )
+AUTO_COPY_UNAVAILABLE_MESSAGE = "자동 광고 문구 생성 백엔드 기능이 아직 준비되지 않았습니다."
 
 
 @asynccontextmanager
@@ -99,6 +106,21 @@ async def config() -> ConfigResponse:
         provider=settings.image_provider,
         maxUploadBytes=settings.max_upload_bytes,
     )
+
+
+@app.post("/api/copy/generate", response_model=CopyResponse, response_model_by_alias=True)
+async def generate_copy(
+    request: CopyGenerateRequest,
+    user: AuthUser | None = Depends(get_optional_user),
+) -> CopyResponse:
+    logger.info(
+        "auto copy requested preset=%s detail=%s mode=%s user_id=%s",
+        request.preset_id or "-",
+        request.detail_type or "-",
+        request.copy_mode,
+        short_id(user.id) if user else "-",
+    )
+    raise HTTPException(status_code=501, detail=AUTO_COPY_UNAVAILABLE_MESSAGE)
 
 
 @app.post("/api/generate", response_model=GenerateResponse, response_model_by_alias=True)

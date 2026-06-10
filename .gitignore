@@ -180,6 +180,7 @@ pnpm-debug.log*
 
 # Prompt engineering local references
 /docs/prompt-references/
+/docs/superpowers/
 
 # Jupyter Notebook 캐시
 .ipynb_checkpoints

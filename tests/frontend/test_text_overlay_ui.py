@@ -1,0 +1,205 @@
+import ast
+import base64
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from frontend import api_client
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+WORK_PAGE = ROOT_DIR / "frontend" / "pages" / "work.py"
+COPY_CONTROLS = ROOT_DIR / "frontend" / "work" / "copy_controls.py"
+
+
+class FakeResponse:
+    def __init__(self, payload: dict[str, object]) -> None:
+        self.payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict[str, object]:
+        return self.payload
+
+
+def _keyword(call: ast.Call, name: str) -> ast.keyword | None:
+    return next((keyword for keyword in call.keywords if keyword.arg == name), None)
+
+
+def test_copy_controls_render_text_overlay_checkbox_checked_by_default() -> None:
+    tree = ast.parse(COPY_CONTROLS.read_text(encoding="utf-8"))
+    checkbox_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "checkbox"
+    ]
+
+    text_overlay_call = next(
+        (
+            call
+            for call in checkbox_calls
+            if (_keyword(call, "key") is not None)
+            and isinstance(_keyword(call, "key").value, ast.Constant)
+            and _keyword(call, "key").value.value == "text_overlay_enabled"
+        ),
+        None,
+    )
+
+    assert text_overlay_call is not None
+    default_value = _keyword(text_overlay_call, "value")
+    assert isinstance(default_value, ast.keyword)
+    assert isinstance(default_value.value, ast.Constant)
+    assert default_value.value.value is True
+
+
+def test_copy_controls_do_not_render_redundant_ad_copy_section_heading() -> None:
+    source = COPY_CONTROLS.read_text(encoding="utf-8")
+
+    assert '<p class="section-label">광고 문구</p>' not in source
+    assert '"광고 문구 포함"' in source
+
+
+def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
+    source = COPY_CONTROLS.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    button_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "button"
+    ]
+    text_area_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "text_area"
+    ]
+
+    auto_copy_button = next(
+        (
+            call
+            for call in button_calls
+            if (_keyword(call, "key") is not None)
+            and isinstance(_keyword(call, "key").value, ast.Constant)
+            and _keyword(call, "key").value.value == "auto_copy_generate"
+        ),
+        None,
+    )
+    prompt_text_area = next(
+        (
+            call
+            for call in text_area_calls
+            if (_keyword(call, "key") is not None)
+            and isinstance(_keyword(call, "key").value, ast.Constant)
+            and _keyword(call, "key").value.value == "ad_copy_prompt"
+        ),
+        None,
+    )
+
+    assert auto_copy_button is not None
+    assert prompt_text_area is not None
+    assert "request_auto_copy" in source
+    assert "build_auto_copy" not in source
+
+
+def test_copy_controls_render_manual_copy_mode_selector() -> None:
+    source = COPY_CONTROLS.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    radio_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "radio"
+    ]
+
+    copy_mode_radio = next(
+        (
+            call
+            for call in radio_calls
+            if (_keyword(call, "key") is not None)
+            and isinstance(_keyword(call, "key").value, ast.Constant)
+            and _keyword(call, "key").value.value == "copy_mode_label"
+        ),
+        None,
+    )
+
+    assert copy_mode_radio is not None
+    assert "COPY_MODE_OPTIONS" in source
+
+
+def test_work_page_keeps_image_prompt_separate_from_ad_copy() -> None:
+    tree = ast.parse(WORK_PAGE.read_text(encoding="utf-8"))
+    text_area_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "text_area"
+    ]
+
+    image_prompt = next(
+        (
+            call
+            for call in text_area_calls
+            if (_keyword(call, "key") is not None)
+            and isinstance(_keyword(call, "key").value, ast.Constant)
+            and _keyword(call, "key").value.value == "image_prompt"
+        ),
+        None,
+    )
+
+    assert image_prompt is not None
+
+
+def test_work_page_displays_backend_copy_metadata() -> None:
+    work_source = WORK_PAGE.read_text(encoding="utf-8")
+
+    assert "from frontend.work.result_copy import render_result_copy" in work_source
+    assert 'st.session_state.get("result_copy")' in work_source
+    assert "render_result_copy(" in work_source
+
+
+def test_work_page_displays_result_inclusion_summary() -> None:
+    work_source = WORK_PAGE.read_text(encoding="utf-8")
+
+    assert "from frontend.work.result_summary import render_result_summary" in work_source
+    assert 'st.session_state.get("result_context")' in work_source
+    assert "render_result_summary(" in work_source
+
+
+def test_request_backend_sends_text_overlay_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured_json: dict[str, object] = {}
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        captured_json.update(json)
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    result = api_client.request_backend(
+        uploaded_file,
+        "",
+        "인스타그램",
+        "정사각형 피드",
+        text_overlay_enabled=False,
+    )
+
+    assert result.image_bytes == b"result"
+    assert captured_json["imageDataUrl"] == (
+        f"data:image/png;base64,{base64.b64encode(b'source-image').decode('ascii')}"
+    )
+    assert captured_json["textOverlayEnabled"] is False
+    assert captured_json["userCopy"] == ""
