@@ -11,6 +11,11 @@ CONFIG_DIR = ROOT_DIR / "config"
 ALLOW_SQLITE_DATABASE_ENV = "ALLOW_SQLITE_DATABASE"
 
 
+def _parse_csv(value: str, *, default: list[str]) -> list[str]:
+    items = [item.strip() for item in value.split(",") if item.strip()]
+    return items or default
+
+
 def _load_env_file(env_path: Path) -> None:
     """단일 .env 파일을 현재 프로세스 환경변수로 적재한다."""
     if not env_path.exists():
@@ -97,6 +102,7 @@ class Settings(BaseModel):
     r2_endpoint_url: str = ""
     r2_bucket_name: str = ""
     r2_public_url: str = ""
+    cors_origins: list[str] = ["*"]
 
 
 @lru_cache
@@ -145,6 +151,7 @@ def get_settings() -> Settings:
         r2_endpoint_url=os.getenv("R2_ENDPOINT_URL", ""),
         r2_bucket_name=os.getenv("R2_BUCKET_NAME", ""),
         r2_public_url=os.getenv("R2_PUBLIC_URL", ""),
+        cors_origins=_parse_csv(os.getenv("CORS_ORIGINS", "*"), default=["*"]),
     )
 
 
