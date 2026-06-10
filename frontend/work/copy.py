@@ -1,6 +1,21 @@
 from typing import Literal
 
 CopyMode = Literal["preserve", "polish", "rewrite"]
+CopyModeOption = tuple[str, CopyMode]
+
+COPY_MODE_OPTIONS: tuple[CopyModeOption, ...] = (
+    ("그대로 사용", "preserve"),
+    ("자연스럽게 다듬기", "polish"),
+    ("홍보 문구로 바꾸기", "rewrite"),
+)
+
+
+def copy_mode_for_prompt(*, text_overlay_enabled: bool, prompt: str) -> CopyMode:
+    if not text_overlay_enabled:
+        return "preserve"
+    if prompt.strip():
+        return "polish"
+    return "rewrite"
 
 
 def build_auto_copy(format_label: str, detail_label: str) -> str:
@@ -26,12 +41,4 @@ def build_auto_copy(format_label: str, detail_label: str) -> str:
         cta = "지금 확인하기"
 
     return f"헤드라인: {headline}\n서브카피: {subcopy}\nCTA: {cta}"
-
-
-def copy_mode_for_prompt(*, text_overlay_enabled: bool, prompt: str) -> CopyMode:
-    if not text_overlay_enabled:
-        return "preserve"
-    if prompt.strip():
-        return "polish"
-    return "rewrite"
 

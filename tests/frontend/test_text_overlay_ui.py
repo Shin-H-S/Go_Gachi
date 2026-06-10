@@ -13,13 +13,13 @@ COPY_CONTROLS = ROOT_DIR / "frontend" / "work" / "copy_controls.py"
 
 
 class FakeResponse:
-    def __init__(self, payload: dict[str, str]) -> None:
+    def __init__(self, payload: dict[str, object]) -> None:
         self.payload = payload
 
     def raise_for_status(self) -> None:
         return None
 
-    def json(self) -> dict[str, str]:
+    def json(self) -> dict[str, object]:
         return self.payload
 
 
@@ -97,6 +97,32 @@ def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
     assert prompt_text_area is not None
 
 
+def test_copy_controls_render_manual_copy_mode_selector() -> None:
+    source = COPY_CONTROLS.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    radio_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "radio"
+    ]
+
+    copy_mode_radio = next(
+        (
+            call
+            for call in radio_calls
+            if (_keyword(call, "key") is not None)
+            and isinstance(_keyword(call, "key").value, ast.Constant)
+            and _keyword(call, "key").value.value == "copy_mode_label"
+        ),
+        None,
+    )
+
+    assert copy_mode_radio is not None
+    assert "COPY_MODE_OPTIONS" in source
+
+
 def test_work_page_keeps_image_prompt_separate_from_ad_copy() -> None:
     tree = ast.parse(WORK_PAGE.read_text(encoding="utf-8"))
     text_area_calls = [
@@ -119,6 +145,14 @@ def test_work_page_keeps_image_prompt_separate_from_ad_copy() -> None:
     )
 
     assert image_prompt is not None
+
+
+def test_work_page_displays_backend_copy_metadata() -> None:
+    work_source = WORK_PAGE.read_text(encoding="utf-8")
+
+    assert "from frontend.work.result_copy import render_result_copy" in work_source
+    assert 'st.session_state.get("result_copy")' in work_source
+    assert "render_result_copy(" in work_source
 
 
 def test_request_backend_sends_text_overlay_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -145,8 +179,9 @@ def test_request_backend_sends_text_overlay_disabled(monkeypatch: pytest.MonkeyP
         text_overlay_enabled=False,
     )
 
-    assert result == b"result"
+    assert result.image_bytes == b"result"
     assert captured_json["imageDataUrl"] == (
         f"data:image/png;base64,{base64.b64encode(b'source-image').decode('ascii')}"
     )
     assert captured_json["textOverlayEnabled"] is False
+    assert captured_json["userCopy"] == ""

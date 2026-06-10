@@ -14,17 +14,13 @@ from frontend.work.components import (
 from frontend.work.copy_controls import render_copy_controls
 from frontend.work.generation import handle_generation_request
 from frontend.work.preview import render_image_preview, render_preview_shell
+from frontend.work.result_copy import render_result_copy
 from frontend.work.state import build_result_context, get_selected_channel, sync_result_state
-from frontend.work.uploads import (
-    UPLOAD_FILE_TYPES,
-    UPLOAD_HELP_TEXT,
-    get_primary_uploaded_file,
-)
+from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_primary_uploaded_file
 
 
 def render_work_page() -> None:
     render_header()
-
     left_col, right_col = st.columns([0.38, 0.62], gap="large")
 
     with left_col:
@@ -108,6 +104,7 @@ def render_work_page() -> None:
                 format_label,
                 detail_label,
                 ad_copy_prompt=ad_copy_prompt,
+                copy_mode=copy_mode,
                 text_overlay_enabled=text_overlay_enabled,
                 logo_file=logo_file,
             )
@@ -166,6 +163,7 @@ def render_work_page() -> None:
             render_image_preview(uploaded_file.getvalue(), format_label, detail_label)
         elif "result_bytes" in st.session_state:
             render_image_preview(st.session_state["result_bytes"], format_label, detail_label)
+            render_result_copy(st.session_state.get("result_copy"))
             st.download_button(
                 "이미지 다운로드",
                 data=st.session_state["result_bytes"],

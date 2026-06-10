@@ -1,4 +1,5 @@
 import base64
+from dataclasses import dataclass
 
 import httpx
 
@@ -15,6 +16,7 @@ __all__ = [
     "BACKEND_URL",
     "DEFAULT_BACKEND_URL",
     "FRONTEND_USE_MOCK",
+    "GenerationResult",
     "build_user_prompt",
     "create_my_folder",
     "data_url_to_bytes",
@@ -28,6 +30,12 @@ __all__ = [
     "request_my_uploads",
     "to_backend_asset_url",
 ]
+
+
+@dataclass(frozen=True)
+class GenerationResult:
+    image_bytes: bytes
+    copy: dict[str, object] | None = None
 
 
 def file_to_data_url(uploaded_file) -> str:
@@ -50,24 +58,12 @@ def data_url_to_bytes(data_url: str) -> bytes:
 def build_user_prompt(
     prompt: str,
     detail_label: str,
-    *,
-    ad_copy_prompt: str = "",
-    text_overlay_enabled: bool = True,
 ) -> str:
     parts = [f"광고 유형: {detail_label}"]
     clean_prompt = prompt.strip()
-    clean_ad_copy = ad_copy_prompt.strip()
 
     if clean_prompt:
         parts.append(f"이미지 요청:\n{clean_prompt}")
-
-    if text_overlay_enabled:
-        if clean_ad_copy:
-            parts.append(f"광고 문구:\n{clean_ad_copy}")
-        else:
-            parts.append("광고 문구: 자동 생성 요청")
-    else:
-        parts.append("광고 문구: 포함하지 않음")
 
     return "\n\n".join(parts)
 
@@ -158,18 +154,15 @@ def request_backend(
     ad_copy_prompt: str = "",
     logo_file=None,
     logo_position: str = "bottom_right",
-) -> bytes:
+) -> GenerationResult:
     target_size = get_detail_size(format_label, detail_label)
+    user_copy = ad_copy_prompt.strip() if text_overlay_enabled else ""
     payload = {
         "imageDataUrl": file_to_data_url(uploaded_file),
         "presetId": FORMAT_OPTIONS[format_label]["value"],
         "detailType": get_detail_id(format_label, detail_label),
-        "userPrompt": build_user_prompt(
-            prompt,
-            detail_label,
-            ad_copy_prompt=ad_copy_prompt,
-            text_overlay_enabled=text_overlay_enabled,
-        ),
+        "userPrompt": build_user_prompt(prompt, detail_label),
+        "userCopy": user_copy,
         "copyMode": copy_mode,
         "textOverlayEnabled": text_overlay_enabled,
         "logoDataUrl": file_to_data_url(logo_file) if logo_file else None,
@@ -196,4 +189,7 @@ def request_backend(
     if not image_data_url:
         raise ValueError("백엔드 응답에 imageDataUrl이 없습니다.")
 
-    return data_url_to_bytes(image_data_url)
+    return GenerationResult(
+        image_bytes=data_url_to_bytes(image_data_url),
+        copy=data.get("copy"),
+    )

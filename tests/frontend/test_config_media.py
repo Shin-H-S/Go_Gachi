@@ -110,8 +110,7 @@ def test_api_client_converts_uploads_and_user_prompt() -> None:
     assert data_url_to_bytes(data_url) == b"image-bytes"
     assert build_user_prompt("  show it bigger  ", "Square feed") == (
         "광고 유형: Square feed\n\n"
-        "이미지 요청:\nshow it bigger\n\n"
-        "광고 문구: 자동 생성 요청"
+        "이미지 요청:\nshow it bigger"
     )
 
 

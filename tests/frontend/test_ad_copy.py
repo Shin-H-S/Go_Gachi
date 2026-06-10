@@ -1,4 +1,4 @@
-from frontend.work.copy import build_auto_copy, copy_mode_for_prompt
+from frontend.work.copy import COPY_MODE_OPTIONS, build_auto_copy
 
 
 def test_build_auto_copy_returns_headline_subcopy_and_cta() -> None:
@@ -10,8 +10,10 @@ def test_build_auto_copy_returns_headline_subcopy_and_cta() -> None:
     assert "인스타그램" in copy_text
 
 
-def test_copy_mode_for_prompt_matches_text_overlay_state() -> None:
-    assert copy_mode_for_prompt(text_overlay_enabled=False, prompt="anything") == "preserve"
-    assert copy_mode_for_prompt(text_overlay_enabled=True, prompt="   ") == "rewrite"
-    assert copy_mode_for_prompt(text_overlay_enabled=True, prompt="오늘만 할인") == "polish"
+def test_copy_mode_options_use_backend_values_and_korean_labels() -> None:
+    assert COPY_MODE_OPTIONS == (
+        ("그대로 사용", "preserve"),
+        ("자연스럽게 다듬기", "polish"),
+        ("홍보 문구로 바꾸기", "rewrite"),
+    )
 

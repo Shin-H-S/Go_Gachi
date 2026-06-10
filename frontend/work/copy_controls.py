@@ -1,6 +1,6 @@
 import streamlit as st
 
-from frontend.work.copy import build_auto_copy, copy_mode_for_prompt
+from frontend.work.copy import COPY_MODE_OPTIONS, build_auto_copy
 
 
 def _fill_auto_copy(format_label: str, detail_label: str) -> None:
@@ -36,9 +36,18 @@ def render_copy_controls(format_label: str, detail_label: str) -> tuple[str, boo
         )
 
     prompt = raw_prompt if text_overlay_enabled else ""
-    copy_mode = copy_mode_for_prompt(
-        text_overlay_enabled=text_overlay_enabled,
-        prompt=prompt,
+    copy_mode_labels = [label for label, _mode in COPY_MODE_OPTIONS]
+    copy_mode_by_label = dict(COPY_MODE_OPTIONS)
+    copy_mode_label = st.radio(
+        "문구 처리 방식",
+        options=copy_mode_labels,
+        index=0,
+        horizontal=False,
+        key="copy_mode_label",
+        disabled=not text_overlay_enabled,
     )
+    copy_mode = copy_mode_by_label.get(copy_mode_label, "preserve")
+    if not text_overlay_enabled:
+        copy_mode = "preserve"
     return prompt, text_overlay_enabled, copy_mode
 

@@ -7,13 +7,13 @@ from frontend import api_client
 
 
 class FakeResponse:
-    def __init__(self, payload: dict[str, str]) -> None:
+    def __init__(self, payload: dict[str, object]) -> None:
         self.payload = payload
 
     def raise_for_status(self) -> None:
         return None
 
-    def json(self) -> dict[str, str]:
+    def json(self) -> dict[str, object]:
         return self.payload
 
 
@@ -23,7 +23,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
 
     def fake_post(
         url: str,
-        json: dict[str, str],
+        json: dict[str, object],
         headers: dict[str, str],
         timeout: int,
     ) -> FakeResponse:
@@ -43,7 +43,8 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
         "정사각형 피드",
     )
 
-    assert result == b"result-image"
+    assert result.image_bytes == b"result-image"
+    assert result.copy is None
     assert captured_request == {
         "url": "https://backend.example/api/generate",
         "json": {
@@ -54,9 +55,9 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             "detailType": "square_feed",
             "userPrompt": (
                 "광고 유형: 정사각형 피드\n\n"
-                "이미지 요청:\n제품이 크게 보여요\n\n"
-                "광고 문구: 자동 생성 요청"
+                "이미지 요청:\n제품이 크게 보여요"
             ),
+            "userCopy": "",
             "copyMode": "preserve",
             "textOverlayEnabled": True,
             "logoDataUrl": None,
@@ -116,13 +117,15 @@ def test_request_backend_sends_copy_mode(monkeypatch: pytest.MonkeyPatch) -> Non
 
     api_client.request_backend(
         uploaded_file,
-        "오늘만 할인",
+        "따뜻한 카페 분위기로",
         "인스타그램",
         "정사각형 피드",
         copy_mode="polish",
+        ad_copy_prompt="오늘만 할인",
     )
 
     assert captured_json["copyMode"] == "polish"
+    assert captured_json["userCopy"] == "오늘만 할인"
 
 
 def test_request_backend_sends_logo_data_url_when_logo_uploaded(
@@ -186,7 +189,7 @@ def test_request_backend_sends_null_logo_data_url_without_logo(
     assert captured_json["logoDataUrl"] is None
 
 
-def test_request_backend_combines_image_prompt_and_ad_copy_separately(
+def test_request_backend_sends_image_prompt_and_user_copy_separately(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured_json: dict[str, object] = {}
@@ -215,9 +218,78 @@ def test_request_backend_combines_image_prompt_and_ad_copy_separately(
 
     assert captured_json["userPrompt"] == (
         "광고 유형: 정사각형 피드\n\n"
-        "이미지 요청:\n따뜻한 배경으로\n\n"
-        "광고 문구:\n헤드라인: 오늘만 할인"
+        "이미지 요청:\n따뜻한 배경으로"
     )
+    assert captured_json["userCopy"] == "헤드라인: 오늘만 할인"
+
+
+def test_request_backend_keeps_user_copy_empty_when_text_overlay_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_json: dict[str, object] = {}
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        captured_json.update(json)
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    api_client.request_backend(
+        uploaded_file,
+        "텍스트 없는 이미지로",
+        "인스타그램",
+        "정사각형 피드",
+        ad_copy_prompt="이미지에 들어가면 안 되는 문구",
+        text_overlay_enabled=False,
+    )
+
+    assert captured_json["textOverlayEnabled"] is False
+    assert captured_json["userCopy"] == ""
+
+
+def test_request_backend_returns_copy_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    copy_payload = {
+        "headline": "오늘 아메리카노 2,500원",
+        "subcopy": "카페에서 더 맛있게 즐겨보세요.",
+        "cta": None,
+        "copyMode": "polish",
+    }
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        return FakeResponse(
+            {
+                "imageDataUrl": "data:image/png;base64,cmVzdWx0",
+                "copy": copy_payload,
+            }
+        )
+
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    result = api_client.request_backend(
+        uploaded_file,
+        "따뜻한 카페 분위기로",
+        "인스타그램",
+        "정사각형 피드",
+        ad_copy_prompt="오늘 아메리카노 2,500원",
+        copy_mode="polish",
+    )
+
+    assert result.image_bytes == b"result"
+    assert result.copy == copy_payload
 
 
 def test_request_backend_uses_default_local_backend_url(

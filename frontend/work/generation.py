@@ -7,10 +7,31 @@ from frontend.media.mock_banner import create_mock_banner
 from frontend.services.api_client import (
     BACKEND_URL,
     FRONTEND_USE_MOCK,
-    build_user_prompt,
+    GenerationResult,
     request_backend,
 )
 from frontend.work.copy import build_auto_copy
+
+
+def _mock_copy_text(
+    ad_copy_prompt: str,
+    format_label: str,
+    detail_label: str,
+    copy_mode: str,
+) -> str:
+    clean_copy = ad_copy_prompt.strip()
+    if copy_mode == "rewrite" or not clean_copy:
+        return build_auto_copy(format_label, detail_label)
+    if copy_mode == "polish":
+        return f"{clean_copy}\n카페에서 더 맛있게 즐겨보세요."
+    return clean_copy
+
+
+def _mock_copy_info(text: str, copy_mode: str) -> dict[str, object]:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    headline = lines[0] if lines else text
+    subcopy = "\n".join(lines[1:]) or None
+    return {"headline": headline, "subcopy": subcopy, "cta": None, "copyMode": copy_mode}
 
 
 def handle_generation_request(
@@ -33,20 +54,29 @@ def handle_generation_request(
             try:
                 time.sleep(1.2)
                 if FRONTEND_USE_MOCK:
-                    mock_prompt = ad_copy_prompt.strip()
-                    if text_overlay_enabled and not mock_prompt:
-                        mock_prompt = build_auto_copy(format_label, detail_label)
-                    result_bytes = create_mock_banner(
-                        image_bytes=uploaded_file.getvalue(),
-                        prompt=build_user_prompt(mock_prompt, detail_label),
-                        format_label=format_label,
-                        detail_label=detail_label,
-                        text_overlay_enabled=text_overlay_enabled,
+                    mock_copy = (
+                        _mock_copy_text(ad_copy_prompt, format_label, detail_label, copy_mode)
+                        if text_overlay_enabled
+                        else ""
+                    )
+                    result = GenerationResult(
+                        image_bytes=create_mock_banner(
+                            image_bytes=uploaded_file.getvalue(),
+                            prompt=mock_copy,
+                            format_label=format_label,
+                            detail_label=detail_label,
+                            text_overlay_enabled=text_overlay_enabled,
+                        ),
+                        copy=(
+                            _mock_copy_info(mock_copy, copy_mode)
+                            if text_overlay_enabled and mock_copy
+                            else None
+                        ),
                     )
                 else:
                     # 로그인 상태면 백엔드가 user_id로 기록을 묶을 수 있도록 JWT를 같이 넘긴다.
                     access_token = st.session_state.get("auth_access_token", "")
-                    result_bytes = request_backend(
+                    result = request_backend(
                         uploaded_file,
                         prompt.strip(),
                         format_label,
@@ -57,7 +87,8 @@ def handle_generation_request(
                         ad_copy_prompt=ad_copy_prompt,
                         logo_file=logo_file,
                     )
-                st.session_state["result_bytes"] = result_bytes
+                st.session_state["result_bytes"] = result.image_bytes
+                st.session_state["result_copy"] = result.copy
                 st.session_state["result_context"] = current_result_context
                 st.rerun()
             except httpx.HTTPStatusError as exc:
