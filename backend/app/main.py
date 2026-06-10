@@ -1,4 +1,4 @@
-"""Cloud Run에서 실행되는 FastAPI 진입점."""
+"""FastAPI 진입점."""
 
 import logging
 from collections.abc import AsyncIterator
@@ -47,7 +47,7 @@ if get_settings().app_env != "production":
     app.include_router(internal_router)
 
 # 생성된 이미지를 /outputs/... 경로로 프론트에 내려주기 위해 outputs 폴더를 정적 파일로 노출한다.
-# 운영(Cloud Run) 환경에서는 컨테이너 디스크가 휘발성이므로 추후 GCS URL로 대체하는 것이 권장된다.
+# 운영 환경은 컨테이너 디스크가 휘발성이라 STORAGE_BACKEND=r2로 외부 스토리지 사용을 권장한다.
 _static_output_dir = get_settings().output_dir
 _static_output_dir.mkdir(parents=True, exist_ok=True)
 app.mount(
@@ -67,7 +67,7 @@ app.mount(
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    # Cloud Run 기본 URL로 접속했을 때 서비스가 살아있는지 빠르게 확인한다.
+    # 운영 URL로 접속했을 때 서비스가 살아있는지 빠르게 확인한다.
     return {"service": "Cafe Ad Maker V1", "status": "ok"}
 
 

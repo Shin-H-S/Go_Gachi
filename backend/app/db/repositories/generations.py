@@ -53,10 +53,31 @@ async def find_cached_generation(
         .order_by(Generation.created_at.desc(), Generation.id.desc())
     )
     result = await db.execute(stmt)
-    for generation in result.scalars():
-        if generation.output_path and await asyncio.to_thread(Path(generation.output_path).exists):
-            return generation
-    return None
+    return result.scalars().first()
+
+
+async def list_cached_generations(
+    db: AsyncSession,
+    *,
+    image_hash: str,
+    preset_id: str,
+    instruction_hash: str,
+    model: str,
+    prompt_version: str,
+) -> list[Generation]:
+    """캐시 조건에 맞는 success 후보 행을 최신순으로 돌려준다."""
+    stmt = (
+        select(Generation)
+        .where(Generation.image_hash == image_hash)
+        .where(Generation.preset_id == preset_id)
+        .where(Generation.instruction_hash == instruction_hash)
+        .where(Generation.model == model)
+        .where(Generation.prompt_version == prompt_version)
+        .where(Generation.status == "success")
+        .order_by(Generation.created_at.desc(), Generation.id.desc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def find_original_path(

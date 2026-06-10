@@ -5,6 +5,7 @@ description = "Small-business ad image backend baseline."
 readme = "README.md"
 requires-python = ">=3.11.14,<3.12"
 dependencies = [
+  "aioboto3>=15.5.0",
   "aiosqlite>=0.20.0",
   "alembic>=1.18.4",
   "asyncpg>=0.31.0",
