@@ -24,8 +24,8 @@ class R2Storage:
         return f"outputs/{generation_id}.png"
 
     def original_path(self, *, image_hash: str, extension: str, generation_id: str) -> str:
-        _ = generation_id
-        return f"uploads/{image_hash}.{extension}"
+        _ = image_hash
+        return f"uploads/{generation_id}.{extension}"
 
     async def write_bytes(self, path: str, body: bytes, *, content_type: str) -> None:
         session = aioboto3.Session()

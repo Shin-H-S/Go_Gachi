@@ -28,23 +28,9 @@ async def prepare_storage(
     storage = get_storage(settings)
     output_path = storage.output_path(generation_id)
 
-    if settings.storage_backend == "r2":
-        original_path = storage.original_path(
-            image_hash=image_hash,
-            extension=uploaded.extension,
-            generation_id=generation_id,
-        )
-        if not await storage.exists(original_path):
-            await storage.write_bytes(
-                original_path,
-                body=uploaded.content,
-                content_type=uploaded.mime_type,
-            )
-        return StoragePaths(original_path=original_path, output_path=output_path)
-
     async with async_session_scope() as db:
         old_path = await crud.find_original_path(db, image_hash=image_hash)
-    if old_path:
+    if old_path and await storage.exists(old_path):
         return StoragePaths(original_path=old_path, output_path=output_path)
 
     original_path = storage.original_path(
