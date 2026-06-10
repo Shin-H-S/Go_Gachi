@@ -1,15 +1,17 @@
 """이미지 생성 캐시 조회와 cache hit 응답 처리를 담당한다."""
 
 import asyncio
+import base64
 import logging
-from pathlib import Path
 from typing import TypedDict
 
+from backend.app.core.config import Settings
 from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Generation
-from backend.app.services.generation_files import file_to_data_url, new_generation_id
+from backend.app.services.generation_files import new_generation_id
+from backend.app.services.storage import get_storage
 from backend.app.services.storage_url import output_url
 
 logger = logging.getLogger(__name__)
@@ -25,9 +27,10 @@ class CacheSnapshot(TypedDict):
     output_path: str | None
     image_url: str | None
     prompt: str | None
+    target_bytes: bytes
 
 
-def _snapshot(row: Generation) -> CacheSnapshot:
+def _snapshot(row: Generation, target_bytes: bytes) -> CacheSnapshot:
     return {
         "image_hash": row.image_hash,
         "preset_id": row.preset_id,
@@ -38,11 +41,13 @@ def _snapshot(row: Generation) -> CacheSnapshot:
         "output_path": row.output_path,
         "image_url": row.image_url,
         "prompt": row.prompt,
+        "target_bytes": target_bytes,
     }
 
 
 async def find_cache_snapshot(
     *,
+    settings: Settings,
     image_hash: str,
     preset_id: str,
     instruction_hash: str,
@@ -51,7 +56,7 @@ async def find_cache_snapshot(
 ) -> CacheSnapshot | None:
     """세션 밖에서도 안전하게 쓸 수 있도록 캐시 행의 필요한 값만 dict로 복사한다."""
     async with async_session_scope() as db:
-        cached_row = await crud.find_cached_generation(
+        rows = await crud.list_cached_generations(
             db,
             image_hash=image_hash,
             preset_id=preset_id,
@@ -59,28 +64,42 @@ async def find_cache_snapshot(
             model=model,
             prompt_version=prompt_version,
         )
-        return None if cached_row is None else _snapshot(cached_row)
+    for row in rows:
+        if row.output_path is None:
+            continue
+        target_bytes = await _load_cached_bytes(row.output_path, settings)
+        if target_bytes is not None:
+            return _snapshot(row, target_bytes)
+    return None
+
+
+async def _load_cached_bytes(output_path: str, settings: Settings) -> bytes | None:
+    """저장 모드에 맞춰 캐시된 결과 이미지의 바이트를 읽는다(없으면 None)."""
+    storage = get_storage(settings)
+    try:
+        return await storage.read_bytes(output_path)
+    except Exception:
+        logger.exception("cache hit storage read failed path=%s", output_path)
+        return None
 
 
 async def cached_response(
     snapshot: CacheSnapshot | None,
     *,
+    settings: Settings,
     user_id: str | None,
     user_copy: str | None,
     has_logo: bool,
     logo_position: str | None,
     logo_image_hash: str | None,
 ) -> dict[str, str | None] | None:
-    """캐시 파일이 남아 있으면 cached 행과 비용 0 사용량을 기록하고 응답을 만든다."""
+    """캐시 객체가 살아있으면 cached 행과 비용 0 사용량을 기록하고 응답을 만든다."""
     if snapshot is None or snapshot["output_path"] is None:
         return None
 
-    cached_path = Path(snapshot["output_path"])
-    if not await asyncio.to_thread(cached_path.exists):
-        return None
-
-    image_data_url = await file_to_data_url(cached_path)
-    image_url = output_url(cached_path)
+    encoded = await asyncio.to_thread(base64.b64encode, snapshot["target_bytes"])
+    image_data_url = f"data:image/png;base64,{encoded.decode('ascii')}"
+    image_url = output_url(snapshot["output_path"])
     generation_id = new_generation_id()
     logger.info(
         "cache hit generation_id=%s image_hash=%s preset=%s user_id=%s",

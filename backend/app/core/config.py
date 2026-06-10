@@ -1,4 +1,4 @@
-"""Cloud Run 런타임 설정과 환경변수 로딩."""
+"""런타임 설정과 환경변수 로딩."""
 
 from functools import lru_cache
 from pathlib import Path
@@ -30,7 +30,7 @@ def _load_env_file(env_path: Path) -> None:
         if not key:
             continue
 
-        # 이미 주입된 환경변수는 Cloud Run/루트 .env 설정이 우선이므로 덮어쓰지 않는다.
+        # 이미 주입된 환경변수(운영 환경)가 루트 .env보다 우선이므로 덮어쓰지 않는다.
         if key in os.environ:
             continue
 
@@ -45,8 +45,8 @@ def _load_env_file(env_path: Path) -> None:
 def load_env() -> None:
     """공통 .env를 환경변수로 적재한다.
 
-    운영에서는 Cloud Run 환경변수를 사용한다. 로컬 검증에서는 레포 최상단 `.env`만
-    프론트/백엔드 공통 기준으로 읽는다.
+    운영에서는 호스팅 플랫폼의 환경변수(Railway Variables 등)를 사용한다.
+    로컬 검증에서는 레포 최상단 `.env`만 프론트/백엔드 공통 기준으로 읽는다.
     """
     _load_env_file(ROOT_DIR / ".env")
 
@@ -71,7 +71,7 @@ class Settings(BaseModel):
 
     # DB 라우팅용 설정. 실제 실행/데모/배포는 PostgreSQL DATABASE_URL을 필수로 받는다.
     database_url: str = ""
-    # data/output/upload 경로는 보통 기본값으로 충분하지만, 테스트·Docker·Cloud Run에서 임시
+    # data/output/upload 경로는 보통 기본값으로 충분하지만, 테스트·Docker·운영 컨테이너에서 임시
     # 폴더로 리다이렉트할 수 있게 env override를 남겨둔다.
     data_dir: Path = DEFAULT_DATA_DIR
     output_dir: Path = DEFAULT_OUTPUT_DIR
@@ -88,6 +88,15 @@ class Settings(BaseModel):
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_jwt_secret: str = ""
+
+    # 외부 스토리지(Cloudflare R2). STORAGE_BACKEND=r2일 때만 사용.
+    # local이면 disk(uploads/outputs)를, r2면 R2 버킷에 객체로 저장한다.
+    storage_backend: Literal["local", "r2"] = "local"
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_endpoint_url: str = ""
+    r2_bucket_name: str = ""
+    r2_public_url: str = ""
 
 
 @lru_cache
@@ -130,6 +139,12 @@ def get_settings() -> Settings:
         supabase_url=os.getenv("SUPABASE_URL", ""),
         supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
         supabase_jwt_secret=os.getenv("SUPABASE_JWT_SECRET", ""),
+        storage_backend=os.getenv("STORAGE_BACKEND", "local"),
+        r2_access_key_id=os.getenv("R2_ACCESS_KEY_ID", ""),
+        r2_secret_access_key=os.getenv("R2_SECRET_ACCESS_KEY", ""),
+        r2_endpoint_url=os.getenv("R2_ENDPOINT_URL", ""),
+        r2_bucket_name=os.getenv("R2_BUCKET_NAME", ""),
+        r2_public_url=os.getenv("R2_PUBLIC_URL", ""),
     )
 
 

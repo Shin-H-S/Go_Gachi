@@ -76,6 +76,67 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
     assert total_usage_count == 2
 
 
+def test_cache_hit_falls_back_to_older_existing_file(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _fake_call(**kwargs: object) -> str:
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    real_settings = force_openai_mode(monkeypatch)
+    preset = default_preset()
+
+    first = asyncio.run(
+        image_edit.edit_image(
+            image_data_url=TINY_PNG_DATA_URL,
+            preset=preset,
+            user_prompt="same prompt",
+            settings=real_settings,
+        )
+    )
+
+    async def _add_newer_missing_cache() -> None:
+        async with async_session_scope() as db:
+            result = await db.execute(select(Generation).where(Generation.status == "success"))
+            row = result.scalar_one()
+            await crud.create_pending_generation(
+                db,
+                request_id="newer-missing-cache",
+                image_hash=row.image_hash,
+                preset_id=row.preset_id,
+                instruction_hash=row.instruction_hash,
+                prompt_version=row.prompt_version,
+                model=row.model,
+                original_path=row.original_path,
+                prompt=row.prompt,
+            )
+            await crud.mark_generation_success(
+                db,
+                request_id="newer-missing-cache",
+                output_path=str(real_settings.output_dir / "missing-cache.png"),
+                image_url=None,
+            )
+
+    asyncio.run(_add_newer_missing_cache())
+
+    async def _raise_if_called(**kwargs: object) -> str:
+        raise AssertionError("OpenAI should not be called when older cache is readable")
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _raise_if_called)
+
+    second = asyncio.run(
+        image_edit.edit_image(
+            image_data_url=TINY_PNG_DATA_URL,
+            preset=preset,
+            user_prompt="same prompt",
+            settings=real_settings,
+        )
+    )
+
+    assert second["note"] == "캐시된 결과 재사용"
+    assert second["image_url"] == first["image_url"]
+
+
 def test_generate_reuses_original_file_for_same_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
