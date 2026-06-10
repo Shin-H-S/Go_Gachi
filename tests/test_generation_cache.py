@@ -15,7 +15,7 @@ def test_snapshot_copies_cache_fields() -> None:
         prompt="prompt text",
     )
 
-    assert _snapshot(row) == {
+    assert _snapshot(row, b"png") == {
         "image_hash": "image-hash",
         "preset_id": "instagram",
         "instruction_hash": "instruction-hash",
@@ -25,4 +25,5 @@ def test_snapshot_copies_cache_fields() -> None:
         "output_path": "outputs/result.png",
         "image_url": None,
         "prompt": "prompt text",
+        "target_bytes": b"png",
     }

@@ -28,7 +28,7 @@
 ## 배포 전 확인
 
 - `.dockerignore`가 `backend/app/assets/fonts/`를 제외하지 않는지 확인합니다.
-- Cloud Run 또는 GCP 서버에서 `backend/app/assets/fonts/`가 함께 배포되는지 확인합니다.
+- 배포 환경(Railway·VM 등)에서 `backend/app/assets/fonts/`가 함께 포함되는지 확인합니다.
 - 폰트 선택 로직을 바꿀 때는 Pillow 로딩 테스트와 텍스트 합성 테스트를 함께 실행합니다.
 
 ```powershell

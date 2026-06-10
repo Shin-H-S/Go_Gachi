@@ -32,6 +32,9 @@ os.environ["UPLOAD_DIR"] = str(_TEST_DIR / "uploads")
 os.environ["APP_ENV"] = "test"
 os.environ["IMAGE_PROVIDER"] = "mock"
 os.environ["FRONTEND_CONFIG_SOURCE"] = "local"
+# 외부 R2를 건드리지 않도록 테스트는 항상 local 디스크 모드로 시작한다.
+# r2 모드를 검증하는 테스트는 monkeypatch로 settings.storage_backend를 바꾼다.
+os.environ["STORAGE_BACKEND"] = "local"
 # 실 API 키가 흘러들어가 실제 호출이 발생하지 않도록 항상 비운다.
 os.environ["OPENAI_API_KEY"] = ""
 os.environ["OPENAI_ADMIN_KEY"] = ""

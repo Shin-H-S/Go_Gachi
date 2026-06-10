@@ -3,7 +3,6 @@
 import asyncio
 import base64
 import logging
-from pathlib import Path
 
 from backend.app.core.config import Settings
 from backend.app.core.logging_utils import short_id
@@ -17,6 +16,7 @@ from backend.app.services.generation_cache import cached_response, find_cache_sn
 from backend.app.services.generation_copy import cache_instruction, rendered_copy_text
 from backend.app.services.generation_files import new_generation_id
 from backend.app.services.generation_inputs import target_size_or_detail, user_prompt_with_context
+from backend.app.services.generation_storage import prepare_storage, save_output
 from backend.app.services.image_processing import normalize_for_openai, render_target_png
 from backend.app.services.image_types import ResizeMode
 from backend.app.services.image_validation import parse_image
@@ -100,6 +100,7 @@ async def edit_image(
     prompt_version = PROMPT_VERSION
 
     cache_snapshot = await find_cache_snapshot(
+        settings=settings,
         image_hash=image_hash,
         preset_id=preset.id,
         instruction_hash=instruction_hash,
@@ -108,6 +109,7 @@ async def edit_image(
     )
     cache_result = await cached_response(
         cache_snapshot,
+        settings=settings,
         user_id=user_id,
         user_copy=stored_user_copy,
         has_logo=has_logo,
@@ -127,16 +129,12 @@ async def edit_image(
         selected_detail.id,
         short_id(user_id),
     )
-    await asyncio.to_thread(settings.upload_dir.mkdir, parents=True, exist_ok=True)
-    await asyncio.to_thread(settings.output_dir.mkdir, parents=True, exist_ok=True)
-    output_path = settings.output_dir / f"{generation_id}.png"
-    async with async_session_scope() as db:
-        old_path = await crud.find_original_path(db, image_hash=image_hash)
-    if old_path:
-        original_path = Path(old_path)
-    else:
-        original_path = settings.upload_dir / f"{generation_id}.{uploaded.extension}"
-        await asyncio.to_thread(original_path.write_bytes, uploaded.content)
+    paths = await prepare_storage(
+        generation_id=generation_id,
+        image_hash=image_hash,
+        uploaded=uploaded,
+        settings=settings,
+    )
 
     async with async_session_scope() as db:
         await crud.create_pending_generation(
@@ -147,7 +145,7 @@ async def edit_image(
             instruction_hash=instruction_hash,
             prompt_version=prompt_version,
             model=model,
-            original_path=str(original_path),
+            original_path=paths.original_path,
             prompt=prompt,
             user_id=user_id,
             user_copy=stored_user_copy,
@@ -212,7 +210,7 @@ async def edit_image(
                 layout,
                 settings,
             )
-        await asyncio.to_thread(output_path.write_bytes, target_png)
+        await save_output(output_path=paths.output_path, body=target_png, settings=settings)
     except Exception as exc:
         # OpenAI 호출/응답 디코딩/파일 저장 중 하나라도 실패하면 failed로 남긴다.
         logger.exception("generation failed generation_id=%s", generation_id)
@@ -235,14 +233,14 @@ async def edit_image(
         raise RuntimeError("이미지 API 응답 이미지를 처리하지 못했습니다.") from exc
 
     # 4) 성공: 파일 저장 → DB success 갱신 → 사용량 기록.
-    # 응답에는 /outputs/... 경로를 함께 내려준다.
-    # 로컬 스토리지 단계에서는 DB에 환경별 절대 URL을 저장하지 않는다.
-    image_url = output_url(output_path)
+    # 응답에는 외부 접근 URL(local: /outputs/..., r2: public URL)을 함께 내려준다.
+    # DB에는 환경별 절대 URL을 박지 않고 path/key만 저장한다.
+    image_url = output_url(paths.output_path)
     async with async_session_scope() as db:
         await crud.mark_generation_success(
             db,
             request_id=generation_id,
-            output_path=str(output_path),
+            output_path=paths.output_path,
             image_url=None,
         )
         await crud.record_usage(
