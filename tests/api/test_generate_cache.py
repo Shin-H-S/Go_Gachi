@@ -75,6 +75,49 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
     assert total_usage_count == 2
 
 
+def test_generate_reuses_original_file_for_same_image(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _fake_call(**kwargs: object) -> str:
+        return TINY_PNG_B64
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    force_openai_mode(monkeypatch)
+
+    first = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": "밝게 해주세요",
+        },
+    )
+    second = client.post(
+        "/api/generate",
+        json={
+            "imageDataUrl": TINY_PNG_DATA_URL,
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": "어둡게 해주세요",
+        },
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+
+    async def _original_paths() -> list[str | None]:
+        async with async_session_scope() as db:
+            result = await db.execute(select(Generation.original_path).order_by(Generation.id))
+            return list(result.scalars().all())
+
+    original_paths = asyncio.run(_original_paths())
+    assert len(original_paths) == 2
+    assert original_paths[0] == original_paths[1]
+    assert original_paths[0] is not None
+    assert Path(original_paths[0]).exists()
+
+
 def test_generate_stores_logo_metadata_without_overlay(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _fake_call(**kwargs: object) -> str:
         return TINY_PNG_B64

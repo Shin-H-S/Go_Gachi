@@ -160,8 +160,9 @@ async def generate(
     ad_copy = None
     copy_info = None
     if request.text_overlay_enabled:
-        # V3 텍스트 합성 전 단계: 사용자 요청을 광고 문구 구조로 먼저 정리한다.
-        copy_source = (request.user_copy or "").strip() or request.user_prompt
+        # userPrompt는 이미지 생성 방향, userCopy는 이미지 위에 들어갈 실제 문구로 분리한다.
+        # userCopy가 비어 있으면 build_ad_copy가 카페 광고 기본 문구를 만든다.
+        copy_source = request.user_copy or ""
         ad_copy = build_ad_copy(copy_source, request.copy_mode)
         copy_info = CopyResponse(**ad_copy.model_dump())
 
