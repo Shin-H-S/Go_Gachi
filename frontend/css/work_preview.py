@@ -89,6 +89,40 @@ WORK_PREVIEW_CSS = """
     box-sizing: border-box;
 }
 
+.result-summary-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.result-summary-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 6px 11px;
+    border: 1px solid rgba(32, 39, 37, 0.12);
+    border-radius: 8px;
+    color: #202725;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.35;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+}
+
+.result-summary-chip.is-included {
+    background: #eaf7f0;
+    border-color: rgba(35, 119, 80, 0.22);
+    color: #206245;
+}
+
+.result-summary-chip.is-excluded {
+    background: #f3f0ea;
+    border-color: rgba(93, 103, 100, 0.18);
+    color: #69736f;
+}
+
 .result-copy-panel {
     margin-top: 14px;
     border: 1px solid rgba(32, 39, 37, 0.12);

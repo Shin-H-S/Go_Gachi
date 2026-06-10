@@ -11,6 +11,8 @@ from frontend.core.config import (
     get_detail_id,
     get_detail_size,
 )
+from frontend.services.copy_client import request_auto_copy
+from frontend.services.prompting import build_user_prompt
 
 __all__ = [
     "BACKEND_URL",
@@ -23,6 +25,7 @@ __all__ = [
     "file_to_data_url",
     "move_generation_to_folder",
     "request_asset_bytes",
+    "request_auto_copy",
     "request_me",
     "request_backend",
     "request_my_folders",
@@ -55,19 +58,6 @@ def data_url_to_bytes(data_url: str) -> bytes:
     return base64.b64decode(encoded)
 
 
-def build_user_prompt(
-    prompt: str,
-    detail_label: str,
-) -> str:
-    parts = [f"광고 유형: {detail_label}"]
-    clean_prompt = prompt.strip()
-
-    if clean_prompt:
-        parts.append(f"이미지 요청:\n{clean_prompt}")
-
-    return "\n\n".join(parts)
-
-
 def _auth_headers(access_token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {access_token}"} if access_token else {}
 
@@ -86,8 +76,10 @@ def request_me(access_token: str) -> dict:
     return _get_json("/api/auth/me", access_token)
 
 
-def request_my_generations(access_token: str) -> dict:
-    return _get_json("/api/auth/me/generations", access_token)
+def request_my_generations(access_token: str, page: int = 1) -> dict:
+    page = max(1, int(page))
+    path = "/api/auth/me/generations" if page == 1 else f"/api/auth/me/generations?page={page}"
+    return _get_json(path, access_token)
 
 
 def request_my_folders(access_token: str) -> dict:

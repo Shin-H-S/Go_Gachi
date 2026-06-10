@@ -52,6 +52,17 @@ class GenerateRequest(BaseModel):
         return self
 
 
+class CopyGenerateRequest(BaseModel):
+    """광고 문구 자동 생성 요청 본문."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    preset_id: str | None = Field(default=None, alias="presetId")
+    detail_type: str | None = Field(default=None, alias="detailType")
+    user_prompt: str = Field(default="", alias="userPrompt")
+    copy_mode: CopyMode = Field(default="rewrite", alias="copyMode")
+
+
 class CopyResponse(BaseModel):
     """V3 문구 처리 결과. 실제 문구 생성/합성 작업에서 채워진다."""
 

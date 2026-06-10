@@ -162,6 +162,21 @@ def test_generate_rejects_too_long_user_copy() -> None:
     assert response.status_code == 422
 
 
+def test_auto_copy_generate_endpoint_is_backend_owned_contract() -> None:
+    response = client.post(
+        "/api/copy/generate",
+        json={
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": "광고 유형: 정사각형 피드",
+            "copyMode": "rewrite",
+        },
+    )
+
+    assert response.status_code == 501
+    assert "자동 광고 문구 생성" in response.json()["detail"]
+
+
 def test_generate_rejects_too_long_logo_data_url() -> None:
     response = client.post(
         "/api/generate",

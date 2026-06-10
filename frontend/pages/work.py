@@ -15,6 +15,7 @@ from frontend.work.copy_controls import render_copy_controls
 from frontend.work.generation import handle_generation_request
 from frontend.work.preview import render_image_preview, render_preview_shell
 from frontend.work.result_copy import render_result_copy
+from frontend.work.result_summary import render_result_summary
 from frontend.work.state import build_result_context, get_selected_channel, sync_result_state
 from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_primary_uploaded_file
 
@@ -96,6 +97,7 @@ def render_work_page() -> None:
             ad_copy_prompt, text_overlay_enabled, copy_mode = render_copy_controls(
                 format_label,
                 detail_label,
+                prompt,
             )
 
             current_result_context = build_result_context(
@@ -163,6 +165,7 @@ def render_work_page() -> None:
             render_image_preview(uploaded_file.getvalue(), format_label, detail_label)
         elif "result_bytes" in st.session_state:
             render_image_preview(st.session_state["result_bytes"], format_label, detail_label)
+            render_result_summary(st.session_state.get("result_context"))
             render_result_copy(st.session_state.get("result_copy"))
             st.download_button(
                 "이미지 다운로드",

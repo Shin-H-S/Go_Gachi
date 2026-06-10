@@ -1,13 +1,17 @@
-from frontend.work.copy import COPY_MODE_OPTIONS, build_auto_copy
+from pathlib import Path
+
+from frontend.work.copy import COPY_MODE_OPTIONS
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+COPY_SOURCE = ROOT_DIR / "frontend" / "work" / "copy.py"
 
 
-def test_build_auto_copy_returns_headline_subcopy_and_cta() -> None:
-    copy_text = build_auto_copy("인스타그램", "정사각형 피드")
+def test_frontend_copy_module_does_not_generate_hardcoded_ad_copy() -> None:
+    source = COPY_SOURCE.read_text(encoding="utf-8")
 
-    assert "헤드라인:" in copy_text
-    assert "서브카피:" in copy_text
-    assert "CTA:" in copy_text
-    assert "인스타그램" in copy_text
+    assert "build_auto_copy" not in source
+    assert "오늘 가장 맛있는 한 컷" not in source
+    assert "지금 저장하기" not in source
 
 
 def test_copy_mode_options_use_backend_values_and_korean_labels() -> None:

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from frontend import api_client
+from frontend.services import copy_client
 
 
 class FakeResponse:
@@ -290,6 +291,56 @@ def test_request_backend_returns_copy_metadata(monkeypatch: pytest.MonkeyPatch) 
 
     assert result.image_bytes == b"result"
     assert result.copy == copy_payload
+
+
+def test_request_auto_copy_posts_to_backend_copy_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_request = {}
+    copy_payload = {
+        "headline": "백엔드가 만든 헤드라인",
+        "subcopy": "백엔드가 만든 서브카피",
+        "cta": "백엔드 CTA",
+        "copyMode": "rewrite",
+    }
+
+    def fake_post(
+        url: str,
+        json: dict[str, object],
+        headers: dict[str, str],
+        timeout: int,
+    ) -> FakeResponse:
+        captured_request.update(
+            {"url": url, "json": json, "headers": headers, "timeout": timeout}
+        )
+        return FakeResponse(copy_payload)
+
+    monkeypatch.setattr(copy_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(copy_client.httpx, "post", fake_post)
+
+    result = api_client.request_auto_copy(
+        "  따뜻한 카페 배경으로  ",
+        "인스타그램",
+        "정사각형 피드",
+        copy_mode="rewrite",
+        access_token="fake-jwt-token",
+    )
+
+    assert result == copy_payload
+    assert captured_request == {
+        "url": "https://backend.example/api/copy/generate",
+        "json": {
+            "presetId": "instagram",
+            "detailType": "square_feed",
+            "userPrompt": (
+                "광고 유형: 정사각형 피드\n\n"
+                "이미지 요청:\n따뜻한 카페 배경으로"
+            ),
+            "copyMode": "rewrite",
+        },
+        "headers": {"Authorization": "Bearer fake-jwt-token"},
+        "timeout": 60,
+    }
 
 
 def test_request_backend_uses_default_local_backend_url(

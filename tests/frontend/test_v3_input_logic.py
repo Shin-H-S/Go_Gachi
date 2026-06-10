@@ -3,7 +3,6 @@ import hashlib
 from types import SimpleNamespace
 
 from frontend import api_client
-from frontend.work.copy import build_auto_copy
 from frontend.work.state import build_result_context
 
 
@@ -72,28 +71,62 @@ def test_1_text_overlay_disabled_skips_user_copy_and_forces_preserve_mode(
     assert captured_json["copyMode"] == "preserve"
 
 
-def test_2_ad_copy_auto_generation_and_manual_copy_stay_separate_in_payload(
+def test_2_ad_copy_text_and_image_prompt_stay_separate_in_payload(
     monkeypatch,
 ) -> None:
     captured_json = _capture_generate_payload(monkeypatch)
     uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
     format_label, detail_label = _labels_for_instagram_square()
-    auto_copy = build_auto_copy(format_label, detail_label)
+    ad_copy = "헤드라인: 백엔드가 만든 문구\n서브카피: 메뉴 분위기를 살려줘요.\nCTA: 자세히 보기"
 
     api_client.request_backend(
         uploaded_file,
         "따뜻한 카페 배경으로 만들어줘",
         format_label,
         detail_label,
-        ad_copy_prompt=auto_copy,
+        ad_copy_prompt=ad_copy,
         copy_mode="polish",
     )
 
     assert "이미지 요청:" in str(captured_json["userPrompt"])
     assert "따뜻한 카페 배경으로 만들어줘" in str(captured_json["userPrompt"])
-    assert captured_json["userCopy"] == auto_copy
+    assert captured_json["userCopy"] == ad_copy
     assert captured_json["copyMode"] == "polish"
-    assert "CTA:" in auto_copy
+
+
+def test_4_rewrite_mode_sends_user_copy_and_keeps_rewritten_copy_response(
+    monkeypatch,
+) -> None:
+    rewritten_copy = {
+        "headline": "오늘 놓치기 아까운 딸기 케이크 6,500원",
+        "subcopy": "카페에서 즐기는 신선한 메뉴를 더 맛있게 전해드려요.",
+        "cta": "지금 방문해보세요",
+        "copyMode": "rewrite",
+    }
+    captured_json = _capture_generate_payload(
+        monkeypatch,
+        result_payload={
+            "imageDataUrl": "data:image/png;base64,cmVzdWx0",
+            "copy": rewritten_copy,
+        },
+    )
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    format_label, detail_label = _labels_for_instagram_square()
+
+    result = api_client.request_backend(
+        uploaded_file,
+        "따뜻한 카페 배경으로 만들어줘",
+        format_label,
+        detail_label,
+        ad_copy_prompt="딸기 케이크 6500원",
+        copy_mode="rewrite",
+        text_overlay_enabled=True,
+    )
+
+    assert captured_json["textOverlayEnabled"] is True
+    assert captured_json["userCopy"] == "딸기 케이크 6500원"
+    assert captured_json["copyMode"] == "rewrite"
+    assert result.copy == rewritten_copy
 
 
 def test_3_logo_upload_is_optional_and_serialized_as_data_url(monkeypatch) -> None:

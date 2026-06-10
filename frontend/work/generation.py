@@ -10,21 +10,6 @@ from frontend.services.api_client import (
     GenerationResult,
     request_backend,
 )
-from frontend.work.copy import build_auto_copy
-
-
-def _mock_copy_text(
-    ad_copy_prompt: str,
-    format_label: str,
-    detail_label: str,
-    copy_mode: str,
-) -> str:
-    clean_copy = ad_copy_prompt.strip()
-    if copy_mode == "rewrite" or not clean_copy:
-        return build_auto_copy(format_label, detail_label)
-    if copy_mode == "polish":
-        return f"{clean_copy}\n카페에서 더 맛있게 즐겨보세요."
-    return clean_copy
 
 
 def _mock_copy_info(text: str, copy_mode: str) -> dict[str, object]:
@@ -54,11 +39,7 @@ def handle_generation_request(
             try:
                 time.sleep(1.2)
                 if FRONTEND_USE_MOCK:
-                    mock_copy = (
-                        _mock_copy_text(ad_copy_prompt, format_label, detail_label, copy_mode)
-                        if text_overlay_enabled
-                        else ""
-                    )
+                    mock_copy = ad_copy_prompt.strip() if text_overlay_enabled else ""
                     result = GenerationResult(
                         image_bytes=create_mock_banner(
                             image_bytes=uploaded_file.getvalue(),

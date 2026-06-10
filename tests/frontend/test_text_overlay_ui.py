@@ -55,8 +55,16 @@ def test_copy_controls_render_text_overlay_checkbox_checked_by_default() -> None
     assert default_value.value.value is True
 
 
+def test_copy_controls_do_not_render_redundant_ad_copy_section_heading() -> None:
+    source = COPY_CONTROLS.read_text(encoding="utf-8")
+
+    assert '<p class="section-label">광고 문구</p>' not in source
+    assert '"광고 문구 포함"' in source
+
+
 def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
-    tree = ast.parse(COPY_CONTROLS.read_text(encoding="utf-8"))
+    source = COPY_CONTROLS.read_text(encoding="utf-8")
+    tree = ast.parse(source)
     button_calls = [
         node
         for node in ast.walk(tree)
@@ -95,6 +103,8 @@ def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
 
     assert auto_copy_button is not None
     assert prompt_text_area is not None
+    assert "request_auto_copy" in source
+    assert "build_auto_copy" not in source
 
 
 def test_copy_controls_render_manual_copy_mode_selector() -> None:
@@ -153,6 +163,14 @@ def test_work_page_displays_backend_copy_metadata() -> None:
     assert "from frontend.work.result_copy import render_result_copy" in work_source
     assert 'st.session_state.get("result_copy")' in work_source
     assert "render_result_copy(" in work_source
+
+
+def test_work_page_displays_result_inclusion_summary() -> None:
+    work_source = WORK_PAGE.read_text(encoding="utf-8")
+
+    assert "from frontend.work.result_summary import render_result_summary" in work_source
+    assert 'st.session_state.get("result_context")' in work_source
+    assert "render_result_summary(" in work_source
 
 
 def test_request_backend_sends_text_overlay_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
