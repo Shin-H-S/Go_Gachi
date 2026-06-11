@@ -41,7 +41,7 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
         presets["instagram"].find_detail("story_image").prompt_hint
     )
     assert "seasonal offer" in presets["daangn"].find_detail("discount_event").prompt_hint
-    assert PROMPT_VERSION == "2026-06-10-v2-ai-copy-in-image-prompt"
+    assert PROMPT_VERSION == "2026-06-11-v3-text-layout-policy"
 
 
 def test_presets_do_not_conflict_with_image_copy_prompting() -> None:
