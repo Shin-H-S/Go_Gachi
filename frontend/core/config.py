@@ -9,7 +9,7 @@ FRONTEND_DIR = Path(__file__).resolve().parents[1]
 ROOT_DIR = FRONTEND_DIR.parent
 CONFIG_PRESETS_PATH = ROOT_DIR / "config" / "presets.json"
 CHANNEL_ASSET_DIR = FRONTEND_DIR / "assets"
-DEFAULT_BACKEND_URL = "http://127.0.0.1:8080"
+DEFAULT_BACKEND_URL = "http://127.0.0.1:8000"
 
 # 공통 설정은 레포 최상단 .env에서 읽고, 프론트 전용 .env가 있으면 그 값으로 덮어쓴다.
 load_dotenv(ROOT_DIR / ".env")

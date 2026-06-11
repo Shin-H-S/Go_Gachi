@@ -51,7 +51,7 @@ uv run streamlit run frontend/app.py
 설정으로 덮어씁니다. 기본 백엔드 주소는 같은 서버에서 실행 중인 FastAPI입니다.
 
 ```env
-BACKEND_URL=http://127.0.0.1:8080
+BACKEND_URL=http://127.0.0.1:8000
 ```
 
 배포된 백엔드나 별도 서버를 바라봐야 하면 `BACKEND_URL`만 해당 주소로 바꿉니다.

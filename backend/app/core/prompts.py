@@ -5,7 +5,7 @@ from backend.app.services.copywriting import AdCopy
 
 # 프롬프트 본문/구조가 바뀌면 이 라벨도 올려 캐시 무효화한다. env가 아니라 코드 상수로
 # 두는 이유: 프롬프트 변경과 항상 같은 커밋에 들어가야 어긋남이 없어서.
-PROMPT_VERSION = "2026-06-10-v2-ai-copy-in-image-prompt"
+PROMPT_VERSION = "2026-06-11-v3-text-layout-policy"
 
 
 def _clean_parts(parts: list[str]) -> list[str]:

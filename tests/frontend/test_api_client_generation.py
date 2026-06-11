@@ -52,7 +52,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             ),
             "presetId": "instagram",
             "detailType": "square_feed",
-            "userPrompt": ("광고 유형: 정사각형 피드\n\n" "이미지 요청:\n제품이 크게 보여요"),
+            "userPrompt": ("광고 유형: 정사각형 피드\n\n이미지 요청:\n제품이 크게 보여요"),
             "userCopy": "",
             "copyMode": "preserve",
             "adCopyEnabled": True,
@@ -213,7 +213,7 @@ def test_request_backend_sends_image_prompt_and_user_copy_separately(
     )
 
     assert captured_json["userPrompt"] == (
-        "광고 유형: 정사각형 피드\n\n" "이미지 요청:\n따뜻한 배경으로"
+        "광고 유형: 정사각형 피드\n\n이미지 요청:\n따뜻한 배경으로"
     )
     assert captured_json["userCopy"] == "헤드라인: 오늘만 할인"
 
@@ -355,7 +355,7 @@ def test_request_auto_copy_posts_to_backend_copy_endpoint(
         "json": {
             "presetId": "instagram",
             "detailType": "square_feed",
-            "userPrompt": ("광고 유형: 정사각형 피드\n\n" "이미지 요청:\n따뜻한 카페 배경으로"),
+            "userPrompt": ("광고 유형: 정사각형 피드\n\n이미지 요청:\n따뜻한 카페 배경으로"),
             "copyMode": "rewrite",
         },
         "headers": {"Authorization": "Bearer fake-jwt-token"},
@@ -383,7 +383,7 @@ def test_request_backend_uses_default_local_backend_url(
 
     api_client.request_backend(uploaded_file, "제품이 크게 보여요", "인스타그램", "정사각형 피드")
 
-    assert captured_request["url"] == "http://127.0.0.1:8080/api/generate"
+    assert captured_request["url"] == "http://127.0.0.1:8000/api/generate"
 
 
 def test_request_backend_rejects_missing_image_data_url(monkeypatch: pytest.MonkeyPatch) -> None:
