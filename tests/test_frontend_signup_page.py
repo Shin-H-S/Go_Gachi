@@ -32,9 +32,7 @@ def test_signup_route_is_registered_and_dispatched() -> None:
 def test_signup_page_collects_contract_fields_without_social_login_or_backend_signup() -> None:
     source = read_source(FRONTEND_SIGNUP_PAGE)
     tree = ast.parse(source)
-    defined_functions = {
-        node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-    }
+    defined_functions = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
 
     assert "render_signup_page" in defined_functions
     assert "Go Gachi" in source

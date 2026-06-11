@@ -33,9 +33,7 @@ def test_login_route_is_registered_and_dispatched() -> None:
 def test_login_page_has_email_password_only_copy_and_english_brand() -> None:
     source = read_source(FRONTEND_LOGIN_PAGE)
     tree = ast.parse(source)
-    defined_functions = {
-        node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-    }
+    defined_functions = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
 
     assert "render_login_page" in defined_functions
     assert "이메일" in source

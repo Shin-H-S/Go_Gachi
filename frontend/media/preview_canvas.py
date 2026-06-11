@@ -17,5 +17,3 @@ def make_preview_canvas(image_bytes: bytes, format_label: str, detail_label: str
     output = BytesIO()
     canvas.save(output, format="PNG", optimize=True)
     return output.getvalue()
-
-

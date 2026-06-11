@@ -78,7 +78,6 @@ def test_frontend_config_falls_back_to_local_presets(monkeypatch) -> None:
         raise config.httpx.ConnectError("backend down")
 
     monkeypatch.setattr(config, "FRONTEND_CONFIG_SOURCE", "auto")
-    monkeypatch.setattr(config, "FRONTEND_USE_MOCK", False)
     monkeypatch.setattr(config.httpx, "get", fake_get)
 
     presets = config.load_presets()
@@ -109,8 +108,7 @@ def test_api_client_converts_uploads_and_user_prompt() -> None:
     assert data_url == _data_url(b"image-bytes")
     assert data_url_to_bytes(data_url) == b"image-bytes"
     assert build_user_prompt("  show it bigger  ", "Square feed") == (
-        "광고 유형: Square feed\n\n"
-        "이미지 요청:\nshow it bigger"
+        "광고 유형: Square feed\n\n" "이미지 요청:\nshow it bigger"
     )
 
 

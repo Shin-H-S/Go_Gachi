@@ -102,4 +102,3 @@ def render_main_page() -> None:
                 """,
                 unsafe_allow_html=True,
             )
-

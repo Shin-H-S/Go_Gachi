@@ -11,6 +11,7 @@ from frontend.work import copy_controls
 ROOT_DIR = Path(__file__).resolve().parents[2]
 WORK_PAGE = ROOT_DIR / "frontend" / "pages" / "work.py"
 COPY_CONTROLS = ROOT_DIR / "frontend" / "work" / "copy_controls.py"
+RESULT_PANEL = ROOT_DIR / "frontend" / "work" / "result_panel.py"
 
 
 class FakeResponse:
@@ -209,18 +210,25 @@ def test_work_page_keeps_image_prompt_separate_from_ad_copy() -> None:
 
 def test_work_page_displays_backend_copy_metadata() -> None:
     work_source = WORK_PAGE.read_text(encoding="utf-8")
+    result_panel_source = RESULT_PANEL.read_text(encoding="utf-8")
 
-    assert "from frontend.work.result_copy import render_result_copy" in work_source
-    assert 'st.session_state.get("result_copy")' in work_source
-    assert "render_result_copy(" in work_source
+    assert "from frontend.work.result_panel import render_result_panel" in work_source
+    assert "from frontend.work.result_copy import render_result_copy" in result_panel_source
+    assert 'st.session_state.get("result_copy")' in result_panel_source
+    assert "render_result_copy(" in result_panel_source
 
 
 def test_work_page_displays_result_inclusion_summary() -> None:
     work_source = WORK_PAGE.read_text(encoding="utf-8")
+    result_panel_source = RESULT_PANEL.read_text(encoding="utf-8")
 
-    assert "from frontend.work.result_summary import render_result_summary" in work_source
-    assert 'st.session_state.get("result_context")' in work_source
-    assert "render_result_summary(" in work_source
+    assert "from frontend.work.result_panel import render_result_panel" in work_source
+    assert (
+        "from frontend.work.result_summary import render_result_summary"
+        in result_panel_source
+    )
+    assert 'st.session_state.get("result_context")' in result_panel_source
+    assert "render_result_summary(" in result_panel_source
 
 
 def test_request_backend_sends_ad_copy_disabled(monkeypatch: pytest.MonkeyPatch) -> None:

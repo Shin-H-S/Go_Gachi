@@ -28,9 +28,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
         headers: dict[str, str],
         timeout: int,
     ) -> FakeResponse:
-        captured_request.update(
-            {"url": url, "json": json, "headers": headers, "timeout": timeout}
-        )
+        captured_request.update({"url": url, "json": json, "headers": headers, "timeout": timeout})
         return FakeResponse({"imageDataUrl": result_data_url})
 
     uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
@@ -54,10 +52,7 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             ),
             "presetId": "instagram",
             "detailType": "square_feed",
-            "userPrompt": (
-                "광고 유형: 정사각형 피드\n\n"
-                "이미지 요청:\n제품이 크게 보여요"
-            ),
+            "userPrompt": ("광고 유형: 정사각형 피드\n\n" "이미지 요청:\n제품이 크게 보여요"),
             "userCopy": "",
             "copyMode": "preserve",
             "adCopyEnabled": True,
@@ -218,8 +213,7 @@ def test_request_backend_sends_image_prompt_and_user_copy_separately(
     )
 
     assert captured_json["userPrompt"] == (
-        "광고 유형: 정사각형 피드\n\n"
-        "이미지 요청:\n따뜻한 배경으로"
+        "광고 유형: 정사각형 피드\n\n" "이미지 요청:\n따뜻한 배경으로"
     )
     assert captured_json["userCopy"] == "헤드라인: 오늘만 할인"
 
@@ -293,6 +287,37 @@ def test_request_backend_returns_copy_metadata(monkeypatch: pytest.MonkeyPatch) 
     assert result.copy == copy_payload
 
 
+def test_request_backend_returns_logo_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    logo_payload = {"used": True, "position": "top_right"}
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        return FakeResponse(
+            {
+                "imageDataUrl": "data:image/png;base64,cmVzdWx0",
+                "logo": logo_payload,
+            }
+        )
+
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    result = api_client.request_backend(
+        uploaded_file,
+        "logo metadata check",
+        "인스타그램",
+        "정사각형 피드",
+    )
+
+    assert result.image_bytes == b"result"
+    assert result.logo == logo_payload
+
+
 def test_request_auto_copy_posts_to_backend_copy_endpoint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -310,9 +335,7 @@ def test_request_auto_copy_posts_to_backend_copy_endpoint(
         headers: dict[str, str],
         timeout: int,
     ) -> FakeResponse:
-        captured_request.update(
-            {"url": url, "json": json, "headers": headers, "timeout": timeout}
-        )
+        captured_request.update({"url": url, "json": json, "headers": headers, "timeout": timeout})
         return FakeResponse(copy_payload)
 
     monkeypatch.setattr(copy_client, "BACKEND_URL", "https://backend.example")
@@ -332,10 +355,7 @@ def test_request_auto_copy_posts_to_backend_copy_endpoint(
         "json": {
             "presetId": "instagram",
             "detailType": "square_feed",
-            "userPrompt": (
-                "광고 유형: 정사각형 피드\n\n"
-                "이미지 요청:\n따뜻한 카페 배경으로"
-            ),
+            "userPrompt": ("광고 유형: 정사각형 피드\n\n" "이미지 요청:\n따뜻한 카페 배경으로"),
             "copyMode": "rewrite",
         },
         "headers": {"Authorization": "Bearer fake-jwt-token"},

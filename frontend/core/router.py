@@ -38,4 +38,3 @@ def get_current_page() -> str:
 
 def navigate_to(page_name: str) -> None:
     st.query_params["page"] = normalize_page_name(page_name)
-

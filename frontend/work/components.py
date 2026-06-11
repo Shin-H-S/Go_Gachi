@@ -18,13 +18,9 @@ def render_channel_tabs(selected_label: str) -> None:
             selected_class = " is-active" if label == selected_label else ""
             if asset_path:
                 channel_asset_src = bytes_to_data_url(asset_path.read_bytes())
-                media_content = (
-                    f'<img src="{channel_asset_src}" alt="{escape(label)} logo" />'
-                )
+                media_content = f'<img src="{channel_asset_src}" alt="{escape(label)} logo" />'
             else:
-                media_content = (
-                    f'<span class="channel-card-placeholder">{escape(label)}</span>'
-                )
+                media_content = f'<span class="channel-card-placeholder">{escape(label)}</span>'
             st.markdown(
                 f"""
                 <div class="channel-card-media{selected_class}">
