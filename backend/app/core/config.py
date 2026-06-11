@@ -11,6 +11,11 @@ CONFIG_DIR = ROOT_DIR / "config"
 ALLOW_SQLITE_DATABASE_ENV = "ALLOW_SQLITE_DATABASE"
 
 
+def _parse_csv(value: str, *, default: list[str]) -> list[str]:
+    items = [item.strip() for item in value.split(",") if item.strip()]
+    return items or default
+
+
 def _load_env_file(env_path: Path) -> None:
     """단일 .env 파일을 현재 프로세스 환경변수로 적재한다."""
     if not env_path.exists():
@@ -60,7 +65,7 @@ class Settings(BaseModel):
     """앱 전체에서 참조하는 런타임 설정값."""
 
     app_env: str = "local"
-    port: int = 8080
+    port: int = 8000
     image_provider: Literal["mock", "openai"] = "mock"
     openai_api_key: str = ""
     openai_admin_key: str = ""
@@ -97,6 +102,7 @@ class Settings(BaseModel):
     r2_endpoint_url: str = ""
     r2_bucket_name: str = ""
     r2_public_url: str = ""
+    cors_origins: list[str] = ["*"]
 
 
 @lru_cache
@@ -119,7 +125,7 @@ def get_settings() -> Settings:
     database_url = _database_url_from_env()
 
     return Settings(
-        port=int(os.getenv("PORT", "8080")),
+        port=int(os.getenv("PORT", "8000")),
         app_env=os.getenv("APP_ENV", "local"),
         image_provider=provider,
         openai_api_key=api_key,
@@ -145,6 +151,7 @@ def get_settings() -> Settings:
         r2_endpoint_url=os.getenv("R2_ENDPOINT_URL", ""),
         r2_bucket_name=os.getenv("R2_BUCKET_NAME", ""),
         r2_public_url=os.getenv("R2_PUBLIC_URL", ""),
+        cors_origins=_parse_csv(os.getenv("CORS_ORIGINS", "*"), default=["*"]),
     )
 
 

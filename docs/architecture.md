@@ -10,7 +10,7 @@
    OpenAI 호출 직전에는 업로드 이미지를 EXIF 보정 후 PNG/RGB로 정규화해 특이한 이미지 모드로 인한 API 거절을 줄입니다.
 6. 백엔드는 생성 결과를 선택 상세 크기의 PNG로 후처리해 `imageDataUrl`로 반환하고, 프론트엔드는 결과 미리보기와 다운로드를 제공합니다. 최종 후처리는 기본 `cover`이며, API에서 `resizeMode=contain`을 보내면 원본 전체를 보존하고 남는 영역을 흐림 배경으로 채웁니다.
 
-프론트엔드는 기본적으로 `BACKEND_URL=http://127.0.0.1:8080`을 사용해 같은 서버의
+프론트엔드는 기본적으로 `BACKEND_URL=http://127.0.0.1:8000`을 사용해 같은 서버의
 FastAPI를 호출합니다. 백엔드 연결 실패 시에는 목업으로 대체하지 않고 에러를 표시합니다.
 화면 확인용 목업은 `FRONTEND_USE_MOCK=true`를 명시한 경우에만 사용합니다.
 프론트 프리셋은 `FRONTEND_CONFIG_SOURCE=auto` 기준으로 백엔드 `/api/config`를 먼저
