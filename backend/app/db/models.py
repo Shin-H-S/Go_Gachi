@@ -82,6 +82,7 @@ class Generation(Base):
     instruction_hash: Mapped[str] = mapped_column(String(64), index=True)
     prompt_version: Mapped[str] = mapped_column(String(80), index=True)
     model: Mapped[str] = mapped_column(String(120), index=True)
+    text_model: Mapped[str | None] = mapped_column(String(120), nullable=True)
     # 원본/결과 이미지의 디스크 경로. 캐시 hit 검증 시 실제 파일 존재 여부도 확인.
     original_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     output_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -141,7 +142,7 @@ class ApiUsage(Base):
     model: Mapped[str] = mapped_column(String(120), index=True)
     operation: Mapped[str] = mapped_column(String(80), default="image_edit")
     # 추정 비용(USD). 캐시 hit이면 0.0.
-    estimated_cost: Mapped[float] = mapped_column(Float, default=0.0)
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     # 이번 호출이 캐시 hit이었나(True면 실제 OpenAI 호출 없음).
     cached: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

@@ -10,7 +10,7 @@ async def record_usage(
     request_id: str,
     model: str,
     operation: str,
-    estimated_cost: float,
+    cost_usd: float,
     cached: bool,
 ) -> ApiUsage:
     usage = ApiUsage(
@@ -18,7 +18,7 @@ async def record_usage(
         provider="openai",
         model=model,
         operation=operation,
-        estimated_cost=estimated_cost,
+        cost_usd=cost_usd,
         cached=cached,
     )
     db.add(usage)
@@ -27,13 +27,14 @@ async def record_usage(
 
 
 async def usage_summary(db: AsyncSession) -> dict[str, float | int]:
-    total_result = await db.execute(select(func.coalesce(func.sum(ApiUsage.estimated_cost), 0.0)))
+    total_result = await db.execute(select(func.coalesce(func.sum(ApiUsage.cost_usd), 0.0)))
     generation_result = await db.execute(select(func.count()).select_from(Generation))
     cached_result = await db.execute(
         select(func.count()).select_from(ApiUsage).where(ApiUsage.cached.is_(True))
     )
+    total_cost = float(total_result.scalar_one())
     return {
-        "total_estimated_cost": float(total_result.scalar_one()),
+        "total_cost_usd": total_cost,
         "generation_count": int(generation_result.scalar_one()),
         "cached_count": int(cached_result.scalar_one()),
     }

@@ -89,6 +89,7 @@ async def cached_response(
     settings: Settings,
     user_id: str | None,
     user_copy: str | None,
+    text_model: str | None,
     has_logo: bool,
     logo_position: str | None,
     logo_image_hash: str | None,
@@ -121,6 +122,7 @@ async def cached_response(
             output_path=snapshot["output_path"],
             image_url=None,
             prompt=snapshot["prompt"],
+            text_model=text_model,
             user_id=user_id,
             user_copy=user_copy,
             has_logo=has_logo,
@@ -133,7 +135,7 @@ async def cached_response(
             request_id=generation_id,
             model=snapshot["model"],
             operation="image_edit",
-            estimated_cost=0.0,
+            cost_usd=0.0,
             cached=True,
         )
     return {

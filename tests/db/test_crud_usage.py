@@ -38,7 +38,7 @@ async def test_create_cached_generation_and_usage_summary(
         request_id="req-1",
         model="gpt-image-2",
         operation="image_edit",
-        estimated_cost=0.01,
+        cost_usd=0.01,
         cached=False,
     )
     cached_generation = await crud.create_cached_generation(
@@ -59,7 +59,7 @@ async def test_create_cached_generation_and_usage_summary(
         request_id="req-2",
         model="gpt-image-2",
         operation="image_edit",
-        estimated_cost=0.0,
+        cost_usd=0.0,
         cached=True,
     )
     await db_session.commit()
@@ -69,6 +69,6 @@ async def test_create_cached_generation_and_usage_summary(
     assert cached_generation.status == "cached"
     assert cached_generation.output_path == str(output_file)
     assert cached_generation.instruction_hash == instr_hash
-    assert summary["total_estimated_cost"] == 0.01
+    assert summary["total_cost_usd"] == 0.01
     assert summary["generation_count"] == 2
     assert summary["cached_count"] == 1
