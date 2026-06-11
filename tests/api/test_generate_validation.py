@@ -51,7 +51,9 @@ def test_generate_rejects_invalid_image_data_url() -> None:
     )
 
     assert response.status_code == 400
-    assert "이미지" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert detail["code"] == "INVALID_IMAGE_INPUT"
+    assert "이미지" in detail["message"]
 
 
 def test_generate_rejects_unknown_preset_id() -> None:
@@ -65,7 +67,9 @@ def test_generate_rejects_unknown_preset_id() -> None:
     )
 
     assert response.status_code == 400
-    assert "presetId" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert detail["code"] == "UNSUPPORTED_PRESET_ID"
+    assert "presetId" in detail["message"]
 
 
 def test_generate_rejects_unknown_detail_type() -> None:
@@ -80,7 +84,9 @@ def test_generate_rejects_unknown_detail_type() -> None:
     )
 
     assert response.status_code == 400
-    assert "detailType" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert detail["code"] == "UNSUPPORTED_DETAIL_TYPE"
+    assert "detailType" in detail["message"]
 
 
 def test_generate_rejects_incomplete_target_size() -> None:

@@ -13,6 +13,7 @@ from backend.app.api.internal import router as internal_router
 from backend.app.api.middlewares import AccessLogMiddleware, RequestIDMiddleware
 from backend.app.core.auth import AuthUser, get_optional_user
 from backend.app.core.config import get_settings
+from backend.app.core.errors import ServiceError, error_detail
 from backend.app.core.logging_config import setup_logging
 from backend.app.core.logging_utils import short_id
 from backend.app.core.presets import default_preset, get_presets
@@ -31,6 +32,14 @@ logger = logging.getLogger(__name__)
 IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
     "이미지 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
 )
+COPY_GENERATION_UNAVAILABLE_MESSAGE = (
+    "광고 문구 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
+)
+
+
+def _service_http_error(exc: ServiceError) -> HTTPException:
+    """서비스 계층 에러를 프론트가 분기 가능한 HTTP 에러로 변환한다."""
+    return HTTPException(status_code=exc.status_code, detail=exc.to_detail())
 
 
 @asynccontextmanager
@@ -128,7 +137,10 @@ async def generate_copy(
     if preset is None:
         raise HTTPException(
             status_code=400,
-            detail=f"지원하지 않는 presetId입니다: {request.preset_id}",
+            detail=error_detail(
+                "UNSUPPORTED_PRESET_ID",
+                f"지원하지 않는 presetId입니다: {request.preset_id}",
+            ),
         )
     detail = (
         preset.find_detail(request.detail_type) if request.detail_type else preset.default_detail()
@@ -136,7 +148,10 @@ async def generate_copy(
     if detail is None:
         raise HTTPException(
             status_code=400,
-            detail=f"지원하지 않는 detailType입니다: {request.detail_type}",
+            detail=error_detail(
+                "UNSUPPORTED_DETAIL_TYPE",
+                f"지원하지 않는 detailType입니다: {request.detail_type}",
+            ),
         )
     logger.info(
         "auto copy requested preset=%s detail=%s mode=%s user_id=%s",
@@ -154,9 +169,15 @@ async def generate_copy(
             user_copy="",
             copy_mode=request.copy_mode,
         )
+    except ServiceError as exc:
+        logger.exception("auto copy generation failed")
+        raise _service_http_error(exc) from exc
     except RuntimeError as exc:
         logger.exception("auto copy generation failed")
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=503,
+            detail=error_detail("COPY_GENERATION_FAILED", COPY_GENERATION_UNAVAILABLE_MESSAGE),
+        ) from exc
     return CopyResponse(**ad_copy.model_dump())
 
 
@@ -173,7 +194,10 @@ async def generate(
         if preset is None:
             raise HTTPException(
                 status_code=400,
-                detail=f"지원하지 않는 presetId입니다: {request.preset_id}",
+                detail=error_detail(
+                    "UNSUPPORTED_PRESET_ID",
+                    f"지원하지 않는 presetId입니다: {request.preset_id}",
+                ),
             )
     else:
         preset = default_preset()
@@ -184,7 +208,10 @@ async def generate(
     if detail is None:
         raise HTTPException(
             status_code=400,
-            detail=f"지원하지 않는 detailType입니다: {request.detail_type}",
+            detail=error_detail(
+                "UNSUPPORTED_DETAIL_TYPE",
+                f"지원하지 않는 detailType입니다: {request.detail_type}",
+            ),
         )
 
     logger.info(
@@ -209,9 +236,15 @@ async def generate(
                 user_copy=copy_source,
                 copy_mode=request.copy_mode,
             )
+        except ServiceError as exc:
+            logger.exception("copy generation failed")
+            raise _service_http_error(exc) from exc
         except RuntimeError as exc:
             logger.exception("copy generation failed")
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=503,
+                detail=error_detail("COPY_GENERATION_FAILED", COPY_GENERATION_UNAVAILABLE_MESSAGE),
+            ) from exc
         copy_info = CopyResponse(**ad_copy.model_dump())
 
     try:
@@ -234,13 +267,19 @@ async def generate(
         )
     except ValueError as exc:
         # 사용자 입력 문제는 프론트가 처리할 수 있게 400으로 돌려준다.
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400,
+            detail=error_detail("INVALID_IMAGE_INPUT", str(exc)),
+        ) from exc
+    except ServiceError as exc:
+        logger.exception("image generation failed code=%s", exc.code)
+        raise _service_http_error(exc) from exc
     except RuntimeError as exc:
         # 서버 설정/외부 이미지 API 문제는 내부 로그에만 원인을 남기고 사용자 메시지는 일반화한다.
         logger.exception("image generation failed")
         raise HTTPException(
             status_code=503,
-            detail=IMAGE_GENERATION_UNAVAILABLE_MESSAGE,
+            detail=error_detail("IMAGE_GENERATION_FAILED", IMAGE_GENERATION_UNAVAILABLE_MESSAGE),
         ) from exc
 
     logger.debug(
