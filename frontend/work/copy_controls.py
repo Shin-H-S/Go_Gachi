@@ -64,6 +64,11 @@ def render_copy_controls(
         value=True,
         key="ad_copy_enabled",
     )
+
+    if not ad_copy_enabled:
+        st.session_state.pop("auto_copy_status", None)
+        return "", False, "preserve"
+
     raw_prompt = st.text_area(
         "광고 문구",
         placeholder=(
@@ -71,24 +76,22 @@ def render_copy_controls(
             "비워두면 자동 문구 생성을 요청합니다."
         ),
         height=150,
-        disabled=not ad_copy_enabled,
         key="ad_copy_prompt",
         help="비워두면 이미지 생성 시 자동 문구 생성을 요청합니다.",
         label_visibility="collapsed",
     )
-    if ad_copy_enabled:
-        st.button(
-            "광고 문구 자동 생성",
-            key="auto_copy_generate",
-            on_click=_fill_auto_copy,
-            args=(format_label, detail_label, image_prompt),
-            use_container_width=True,
-        )
-        auto_copy_status = st.session_state.pop("auto_copy_status", None)
-        if auto_copy_status:
-            st.info(auto_copy_status)
+    st.button(
+        "광고 문구 자동 생성",
+        key="auto_copy_generate",
+        on_click=_fill_auto_copy,
+        args=(format_label, detail_label, image_prompt),
+        use_container_width=True,
+    )
+    auto_copy_status = st.session_state.pop("auto_copy_status", None)
+    if auto_copy_status:
+        st.info(auto_copy_status)
 
-    prompt = raw_prompt if ad_copy_enabled else ""
+    prompt = raw_prompt
     copy_mode_labels = [label for label, _mode in COPY_MODE_OPTIONS]
     copy_mode_by_label = dict(COPY_MODE_OPTIONS)
     copy_mode_label = st.radio(
@@ -97,10 +100,7 @@ def render_copy_controls(
         index=0,
         horizontal=False,
         key="copy_mode_label",
-        disabled=not ad_copy_enabled,
     )
     copy_mode = copy_mode_by_label.get(copy_mode_label, "preserve")
-    if not ad_copy_enabled:
-        copy_mode = "preserve"
     return prompt, ad_copy_enabled, copy_mode
 

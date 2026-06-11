@@ -45,7 +45,9 @@ def _handle_login_submit() -> str:
         return str(exc)
 
     save_auth_session(st.session_state, auth_session)
-    navigate_to("work")
+    redirect_page = st.session_state.get("auth_redirect_page") or "work"
+    st.session_state["auth_redirect_page"] = ""
+    navigate_to(redirect_page)
     st.rerun()
     return ""
 
