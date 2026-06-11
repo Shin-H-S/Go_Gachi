@@ -194,3 +194,4 @@ docker-compose.override.yml
 
 # 로컬 테스트용 임시 파일
 /tmp/
+.tmp/

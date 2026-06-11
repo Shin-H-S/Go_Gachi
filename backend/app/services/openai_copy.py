@@ -3,6 +3,7 @@
 import json
 import logging
 import time
+from dataclasses import dataclass, field
 
 import httpx
 from pydantic import ValidationError
@@ -14,6 +15,13 @@ from backend.app.schemas import CopyMode
 from backend.app.services.copywriting import AdCopy, build_ad_copy
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class CopyGenerationResult:
+    copy: AdCopy
+    usage: dict[str, object] = field(default_factory=dict)
+    used_openai: bool = False
 
 
 COPY_JSON_SCHEMA = {
@@ -61,6 +69,14 @@ def _extract_output_text(payload: object) -> str:
     if not texts:
         raise ServiceError("COPY_API_RESULT_EMPTY", "문구 생성 API 응답에 출력 텍스트가 없습니다.")
     return "\n".join(texts)
+
+
+def _extract_usage(payload: object) -> dict[str, object]:
+    """Responses API 응답에서 token usage를 꺼낸다."""
+    if not isinstance(payload, dict):
+        return {}
+    usage = payload.get("usage")
+    return usage if isinstance(usage, dict) else {}
 
 
 def _parse_copy_json(text: str, copy_mode: CopyMode) -> AdCopy:
@@ -137,7 +153,7 @@ async def call_openai_copy(
     user_prompt: str,
     user_copy: str,
     copy_mode: CopyMode,
-) -> AdCopy:
+) -> CopyGenerationResult:
     """Responses API로 광고 문구를 생성하고 AdCopy로 반환한다."""
     start = time.perf_counter()
     try:
@@ -221,14 +237,22 @@ async def call_openai_copy(
         )
         raise ServiceError("COPY_API_REJECTED", "문구 생성 요청이 외부 API에서 거절되었습니다.")
 
+    usage = _extract_usage(payload)
     logger.info(
-        "OpenAI copy generation finished status=%s model=%s took=%.1fms openai_request_id=%s",
+        "OpenAI copy generation finished status=%s model=%s took=%.1fms "
+        "openai_request_id=%s input_tokens=%s output_tokens=%s",
         response.status_code,
         settings.openai_text_model,
         elapsed_ms,
         openai_request_id or "-",
+        usage.get("input_tokens", "-"),
+        usage.get("output_tokens", "-"),
     )
-    return _parse_copy_json(_extract_output_text(payload), copy_mode)
+    return CopyGenerationResult(
+        copy=_parse_copy_json(_extract_output_text(payload), copy_mode),
+        usage=usage,
+        used_openai=True,
+    )
 
 
 async def generate_ad_copy(
@@ -239,15 +263,15 @@ async def generate_ad_copy(
     user_prompt: str,
     user_copy: str,
     copy_mode: CopyMode,
-) -> AdCopy:
+) -> CopyGenerationResult:
     """실행 환경에 맞게 AI 문구 생성 또는 로컬 fallback을 수행한다."""
     if settings.image_provider != "openai" or not settings.openai_api_key:
         # mock/로컬 키 없음 상태에서는 userPrompt를 문구로 오해하지 않도록 userCopy만 사용한다.
-        return build_ad_copy(user_copy, copy_mode)
+        return CopyGenerationResult(copy=build_ad_copy(user_copy, copy_mode))
 
     if copy_mode == "preserve" and user_copy.strip():
         # 그대로 사용은 모델 호출보다 사용자 입력 보존이 더 중요하다.
-        return build_ad_copy(user_copy, copy_mode)
+        return CopyGenerationResult(copy=build_ad_copy(user_copy, copy_mode))
 
     return await call_openai_copy(
         settings=settings,

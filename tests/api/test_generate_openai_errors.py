@@ -142,7 +142,7 @@ def test_generate_returns_503_when_openai_result_base64_is_invalid(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
-        return "not-valid-base64!"
+        return "not-valid-base64!", {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
@@ -162,7 +162,7 @@ def test_generate_returns_503_when_openai_result_is_not_image(
     fake_b64 = base64.b64encode(b"not-an-image").decode("ascii")
 
     async def _fake_call(**kwargs):  # noqa: ANN003, ANN202
-        return fake_b64
+        return fake_b64, {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)

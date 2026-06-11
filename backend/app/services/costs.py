@@ -1,11 +1,57 @@
-"""OpenAI 실제 비용 조회 어댑터."""
+"""OpenAI 실제 비용 조회 어댑터 + 호출별 토큰 기반 비용 계산."""
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Final
 
 import httpx
 
 from backend.app.core.config import Settings
+
+# 2026-06 기준 OpenAI 단가(USD per 1M token).
+# 모델·티어 단가가 바뀌면 여기만 갱신한다.
+_IMAGE_INPUT_PER_TOKEN: Final[float] = 8.0 / 1_000_000
+_IMAGE_OUTPUT_PER_TOKEN: Final[float] = 30.0 / 1_000_000
+_TEXT_COST_BY_MODEL: Final[dict[str, tuple[float, float]]] = {
+    "gpt-5": (1.25 / 1_000_000, 10.0 / 1_000_000),
+    "gpt-5.4": (2.5 / 1_000_000, 15.0 / 1_000_000),
+    "gpt-5.4-mini": (0.75 / 1_000_000, 4.5 / 1_000_000),
+    "gpt-5.5": (5.0 / 1_000_000, 30.0 / 1_000_000),
+}
+
+# 응답에 usage가 없을 때(옛 모델 등) 사용하는 quality별 보수적 추정 단가.
+_IMAGE_COST_BY_QUALITY: Final[dict[str, float]] = {
+    "low": 0.011,
+    "medium": 0.042,
+    "high": 0.167,
+}
+
+
+def calculate_image_cost(usage: dict[str, object] | None, *, quality: str = "medium") -> float:
+    """OpenAI 이미지 응답의 usage(토큰 수)로 실제 호출 비용을 계산한다.
+
+    usage가 비어 있으면 quality 기반 추정 단가로 폴백한다(옛 모델·테스트 호환).
+    """
+    if not usage:
+        return _IMAGE_COST_BY_QUALITY.get(quality, _IMAGE_COST_BY_QUALITY["medium"])
+
+    input_tokens = int(usage.get("input_tokens", 0) or 0)
+    output_tokens = int(usage.get("output_tokens", 0) or 0)
+    cost = input_tokens * _IMAGE_INPUT_PER_TOKEN + output_tokens * _IMAGE_OUTPUT_PER_TOKEN
+    if cost <= 0:
+        return _IMAGE_COST_BY_QUALITY.get(quality, _IMAGE_COST_BY_QUALITY["medium"])
+    return round(cost, 6)
+
+
+def calculate_text_cost(usage: dict[str, object] | None, *, model: str = "gpt-5") -> float:
+    """OpenAI 텍스트(Responses API) usage로 호출 비용을 계산한다."""
+    if not usage:
+        return 0.0
+    input_tokens = int(usage.get("input_tokens", 0) or 0)
+    output_tokens = int(usage.get("output_tokens", 0) or 0)
+    input_rate, output_rate = _TEXT_COST_BY_MODEL.get(model, _TEXT_COST_BY_MODEL["gpt-5"])
+    cost = input_tokens * input_rate + output_tokens * output_rate
+    return round(cost, 6)
 
 
 @dataclass(frozen=True)
