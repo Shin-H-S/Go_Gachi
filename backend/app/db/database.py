@@ -1,0 +1,86 @@
+"""비동기 DB 연결·세션 인프라."""
+
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
+
+from backend.app.core.config import get_settings
+
+
+class Base(DeclarativeBase):
+    """모든 ORM 모델의 베이스. Alembic이 이 메타데이터로 마이그레이션을 만든다."""
+
+
+def _async_database_url(database_url: str) -> str:
+    """동기 DB URL이 들어와도 SQLAlchemy async 드라이버 URL로 보정한다."""
+    if database_url.startswith("sqlite+aiosqlite"):
+        return database_url
+    if database_url.startswith("sqlite"):
+        return database_url.replace("sqlite", "sqlite+aiosqlite", 1)
+    if database_url.startswith("postgresql+asyncpg"):
+        return database_url
+    if database_url.startswith("postgresql"):
+        return database_url.replace("postgresql", "postgresql+asyncpg", 1)
+    return database_url
+
+
+def _connect_args(database_url: str) -> dict[str, object]:
+    """DB 종류별 연결 옵션."""
+    if database_url.startswith("sqlite"):
+        return {"check_same_thread": False}
+    # Postgres(Supabase Transaction pooler, 포트 6543)는 트랜잭션마다 서버 연결을
+    # 갈아끼우므로 asyncpg의 prepared statement 캐시를 끈다. 켜두면 다른 연결에
+    # 등록된 statement를 참조해 "prepared statement does not exist" 에러가 난다.
+    return {"statement_cache_size": 0, "prepared_statement_cache_size": 0}
+
+
+# 엔진은 앱 전체에서 1개만 재사용. pool_pre_ping=True로 죽은 연결을 자동 폐기한다.
+_settings = get_settings()
+ASYNC_DATABASE_URL = _async_database_url(_settings.database_url)
+engine = create_async_engine(
+    ASYNC_DATABASE_URL,
+    connect_args=_connect_args(ASYNC_DATABASE_URL),
+    pool_pre_ping=True,
+)
+
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+)
+
+
+async def async_init_db() -> None:
+    """테스트·임시 개발 DB에 테이블을 직접 만든다.
+
+    운영/공유 DB 스키마는 이 함수를 쓰지 않고 `alembic upgrade head`로 관리한다.
+    """
+    # 모델 import를 함수 안에서: database를 import할 때 models를 끌고 오면 순환참조 위험.
+    from backend.app.db import models  # noqa: F401
+
+    # 테스트 SQLite처럼 파일 DB를 쓸 때 폴더가 없으면 먼저 만들어둔다.
+    settings = get_settings()
+    settings.data_dir.mkdir(parents=True, exist_ok=True)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+@asynccontextmanager
+async def async_session_scope() -> AsyncIterator[AsyncSession]:
+    """`async with` 블록 단위로 commit/rollback/close를 자동 처리한다.
+
+    예외 발생 시 rollback 후 그대로 재발생한다.
+    """
+    db = AsyncSessionLocal()
+    try:
+        yield db
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    finally:
+        await db.close()
