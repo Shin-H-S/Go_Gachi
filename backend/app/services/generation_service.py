@@ -11,6 +11,7 @@ from backend.app.core.prompts import PROMPT_VERSION, build_prompt
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.services.copywriting import AdCopy
+from backend.app.services.costs import calculate_image_cost
 from backend.app.services.generation_cache import cached_response, find_cache_snapshot
 from backend.app.services.generation_copy import cache_instruction, rendered_copy_text
 from backend.app.services.generation_files import new_generation_id
@@ -67,6 +68,7 @@ async def edit_image(
     )
     clean_user_copy: str | None = (user_copy or "").strip() or None
     stored_user_copy: str | None = rendered_copy_text(text_copy)
+    text_model: str | None = settings.openai_text_model if text_copy is not None else None
     logo_image_hash: str | None = (
         crud.image_sha256(logo_uploaded.content) if logo_uploaded else None
     )
@@ -122,6 +124,7 @@ async def edit_image(
         settings=settings,
         user_id=user_id,
         user_copy=stored_user_copy,
+        text_model=text_model,
         has_logo=has_logo,
         logo_position=stored_logo_position,
         logo_image_hash=logo_image_hash,
@@ -158,6 +161,7 @@ async def edit_image(
             model=model,
             original_path=paths.original_path,
             prompt=prompt,
+            text_model=text_model,
             user_id=user_id,
             user_copy=stored_user_copy,
             has_logo=has_logo,
@@ -222,7 +226,7 @@ async def edit_image(
             selected_detail.api_size,
             1 if openai_logo_uploaded else 0,
         )
-        b64_json = await call_openai_edit(
+        b64_json, image_usage = await call_openai_edit(
             uploaded=openai_uploaded,
             reference_images=[openai_logo_uploaded] if openai_logo_uploaded else None,
             api_size=selected_detail.api_size,
@@ -252,7 +256,7 @@ async def edit_image(
                 request_id=generation_id,
                 model=model,
                 operation="image_edit",
-                estimated_cost=0.0,
+                cost_usd=0.0,
                 cached=False,
             )
         if isinstance(exc, RuntimeError):
@@ -263,6 +267,8 @@ async def edit_image(
     # 응답에는 외부 접근 URL(local: /outputs/..., r2: public URL)을 함께 내려준다.
     # DB에는 환경별 절대 URL을 박지 않고 path/key만 저장한다.
     image_url = output_url(paths.output_path)
+    # usage가 비어 있으면(테스트·옛 모델) quality 기반 보수적 추정 단가로 폴백한다.
+    actual_cost = calculate_image_cost(image_usage, quality=settings.openai_image_quality)
     async with async_session_scope() as db:
         await crud.mark_generation_success(
             db,
@@ -275,7 +281,7 @@ async def edit_image(
             request_id=generation_id,
             model=model,
             operation="image_edit",
-            estimated_cost=settings.openai_image_edit_estimated_cost_usd,
+            cost_usd=actual_cost,
             cached=False,
         )
     logger.info(

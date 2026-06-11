@@ -38,8 +38,11 @@ async def call_openai_edit(
     api_size: str,
     prompt: str,
     settings: Settings,
-) -> str:
-    """OpenAI Images Edit API를 호출하고 결과 base64 문자열을 돌려준다."""
+) -> tuple[str, dict[str, object]]:
+    """OpenAI Images Edit API를 호출하고 (결과 base64, usage dict)을 돌려준다.
+
+    usage는 토큰 기반 비용 계산용. 응답에 없으면 빈 dict.
+    """
     start = time.perf_counter()
     images = [uploaded, *(reference_images or [])]
     files: dict[str, tuple[str, bytes, str]] | list[tuple[str, tuple[str, bytes, str]]]
@@ -119,13 +122,18 @@ async def call_openai_edit(
         )
         raise RuntimeError(message)
 
+    usage = payload.get("usage") if isinstance(payload, dict) else None
+    if not isinstance(usage, dict):
+        usage = {}
     logger.info(
         "OpenAI image edit finished status=%s model=%s image_count=%s took=%.1fms "
-        "openai_request_id=%s",
+        "openai_request_id=%s input_tokens=%s output_tokens=%s",
         response.status_code,
         settings.openai_image_model,
         len(images),
         elapsed_ms,
         openai_request_id or "-",
+        usage.get("input_tokens", "-"),
+        usage.get("output_tokens", "-"),
     )
-    return _extract_b64_json(payload)
+    return _extract_b64_json(payload), usage

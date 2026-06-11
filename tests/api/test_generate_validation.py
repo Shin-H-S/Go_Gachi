@@ -223,9 +223,9 @@ def test_generate_normalizes_uploaded_image_before_openai(
     )
     captured: dict[str, image_edit.UploadedImage] = {}
 
-    async def _fake_call(**kwargs: object) -> str:
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
         captured["uploaded"] = kwargs["uploaded"]
-        return TINY_PNG_B64
+        return TINY_PNG_B64, {}
 
     from backend.app.services import generation_service
     from tests.api.helpers import force_openai_mode
