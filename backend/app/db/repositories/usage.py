@@ -1,7 +1,11 @@
+import logging
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models import ApiUsage, Generation
+
+logger = logging.getLogger(__name__)
 
 
 async def record_usage(
@@ -15,6 +19,13 @@ async def record_usage(
     cached: bool,
 ) -> ApiUsage:
     cost_usd = round(image_cost_usd + text_cost_usd, 6)
+    logger.info(
+        "usage cost request_id=%s image=%.6f text=%.6f total=%.6f",
+        request_id,
+        image_cost_usd,
+        text_cost_usd,
+        cost_usd,
+    )
     usage = ApiUsage(
         request_id=request_id,
         provider="openai",
