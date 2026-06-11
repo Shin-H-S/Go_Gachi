@@ -182,6 +182,9 @@ pnpm-debug.log*
 /docs/prompt-references/
 /docs/superpowers/
 
+# Prompt experiment outputs: generated images and run artifacts stay local.
+/experiments/runs/
+
 # Jupyter Notebook 캐시
 .ipynb_checkpoints
 
