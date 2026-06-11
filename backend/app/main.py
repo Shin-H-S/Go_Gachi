@@ -12,10 +12,12 @@ from backend.app.api.auth import router as auth_router
 from backend.app.api.internal import router as internal_router
 from backend.app.api.middlewares import AccessLogMiddleware, RequestIDMiddleware
 from backend.app.core.auth import AuthUser, get_optional_user
-from backend.app.core.config import get_settings
+from backend.app.core.config import Settings, get_settings
 from backend.app.core.logging_config import setup_logging
 from backend.app.core.logging_utils import short_id
 from backend.app.core.presets import default_preset, get_presets
+from backend.app.db import crud
+from backend.app.db.database import async_session_scope
 from backend.app.schemas import (
     ConfigResponse,
     CopyGenerateRequest,
@@ -24,6 +26,8 @@ from backend.app.schemas import (
     GenerateResponse,
     LogoResponse,
 )
+from backend.app.services.costs import calculate_text_cost
+from backend.app.services.generation_files import new_generation_id
 from backend.app.services.image_edit import edit_image
 from backend.app.services.openai_copy import generate_ad_copy
 
@@ -31,6 +35,22 @@ logger = logging.getLogger(__name__)
 IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
     "이미지 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
 )
+
+
+async def _record_text_usage(
+    *,
+    settings: Settings,
+    usage: dict[str, object],
+) -> None:
+    async with async_session_scope() as db:
+        await crud.record_usage(
+            db,
+            request_id=new_generation_id(),
+            model=settings.openai_text_model,
+            operation="text_generation",
+            cost_usd=calculate_text_cost(usage, model=settings.openai_text_model),
+            cached=False,
+        )
 
 
 @asynccontextmanager
@@ -146,7 +166,7 @@ async def generate_copy(
         short_id(user.id) if user else "-",
     )
     try:
-        ad_copy = await generate_ad_copy(
+        copy_result = await generate_ad_copy(
             settings=settings,
             preset=preset,
             detail=detail,
@@ -157,7 +177,9 @@ async def generate_copy(
     except RuntimeError as exc:
         logger.exception("auto copy generation failed")
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return CopyResponse(**ad_copy.model_dump())
+    if copy_result.used_openai:
+        await _record_text_usage(settings=settings, usage=copy_result.usage)
+    return CopyResponse(**copy_result.copy.model_dump())
 
 
 @app.post("/api/generate", response_model=GenerateResponse, response_model_by_alias=True)
@@ -201,7 +223,7 @@ async def generate(
         # userCopy가 비어 있으면 텍스트 AI가 userPrompt/채널 맥락을 보고 광고 문구를 만든다.
         copy_source = request.user_copy or ""
         try:
-            ad_copy = await generate_ad_copy(
+            copy_result = await generate_ad_copy(
                 settings=settings,
                 preset=preset,
                 detail=detail,
@@ -212,6 +234,9 @@ async def generate(
         except RuntimeError as exc:
             logger.exception("copy generation failed")
             raise HTTPException(status_code=503, detail=str(exc)) from exc
+        if copy_result.used_openai:
+            await _record_text_usage(settings=settings, usage=copy_result.usage)
+        ad_copy = copy_result.copy
         copy_info = CopyResponse(**ad_copy.model_dump())
 
     try:
