@@ -21,6 +21,10 @@ def test_folder_view_helpers_build_titles_and_choices() -> None:
     assert mapping["Summer"] == 8
 
 
+def test_recent_view_title_is_labeled_as_all_work() -> None:
+    assert state.view_title(state.RECENT_VIEW, []) == "전체 작업"
+
+
 def test_filter_generations_matches_recent_all_uncategorized_and_folder_views() -> None:
     uncategorized = {"request_id": "none", "folder_id": None}
     spring = {"request_id": "spring", "folder_id": 7}

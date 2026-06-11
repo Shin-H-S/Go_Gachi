@@ -47,6 +47,13 @@ div[data-testid="stSegmentedControl"] button * {
     line-height: 1.2 !important;
 }
 
+.st-key-text_overlay_enabled label,
+.st-key-text_overlay_enabled label *,
+.st-key-text_overlay_enabled p {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+}
+
 div[data-testid="stRadio"] label,
 div[role="radiogroup"] label {
     border: 1px solid rgba(32, 39, 37, 0.12);

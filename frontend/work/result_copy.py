@@ -2,11 +2,7 @@ from html import escape
 
 import streamlit as st
 
-COPY_MODE_LABELS = {
-    "preserve": "그대로 사용",
-    "polish": "자연스럽게 다듬기",
-    "rewrite": "홍보 문구로 바꾸기",
-}
+from frontend.work.copy import copy_mode_label
 
 
 def _line(label: str, value: object) -> str:
@@ -25,8 +21,7 @@ def render_result_copy(copy: dict[str, object] | None) -> None:
     if not copy:
         return
 
-    mode = str(copy.get("copyMode") or "")
-    mode_label = COPY_MODE_LABELS.get(mode, mode or "문구")
+    mode_label = copy_mode_label(copy.get("copyMode"))
     lines = [
         _line("헤드라인", copy.get("headline")),
         _line("서브카피", copy.get("subcopy")),

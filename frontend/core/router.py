@@ -24,6 +24,7 @@ def init_session_state() -> None:
         "auth_user_email": "",
         "auth_error": "",
         "auth_notice": "",
+        "auth_redirect_page": "",
         "mypage_view": "recent",
         "mypage_show_folder_form": False,
     }

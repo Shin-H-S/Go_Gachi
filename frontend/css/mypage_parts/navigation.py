@@ -6,18 +6,7 @@ MYPAGE_NAVIGATION_CSS = """
     font-weight: 700;
 }
 
-.mypage-current-view {
-    margin-top: 24px;
-    padding: 12px;
-    border: 1px solid #dfe3df;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #27312f;
-    font-weight: 800;
-}
-
 .st-key-mypage-nav-recent button,
-.st-key-mypage-folder-all button,
 .st-key-mypage-folder-none button,
 .st-key-mypage-nav-uploads button,
 .st-key-mypage-nav-account button,
@@ -40,7 +29,10 @@ MYPAGE_NAVIGATION_CSS = """
 }
 
 .st-key-mypage-new-folder button {
-    justify-content: flex-start !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
     border: 0 !important;
     border-radius: 8px !important;
     background: #edf0ed !important;
@@ -48,11 +40,27 @@ MYPAGE_NAVIGATION_CSS = """
     font-weight: 800 !important;
 }
 
+.st-key-mypage-new-folder button div[data-testid="stMarkdownContainer"],
+.st-key-mypage-new-folder button p {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: max-content !important;
+    margin: 0 !important;
+    text-align: left !important;
+}
+
 .st-key-mypage-new-folder button::before {
     content: "+";
-    width: 18px; height: 18px; display: inline-grid; place-items: center;
-    margin-right: 8px; border-radius: 999px;
+    width: 18px;
+    height: 18px;
+    display: inline-grid;
+    place-items: center;
+    margin-right: 0;
+    flex: 0 0 auto;
+    border-radius: 999px;
     border: 1px solid rgba(24, 33, 31, 0.18);
-    background: #ffffff; color: #18211f; font: 900 14px/1 sans-serif;
+    background: #ffffff;
+    color: #18211f;
+    font: 900 14px/1 sans-serif;
 }
 """

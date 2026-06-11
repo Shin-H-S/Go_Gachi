@@ -36,8 +36,17 @@ def test_mypage_page_is_routed_and_split_into_focused_renderers() -> None:
     assert "닉네임의 마이페이지" in page_source
     assert "업로드한 메뉴 사진" in page_source
     assert "계정 설정" in page_source
+    assert "전체 작업" in page_source
     assert "새 폴더" in page_source
     assert "새로 생성하기" in page_source
+
+
+def test_mypage_login_prompt_sets_return_route_before_login() -> None:
+    page_source = FRONTEND_MYPAGE_PAGE.read_text(encoding="utf-8")
+
+    assert '"auth_redirect_page"' in page_source
+    assert '"mypage"' in page_source
+    assert 'navigate_to("login")' in page_source
 
 
 def test_app_does_not_import_mypage_until_route_is_selected() -> None:
@@ -108,19 +117,38 @@ def test_generation_download_uses_streamlit_download_button() -> None:
     assert "request_asset_bytes" in source
 
 
-def test_new_folder_action_lives_under_sidebar_all_button() -> None:
+def test_sidebar_removes_duplicate_all_folder_action() -> None:
     source = FRONTEND_MYPAGE_SIDEBAR.read_text(encoding="utf-8")
     compact_source = "".join(source.split())
     navigation_styles = STYLE_MYPAGE_NAVIGATION.read_text(encoding="utf-8")
 
-    all_button_index = source.index('key="mypage-folder-all"')
     new_folder_index = source.index('"새 폴더 만들기"')
+    account_index = source.index('"계정 설정"')
+    uncategorized_index = source.index('key="mypage-folder-none"')
 
-    assert all_button_index < new_folder_index
+    assert 'key="mypage-folder-all"' not in source
+    assert "FOLDER_ALL_VIEW" not in source
+    assert ".st-key-mypage-folder-all" not in navigation_styles
+    assert "mypage-current-view" not in source
+    assert ".mypage-current-view" not in navigation_styles
+    assert "view_title" not in source
+    assert uncategorized_index < account_index < new_folder_index
     assert "new_folder_col" not in source
     assert '="mypage_show_folder_form"' not in compact_source
     assert '=notst.session_state.get("mypage_show_folder_form",False,)' in compact_source
+    assert '"+ 새 폴더 만들기"' not in source
     assert ".st-key-mypage-new-folder button::before" in navigation_styles
+    assert "justify-content: center !important" in navigation_styles
+    assert "justify-content: flex-start !important" not in navigation_styles
+    new_folder_label_selector = (
+        '.st-key-mypage-new-folder button div[data-testid="stMarkdownContainer"]'
+    )
+    assert new_folder_label_selector in navigation_styles
+    assert ".st-key-mypage-new-folder button p" in navigation_styles
+    assert "flex: 0 0 auto !important" in navigation_styles
+    assert "width: auto !important" in navigation_styles
+    assert "gap: 8px !important" in navigation_styles
+    assert "margin-right: 0" in navigation_styles
     assert 'content: "+"' in navigation_styles
     assert (
         "render_sidebar(profile: dict, folders: list[dict], view: str, access_token: str)"

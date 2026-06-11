@@ -5,11 +5,11 @@ import streamlit as st
 from frontend.auth.session import clear_auth_session
 from frontend.core.router import navigate_to
 from frontend.mypage.components import render_generation_grid
-from frontend.mypage.pagination import page_status_text, paginate_items
+from frontend.mypage.pagination import page_count, page_status_text, paginate_items
 from frontend.mypage.state import filter_generations, format_date, profile_name
 from frontend.services.api_client import data_url_to_bytes, to_backend_asset_url
 
-GENERATION_PAGE_SIZE = 9
+GENERATION_PAGE_SIZE = 12
 UPLOAD_PAGE_SIZE = 8
 
 
@@ -23,6 +23,10 @@ def _current_page(scope: str) -> int:
         return int(st.session_state.get(_page_key(scope), 1))
     except (TypeError, ValueError):
         return 1
+
+
+def current_page(scope: str) -> int:
+    return _current_page(scope)
 
 
 def _render_collection_status(total_items: int, current_page: int, total_pages: int) -> None:
@@ -64,15 +68,21 @@ def render_pagination_controls(scope: str, current_page: int, total_pages: int) 
             st.rerun()
 
 
-def render_recent_work(generations: list[dict], folders: list[dict], access_token: str) -> None:
-    items, current_page, total_pages = paginate_items(
-        generations,
-        _current_page("recent"),
-        GENERATION_PAGE_SIZE,
-    )
-    _render_collection_status(len(generations), current_page, total_pages)
-    render_generation_grid(items, folders, access_token)
-    render_pagination_controls("recent", current_page, total_pages)
+def render_recent_work(
+    generations: list[dict],
+    folders: list[dict],
+    access_token: str,
+    *,
+    total_count: int | None = None,
+    current_page: int | None = None,
+) -> None:
+    total_items = len(generations) if total_count is None else max(0, int(total_count))
+    total_pages = page_count(total_items, GENERATION_PAGE_SIZE)
+    visible_page = current_page if current_page is not None else _current_page("recent")
+    visible_page = min(max(1, int(visible_page)), total_pages)
+    _render_collection_status(total_items, visible_page, total_pages)
+    render_generation_grid(generations, folders, access_token)
+    render_pagination_controls("recent", visible_page, total_pages)
 
 
 def render_folder_view(
@@ -129,11 +139,8 @@ def render_uploads(uploads: list[dict]) -> None:
                 st.markdown(
                     f"""
                     <div class="mypage-card-meta">
-                        <span>원본 사진</span>
+                        <span>{escape(format_date(item.get("created_at")))}</span>
                         <span>{int(item.get("used_count") or 0)}회 사용</span>
-                    </div>
-                    <div class="mypage-card-date">
-                        {escape(format_date(item.get("created_at")))}
                     </div>
                     """,
                     unsafe_allow_html=True,

@@ -33,4 +33,11 @@ body,
 h1, h2, h3, p {
     letter-spacing: 0;
 }
+
+div[data-testid="stAlert"],
+div[data-testid="stAlert"] *,
+div[data-testid="stAlert"] p {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+}
 """
