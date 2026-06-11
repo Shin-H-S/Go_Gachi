@@ -78,7 +78,7 @@ def test_generation_card_renders_original_image_as_new_tab_link(monkeypatch) -> 
     assert fake_st.column_counts == [(2, "small")]
     assert fake_st.links == [
         {
-            "args": ("원본", "http://127.0.0.1:8080/uploads/source.png"),
+            "args": ("원본", "http://127.0.0.1:8000/uploads/source.png"),
             "key": "mypage-original-request-1",
             "use_container_width": True,
         }
