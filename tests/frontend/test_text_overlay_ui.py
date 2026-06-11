@@ -28,7 +28,7 @@ class FakeResponse:
 class FakeCopyControlStreamlit:
     def __init__(self, *, checkbox_value: bool) -> None:
         self.checkbox_value = checkbox_value
-        self.session_state = {"auto_copy_status": "old status"}
+        self.session_state = {}
         self.text_area_calls: list[dict[str, object]] = []
         self.button_calls: list[dict[str, object]] = []
         self.radio_calls: list[dict[str, object]] = []
@@ -92,7 +92,7 @@ def test_copy_controls_do_not_render_redundant_ad_copy_section_heading() -> None
     assert '"광고 문구 포함"' in source
 
 
-def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
+def test_copy_controls_do_not_render_auto_copy_button() -> None:
     source = COPY_CONTROLS.read_text(encoding="utf-8")
     tree = ast.parse(source)
     button_calls = [
@@ -102,14 +102,6 @@ def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
         and isinstance(node.func, ast.Attribute)
         and node.func.attr == "button"
     ]
-    text_area_calls = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "text_area"
-    ]
-
     auto_copy_button = next(
         (
             call
@@ -120,21 +112,30 @@ def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
         ),
         None,
     )
+
+    assert auto_copy_button is None
+    assert "request_auto_copy" not in source
+    assert "build_auto_copy" not in source
+
+
+def test_copy_controls_render_manual_copy_prompt_state_key() -> None:
+    source = COPY_CONTROLS.read_text(encoding="utf-8")
+    tree = ast.parse(source)
     prompt_text_area = next(
         (
             call
-            for call in text_area_calls
-            if (_keyword(call, "key") is not None)
+            for call in ast.walk(tree)
+            if isinstance(call, ast.Call)
+            and isinstance(call.func, ast.Attribute)
+            and call.func.attr == "text_area"
+            and (_keyword(call, "key") is not None)
             and isinstance(_keyword(call, "key").value, ast.Constant)
             and _keyword(call, "key").value.value == "ad_copy_prompt"
         ),
         None,
     )
 
-    assert auto_copy_button is not None
     assert prompt_text_area is not None
-    assert "request_auto_copy" in source
-    assert "build_auto_copy" not in source
 
 
 def test_copy_controls_hide_copy_inputs_when_text_overlay_is_unchecked(

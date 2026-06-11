@@ -34,23 +34,6 @@ def render_logo_controls():
         key="logo_upload",
         label_visibility="collapsed",
     )
-    if logo_file is not None:
-        st.markdown(
-            """
-            <style>
-            .st-key-logo_upload
-                section > div:not(:has([data-testid="stFileUploaderFile"])) button {
-                display: none !important;
-            }
-
-            .st-key-logo_upload
-                section > div:has([data-testid="stFileUploaderFile"]) button {
-                display: inline-flex !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
 
     logo_position = st.selectbox(
         "로고 위치",
