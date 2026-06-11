@@ -42,6 +42,7 @@ async def edit_image(
     logo_data_url: str | None = None,
     logo_position: str | None = None,
     text_copy: AdCopy | None = None,
+    text_cost_usd: float = 0.0,
 ) -> dict[str, str | None]:
     """설정된 provider에 따라 mock 반환 또는 OpenAI 이미지 편집을 수행한다.
 
@@ -126,6 +127,7 @@ async def edit_image(
         user_id=user_id,
         user_copy=stored_user_copy,
         text_model=text_model,
+        text_cost_usd=text_cost_usd,
         has_logo=has_logo,
         logo_position=stored_logo_position,
         logo_image_hash=logo_image_hash,
@@ -299,9 +301,10 @@ async def edit_image(
             await crud.record_usage(
                 db,
                 request_id=generation_id,
-                model=model,
-                operation="image_edit",
-                cost_usd=0.0,
+                image_model=model,
+                text_model=text_model,
+                image_cost_usd=0.0,
+                text_cost_usd=text_cost_usd,
                 cached=False,
             )
         if isinstance(exc, ServiceError):
@@ -327,9 +330,10 @@ async def edit_image(
         await crud.record_usage(
             db,
             request_id=generation_id,
-            model=model,
-            operation="image_edit",
-            cost_usd=actual_cost,
+            image_model=model,
+            text_model=text_model,
+            image_cost_usd=actual_cost,
+            text_cost_usd=text_cost_usd,
             cached=False,
         )
     logger.info(

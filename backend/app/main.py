@@ -51,13 +51,15 @@ async def _record_text_usage(
     settings: Settings,
     usage: dict[str, object],
 ) -> None:
+    text_cost = calculate_text_cost(usage, model=settings.openai_text_model)
     async with async_session_scope() as db:
         await crud.record_usage(
             db,
             request_id=new_generation_id(),
-            model=settings.openai_text_model,
-            operation="text_generation",
-            cost_usd=calculate_text_cost(usage, model=settings.openai_text_model),
+            image_model=None,
+            text_model=settings.openai_text_model,
+            image_cost_usd=0.0,
+            text_cost_usd=text_cost,
             cached=False,
         )
 
@@ -245,6 +247,7 @@ async def generate(
 
     ad_copy = None
     copy_info = None
+    text_cost_usd = 0.0
     if request.ad_copy_enabled:
         # userPrompt는 이미지 생성 방향, userCopy는 이미지에 넣을 실제 문구로 분리한다.
         # userCopy가 비어 있으면 텍스트 AI가 userPrompt/채널 맥락을 보고 광고 문구를 만든다.
@@ -268,7 +271,10 @@ async def generate(
                 detail=error_detail("COPY_GENERATION_FAILED", COPY_GENERATION_UNAVAILABLE_MESSAGE),
             ) from exc
         if copy_result.used_openai:
-            await _record_text_usage(settings=settings, usage=copy_result.usage)
+            text_cost_usd = calculate_text_cost(
+                copy_result.usage,
+                model=settings.openai_text_model,
+            )
         ad_copy = copy_result.copy
         copy_info = CopyResponse(**ad_copy.model_dump())
 
@@ -289,6 +295,7 @@ async def generate(
             logo_data_url=request.logo_data_url,
             logo_position=request.logo_position,
             text_copy=ad_copy,
+            text_cost_usd=text_cost_usd,
         )
     except ValueError as exc:
         # 사용자 입력 문제는 프론트가 처리할 수 있게 400으로 돌려준다.

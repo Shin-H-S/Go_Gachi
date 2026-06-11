@@ -8,16 +8,20 @@ async def record_usage(
     db: AsyncSession,
     *,
     request_id: str,
-    model: str,
-    operation: str,
-    cost_usd: float,
+    image_model: str | None,
+    text_model: str | None,
+    image_cost_usd: float,
+    text_cost_usd: float,
     cached: bool,
 ) -> ApiUsage:
+    cost_usd = round(image_cost_usd + text_cost_usd, 6)
     usage = ApiUsage(
         request_id=request_id,
         provider="openai",
-        model=model,
-        operation=operation,
+        image_model=image_model,
+        text_model=text_model,
+        image_cost_usd=image_cost_usd,
+        text_cost_usd=text_cost_usd,
         cost_usd=cost_usd,
         cached=cached,
     )

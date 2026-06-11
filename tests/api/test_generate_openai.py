@@ -203,10 +203,25 @@ def test_generate_records_image_usage_cost(monkeypatch: pytest.MonkeyPatch) -> N
     async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
         return TINY_PNG_B64, {"input_tokens": 1000, "output_tokens": 2000}
 
-    async def _saved_cost() -> float:
+    async def _saved_usage() -> tuple[str | None, str | None, float, float, float]:
         async with async_session_scope() as db:
-            result = await db.execute(select(ApiUsage.cost_usd))
-            return float(result.scalar_one())
+            result = await db.execute(
+                select(
+                    ApiUsage.image_model,
+                    ApiUsage.text_model,
+                    ApiUsage.image_cost_usd,
+                    ApiUsage.text_cost_usd,
+                    ApiUsage.cost_usd,
+                )
+            )
+            row = result.one()
+            return (
+                row.image_model,
+                row.text_model,
+                float(row.image_cost_usd),
+                float(row.text_cost_usd),
+                float(row.cost_usd),
+            )
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
@@ -222,7 +237,7 @@ def test_generate_records_image_usage_cost(monkeypatch: pytest.MonkeyPatch) -> N
     )
 
     assert response.status_code == 200
-    assert asyncio.run(_saved_cost()) == 0.068
+    assert asyncio.run(_saved_usage()) == ("gpt-image-2", None, 0.068, 0.0, 0.068)
 
 
 def test_generate_records_text_usage_cost(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -241,12 +256,25 @@ def test_generate_records_text_usage_cost(monkeypatch: pytest.MonkeyPatch) -> No
             used_openai=True,
         )
 
-    async def _saved_text_cost() -> float:
+    async def _saved_usage() -> tuple[str | None, str | None, float, float, float]:
         async with async_session_scope() as db:
             result = await db.execute(
-                select(ApiUsage.cost_usd).where(ApiUsage.operation == "text_generation")
+                select(
+                    ApiUsage.image_model,
+                    ApiUsage.text_model,
+                    ApiUsage.image_cost_usd,
+                    ApiUsage.text_cost_usd,
+                    ApiUsage.cost_usd,
+                )
             )
-            return float(result.scalar_one())
+            row = result.one()
+            return (
+                row.image_model,
+                row.text_model,
+                float(row.image_cost_usd),
+                float(row.text_cost_usd),
+                float(row.cost_usd),
+            )
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     monkeypatch.setattr(openai_copy, "call_openai_copy", _fake_copy)
@@ -265,4 +293,4 @@ def test_generate_records_text_usage_cost(monkeypatch: pytest.MonkeyPatch) -> No
     )
 
     assert response.status_code == 200
-    assert asyncio.run(_saved_text_cost()) == 0.02125
+    assert asyncio.run(_saved_usage()) == ("gpt-image-2", "gpt-5", 0.042, 0.02125, 0.06325)

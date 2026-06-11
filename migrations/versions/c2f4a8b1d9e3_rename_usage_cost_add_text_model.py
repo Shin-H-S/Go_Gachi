@@ -20,6 +20,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    op.drop_index(op.f("ix_api_usage_model"), table_name="api_usage")
     op.alter_column(
         "api_usage",
         "estimated_cost",
@@ -27,6 +28,21 @@ def upgrade() -> None:
         existing_type=sa.Float(),
         existing_nullable=False,
     )
+    op.add_column("api_usage", sa.Column("image_model", sa.String(length=120), nullable=True))
+    op.add_column("api_usage", sa.Column("text_model", sa.String(length=120), nullable=True))
+    op.add_column(
+        "api_usage",
+        sa.Column("image_cost_usd", sa.Float(), nullable=False, server_default="0"),
+    )
+    op.add_column(
+        "api_usage",
+        sa.Column("text_cost_usd", sa.Float(), nullable=False, server_default="0"),
+    )
+    op.execute("UPDATE api_usage SET image_model = model, image_cost_usd = cost_usd")
+    op.drop_column("api_usage", "operation")
+    op.drop_column("api_usage", "model")
+    op.create_index(op.f("ix_api_usage_image_model"), "api_usage", ["image_model"], unique=False)
+    op.create_index(op.f("ix_api_usage_text_model"), "api_usage", ["text_model"], unique=False)
     op.add_column(
         "generations",
         sa.Column("text_model", sa.String(length=120), nullable=True),
@@ -36,6 +52,22 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_column("generations", "text_model")
+    op.drop_index(op.f("ix_api_usage_text_model"), table_name="api_usage")
+    op.drop_index(op.f("ix_api_usage_image_model"), table_name="api_usage")
+    op.add_column(
+        "api_usage",
+        sa.Column("model", sa.String(length=120), nullable=True),
+    )
+    op.add_column(
+        "api_usage",
+        sa.Column("operation", sa.String(length=80), nullable=False, server_default="image_edit"),
+    )
+    op.execute("UPDATE api_usage SET model = COALESCE(image_model, text_model, 'unknown')")
+    op.alter_column("api_usage", "model", nullable=False)
+    op.drop_column("api_usage", "text_cost_usd")
+    op.drop_column("api_usage", "image_cost_usd")
+    op.drop_column("api_usage", "text_model")
+    op.drop_column("api_usage", "image_model")
     op.alter_column(
         "api_usage",
         "cost_usd",
@@ -43,3 +75,4 @@ def downgrade() -> None:
         existing_type=sa.Float(),
         existing_nullable=False,
     )
+    op.create_index(op.f("ix_api_usage_model"), "api_usage", ["model"], unique=False)

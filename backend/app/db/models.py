@@ -139,8 +139,10 @@ class ApiUsage(Base):
     # 같은 request_id의 Generation 행과 짝지어진다.
     request_id: Mapped[str] = mapped_column(String(64), index=True)
     provider: Mapped[str] = mapped_column(String(50), default="openai")
-    model: Mapped[str] = mapped_column(String(120), index=True)
-    operation: Mapped[str] = mapped_column(String(80), default="image_edit")
+    image_model: Mapped[str | None] = mapped_column(String(120), index=True, nullable=True)
+    text_model: Mapped[str | None] = mapped_column(String(120), index=True, nullable=True)
+    image_cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    text_cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     # 추정 비용(USD). 캐시 hit이면 0.0.
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     # 이번 호출이 캐시 hit이었나(True면 실제 OpenAI 호출 없음).
