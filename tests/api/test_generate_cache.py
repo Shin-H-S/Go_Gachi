@@ -12,12 +12,13 @@ from backend.app.db.database import async_session_scope
 from backend.app.db.models import ApiUsage, Generation
 from backend.app.services import generation_service, image_edit, openai_copy
 from backend.app.services.copywriting import AdCopy
+from backend.app.services.openai_copy import CopyGenerationResult
 from tests.api.helpers import TINY_PNG_B64, TINY_PNG_DATA_URL, client, force_openai_mode
 
 
 def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _fake_call(**kwargs: object) -> str:
-        return TINY_PNG_B64
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
+        return TINY_PNG_B64, {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     real_settings = force_openai_mode(monkeypatch)
@@ -79,8 +80,8 @@ def test_openai_cache_hit_on_repeated_input(monkeypatch: pytest.MonkeyPatch) -> 
 def test_cache_hit_falls_back_to_older_existing_file(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def _fake_call(**kwargs: object) -> str:
-        return TINY_PNG_B64
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
+        return TINY_PNG_B64, {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     real_settings = force_openai_mode(monkeypatch)
@@ -140,8 +141,8 @@ def test_cache_hit_falls_back_to_older_existing_file(
 def test_generate_reuses_original_file_for_same_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def _fake_call(**kwargs: object) -> str:
-        return TINY_PNG_B64
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
+        return TINY_PNG_B64, {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
@@ -183,9 +184,9 @@ def test_generate_reuses_original_file_for_same_image(
 def test_generate_stores_logo_reference_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
     captured_call: dict[str, object] = {}
 
-    async def _fake_call(**kwargs: object) -> str:
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
         captured_call.update(kwargs)
-        return TINY_PNG_B64
+        return TINY_PNG_B64, {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
@@ -236,15 +237,17 @@ def test_generate_stores_logo_reference_metadata(monkeypatch: pytest.MonkeyPatch
 
 
 def test_generate_stores_rendered_user_copy(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _fake_call(**kwargs: object) -> str:
-        return TINY_PNG_B64
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
+        return TINY_PNG_B64, {}
 
-    async def _fake_copy(**kwargs: object) -> AdCopy:
-        return AdCopy(
-            headline="오늘 놓치기 아까운 딸기 케이크 6,500원",
-            subcopy="카페에서 즐기는 신선한 메뉴를 더 맛있게 전해드려요.",
-            cta="지금 방문해보세요",
-            mode="rewrite",
+    async def _fake_copy(**kwargs: object) -> CopyGenerationResult:
+        return CopyGenerationResult(
+            copy=AdCopy(
+                headline="오늘 놓치기 아까운 딸기 케이크 6,500원",
+                subcopy="카페에서 즐기는 신선한 메뉴를 더 맛있게 전해드려요.",
+                cta="지금 방문해보세요",
+                mode="rewrite",
+            )
         )
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
@@ -286,15 +289,17 @@ def test_generate_stores_rendered_user_copy(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_generate_cache_hit_stores_rendered_user_copy(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _fake_call(**kwargs: object) -> str:
-        return TINY_PNG_B64
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
+        return TINY_PNG_B64, {}
 
-    async def _fake_copy(**kwargs: object) -> AdCopy:
-        return AdCopy(
-            headline="라떼 4,500원",
-            subcopy="카페에서 더 맛있게 즐겨보세요.",
-            cta=None,
-            mode="polish",
+    async def _fake_copy(**kwargs: object) -> CopyGenerationResult:
+        return CopyGenerationResult(
+            copy=AdCopy(
+                headline="라떼 4,500원",
+                subcopy="카페에서 더 맛있게 즐겨보세요.",
+                cta=None,
+                mode="polish",
+            )
         )
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
@@ -332,8 +337,8 @@ def test_generate_cache_hit_stores_rendered_user_copy(monkeypatch: pytest.Monkey
 
 
 def test_generate_stores_blank_user_copy_as_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _fake_call(**kwargs: object) -> str:
-        return TINY_PNG_B64
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
+        return TINY_PNG_B64, {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)
@@ -362,8 +367,8 @@ def test_generate_stores_blank_user_copy_as_none(monkeypatch: pytest.MonkeyPatch
 def test_generate_ignores_user_copy_when_ad_copy_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def _fake_call(**kwargs: object) -> str:
-        return TINY_PNG_B64
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
+        return TINY_PNG_B64, {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
     force_openai_mode(monkeypatch)

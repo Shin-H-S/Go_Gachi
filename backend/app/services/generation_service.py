@@ -5,12 +5,14 @@ import base64
 import logging
 
 from backend.app.core.config import Settings
+from backend.app.core.errors import ServiceError
 from backend.app.core.logging_utils import short_id
 from backend.app.core.presets import Preset, PresetDetail
 from backend.app.core.prompts import PROMPT_VERSION, build_prompt
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.services.copywriting import AdCopy
+from backend.app.services.costs import calculate_image_cost
 from backend.app.services.generation_cache import cached_response, find_cache_snapshot
 from backend.app.services.generation_copy import cache_instruction, rendered_copy_text
 from backend.app.services.generation_files import new_generation_id
@@ -40,6 +42,7 @@ async def edit_image(
     logo_data_url: str | None = None,
     logo_position: str | None = None,
     text_copy: AdCopy | None = None,
+    text_cost_usd: float = 0.0,
 ) -> dict[str, str | None]:
     """설정된 provider에 따라 mock 반환 또는 OpenAI 이미지 편집을 수행한다.
 
@@ -67,6 +70,7 @@ async def edit_image(
     )
     clean_user_copy: str | None = (user_copy or "").strip() or None
     stored_user_copy: str | None = rendered_copy_text(text_copy)
+    text_model: str | None = settings.openai_text_model if text_copy is not None else None
     logo_image_hash: str | None = (
         crud.image_sha256(logo_uploaded.content) if logo_uploaded else None
     )
@@ -95,7 +99,7 @@ async def edit_image(
         }
 
     if not settings.openai_api_key:
-        raise RuntimeError("OPENAI_API_KEY가 설정되지 않았습니다.")
+        raise ServiceError("OPENAI_API_KEY_MISSING", "OPENAI_API_KEY가 설정되지 않았습니다.")
 
     prompt = build_prompt(
         preset,
@@ -122,6 +126,8 @@ async def edit_image(
         settings=settings,
         user_id=user_id,
         user_copy=stored_user_copy,
+        text_model=text_model,
+        text_cost_usd=text_cost_usd,
         has_logo=has_logo,
         logo_position=stored_logo_position,
         logo_image_hash=logo_image_hash,
@@ -140,12 +146,19 @@ async def edit_image(
         selected_detail.id,
         short_id(user_id),
     )
-    paths = await prepare_storage(
-        generation_id=generation_id,
-        image_hash=image_hash,
-        uploaded=uploaded,
-        settings=settings,
-    )
+    try:
+        paths = await prepare_storage(
+            generation_id=generation_id,
+            image_hash=image_hash,
+            uploaded=uploaded,
+            settings=settings,
+        )
+    except Exception as exc:
+        logger.exception("generation storage prepare failed generation_id=%s", generation_id)
+        raise ServiceError(
+            "IMAGE_STORAGE_PREPARE_FAILED",
+            "이미지 저장소를 준비하지 못했습니다.",
+        ) from exc
 
     async with async_session_scope() as db:
         await crud.create_pending_generation(
@@ -158,6 +171,7 @@ async def edit_image(
             model=model,
             original_path=paths.original_path,
             prompt=prompt,
+            text_model=text_model,
             user_id=user_id,
             user_copy=stored_user_copy,
             has_logo=has_logo,
@@ -173,10 +187,18 @@ async def edit_image(
     )
 
     try:
-        openai_uploaded = await asyncio.to_thread(normalize_for_openai, uploaded)
-        openai_logo_uploaded = (
-            await asyncio.to_thread(normalize_for_openai, logo_uploaded) if logo_uploaded else None
-        )
+        try:
+            openai_uploaded = await asyncio.to_thread(normalize_for_openai, uploaded)
+            openai_logo_uploaded = (
+                await asyncio.to_thread(normalize_for_openai, logo_uploaded)
+                if logo_uploaded
+                else None
+            )
+        except Exception as exc:
+            raise ServiceError(
+                "IMAGE_INPUT_NORMALIZE_FAILED",
+                "OpenAI 호출 전 입력 이미지를 정규화하지 못했습니다.",
+            ) from exc
         logger.debug(
             "OpenAI image input prepared generation_id=%s original_mime=%s "
             "original_format=%s original_mode=%s original_size=%sx%s "
@@ -222,22 +244,51 @@ async def edit_image(
             selected_detail.api_size,
             1 if openai_logo_uploaded else 0,
         )
-        b64_json = await call_openai_edit(
-            uploaded=openai_uploaded,
-            reference_images=[openai_logo_uploaded] if openai_logo_uploaded else None,
-            api_size=selected_detail.api_size,
-            prompt=prompt,
-            settings=settings,
-        )
-        # OpenAI가 응답은 했지만 결과 이미지 base64가 깨졌다면 외부 응답 처리 실패로 본다.
-        decoded = base64.b64decode(b64_json, validate=True)
-        target_png = await asyncio.to_thread(
-            render_target_png,
-            decoded,
-            target_size,
-            resize_mode,
-        )
-        await save_output(output_path=paths.output_path, body=target_png, settings=settings)
+        try:
+            b64_json, image_usage = await call_openai_edit(
+                uploaded=openai_uploaded,
+                reference_images=[openai_logo_uploaded] if openai_logo_uploaded else None,
+                api_size=selected_detail.api_size,
+                prompt=prompt,
+                settings=settings,
+            )
+        except ServiceError:
+            raise
+        except Exception as exc:
+            raise ServiceError(
+                "IMAGE_API_CALL_FAILED",
+                "이미지 API 호출 중 문제가 발생했습니다.",
+            ) from exc
+
+        try:
+            # OpenAI가 응답은 했지만 결과 이미지 base64가 깨졌다면 별도 응답 오류로 본다.
+            decoded = base64.b64decode(b64_json, validate=True)
+        except Exception as exc:
+            raise ServiceError(
+                "IMAGE_RESULT_DECODE_FAILED",
+                "이미지 API 결과를 디코딩하지 못했습니다.",
+            ) from exc
+
+        try:
+            target_png = await asyncio.to_thread(
+                render_target_png,
+                decoded,
+                target_size,
+                resize_mode,
+            )
+        except Exception as exc:
+            raise ServiceError(
+                "IMAGE_RESULT_PROCESS_FAILED",
+                "이미지 API 결과를 처리하지 못했습니다.",
+            ) from exc
+
+        try:
+            await save_output(output_path=paths.output_path, body=target_png, settings=settings)
+        except Exception as exc:
+            raise ServiceError(
+                "IMAGE_STORAGE_SAVE_FAILED",
+                "결과 이미지를 저장하지 못했습니다.",
+            ) from exc
     except Exception as exc:
         # OpenAI 호출/응답 디코딩/파일 저장 중 하나라도 실패하면 failed로 남긴다.
         logger.exception("generation failed generation_id=%s", generation_id)
@@ -250,19 +301,25 @@ async def edit_image(
             await crud.record_usage(
                 db,
                 request_id=generation_id,
-                model=model,
-                operation="image_edit",
-                estimated_cost=0.0,
+                image_model=model,
+                text_model=text_model,
+                image_cost_usd=0.0,
+                text_cost_usd=text_cost_usd,
                 cached=False,
             )
-        if isinstance(exc, RuntimeError):
+        if isinstance(exc, ServiceError):
             raise
-        raise RuntimeError("이미지 API 응답 이미지를 처리하지 못했습니다.") from exc
+        raise ServiceError(
+            "IMAGE_GENERATION_FAILED",
+            "이미지 생성 처리 중 문제가 발생했습니다.",
+        ) from exc
 
     # 4) 성공: 파일 저장 → DB success 갱신 → 사용량 기록.
     # 응답에는 외부 접근 URL(local: /outputs/..., r2: public URL)을 함께 내려준다.
     # DB에는 환경별 절대 URL을 박지 않고 path/key만 저장한다.
     image_url = output_url(paths.output_path)
+    # usage가 비어 있으면(테스트·옛 모델) quality 기반 보수적 추정 단가로 폴백한다.
+    actual_cost = calculate_image_cost(image_usage, quality=settings.openai_image_quality)
     async with async_session_scope() as db:
         await crud.mark_generation_success(
             db,
@@ -273,9 +330,10 @@ async def edit_image(
         await crud.record_usage(
             db,
             request_id=generation_id,
-            model=model,
-            operation="image_edit",
-            estimated_cost=settings.openai_image_edit_estimated_cost_usd,
+            image_model=model,
+            text_model=text_model,
+            image_cost_usd=actual_cost,
+            text_cost_usd=text_cost_usd,
             cached=False,
         )
     logger.info(

@@ -3,16 +3,25 @@
 import json
 import logging
 import time
+from dataclasses import dataclass, field
 
 import httpx
 from pydantic import ValidationError
 
 from backend.app.core.config import Settings
+from backend.app.core.errors import ServiceError
 from backend.app.core.presets import Preset, PresetDetail
 from backend.app.schemas import CopyMode
 from backend.app.services.copywriting import AdCopy, build_ad_copy
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class CopyGenerationResult:
+    copy: AdCopy
+    usage: dict[str, object] = field(default_factory=dict)
+    used_openai: bool = False
 
 
 COPY_JSON_SCHEMA = {
@@ -30,7 +39,10 @@ COPY_JSON_SCHEMA = {
 def _extract_output_text(payload: object) -> str:
     """Responses API 응답에서 텍스트 출력을 꺼낸다."""
     if not isinstance(payload, dict):
-        raise RuntimeError("문구 생성 API 응답 형식이 올바르지 않습니다.")
+        raise ServiceError(
+            "COPY_API_RESPONSE_INVALID",
+            "문구 생성 API 응답 형식이 올바르지 않습니다.",
+        )
 
     output_text = payload.get("output_text")
     if isinstance(output_text, str) and output_text.strip():
@@ -38,7 +50,7 @@ def _extract_output_text(payload: object) -> str:
 
     output = payload.get("output")
     if not isinstance(output, list):
-        raise RuntimeError("문구 생성 API 응답에 출력이 없습니다.")
+        raise ServiceError("COPY_API_RESULT_EMPTY", "문구 생성 API 응답에 출력이 없습니다.")
 
     texts: list[str] = []
     for item in output:
@@ -55,8 +67,16 @@ def _extract_output_text(payload: object) -> str:
                 texts.append(text)
 
     if not texts:
-        raise RuntimeError("문구 생성 API 응답에 출력 텍스트가 없습니다.")
+        raise ServiceError("COPY_API_RESULT_EMPTY", "문구 생성 API 응답에 출력 텍스트가 없습니다.")
     return "\n".join(texts)
+
+
+def _extract_usage(payload: object) -> dict[str, object]:
+    """Responses API 응답에서 token usage를 꺼낸다."""
+    if not isinstance(payload, dict):
+        return {}
+    usage = payload.get("usage")
+    return usage if isinstance(usage, dict) else {}
 
 
 def _parse_copy_json(text: str, copy_mode: CopyMode) -> AdCopy:
@@ -64,10 +84,16 @@ def _parse_copy_json(text: str, copy_mode: CopyMode) -> AdCopy:
     try:
         raw = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise RuntimeError("문구 생성 API 응답 JSON을 해석하지 못했습니다.") from exc
+        raise ServiceError(
+            "COPY_API_JSON_PARSE_FAILED",
+            "문구 생성 API 응답 JSON을 해석하지 못했습니다.",
+        ) from exc
 
     if not isinstance(raw, dict):
-        raise RuntimeError("문구 생성 API 응답 JSON 형식이 올바르지 않습니다.")
+        raise ServiceError(
+            "COPY_API_JSON_INVALID",
+            "문구 생성 API 응답 JSON 형식이 올바르지 않습니다.",
+        )
 
     try:
         return AdCopy(
@@ -77,7 +103,10 @@ def _parse_copy_json(text: str, copy_mode: CopyMode) -> AdCopy:
             mode=copy_mode,
         )
     except ValidationError as exc:
-        raise RuntimeError("문구 생성 API 응답 검증에 실패했습니다.") from exc
+        raise ServiceError(
+            "COPY_API_VALIDATION_FAILED",
+            "문구 생성 API 응답 검증에 실패했습니다.",
+        ) from exc
 
 
 def _copy_system_prompt(copy_mode: CopyMode) -> str:
@@ -124,7 +153,7 @@ async def call_openai_copy(
     user_prompt: str,
     user_copy: str,
     copy_mode: CopyMode,
-) -> AdCopy:
+) -> CopyGenerationResult:
     """Responses API로 광고 문구를 생성하고 AdCopy로 반환한다."""
     start = time.perf_counter()
     try:
@@ -159,6 +188,15 @@ async def call_openai_copy(
                     },
                 },
             )
+    except httpx.TimeoutException as exc:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.warning(
+            "OpenAI copy generation timed out model=%s took=%.1fms error=%s",
+            settings.openai_text_model,
+            elapsed_ms,
+            type(exc).__name__,
+        )
+        raise ServiceError("COPY_API_TIMEOUT", "문구 생성 API 응답 시간이 초과되었습니다.") from exc
     except httpx.HTTPError as exc:
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
@@ -167,21 +205,27 @@ async def call_openai_copy(
             elapsed_ms,
             type(exc).__name__,
         )
-        raise RuntimeError("문구 생성 API에 연결하지 못했습니다.") from exc
+        raise ServiceError(
+            "COPY_API_CONNECTION_FAILED",
+            "문구 생성 API에 연결하지 못했습니다.",
+        ) from exc
 
     elapsed_ms = (time.perf_counter() - start) * 1000
     openai_request_id = response.headers.get("x-request-id")
     try:
         payload = response.json()
     except ValueError as exc:
-        raise RuntimeError("문구 생성 API 응답을 해석하지 못했습니다.") from exc
+        raise ServiceError(
+            "COPY_API_RESPONSE_PARSE_FAILED",
+            "문구 생성 API 응답을 해석하지 못했습니다.",
+        ) from exc
 
     if response.status_code >= 400:
-        message = "문구 생성에 실패했습니다."
+        raw_message = "문구 생성에 실패했습니다."
         if isinstance(payload, dict):
             error = payload.get("error")
             if isinstance(error, dict):
-                message = str(error.get("message") or message)
+                raw_message = str(error.get("message") or raw_message)
         logger.warning(
             "OpenAI copy generation failed status=%s model=%s took=%.1fms "
             "openai_request_id=%s message=%s",
@@ -189,18 +233,26 @@ async def call_openai_copy(
             settings.openai_text_model,
             elapsed_ms,
             openai_request_id or "-",
-            message,
+            raw_message,
         )
-        raise RuntimeError(message)
+        raise ServiceError("COPY_API_REJECTED", "문구 생성 요청이 외부 API에서 거절되었습니다.")
 
+    usage = _extract_usage(payload)
     logger.info(
-        "OpenAI copy generation finished status=%s model=%s took=%.1fms openai_request_id=%s",
+        "OpenAI copy generation finished status=%s model=%s took=%.1fms "
+        "openai_request_id=%s input_tokens=%s output_tokens=%s",
         response.status_code,
         settings.openai_text_model,
         elapsed_ms,
         openai_request_id or "-",
+        usage.get("input_tokens", "-"),
+        usage.get("output_tokens", "-"),
     )
-    return _parse_copy_json(_extract_output_text(payload), copy_mode)
+    return CopyGenerationResult(
+        copy=_parse_copy_json(_extract_output_text(payload), copy_mode),
+        usage=usage,
+        used_openai=True,
+    )
 
 
 async def generate_ad_copy(
@@ -211,15 +263,15 @@ async def generate_ad_copy(
     user_prompt: str,
     user_copy: str,
     copy_mode: CopyMode,
-) -> AdCopy:
+) -> CopyGenerationResult:
     """실행 환경에 맞게 AI 문구 생성 또는 로컬 fallback을 수행한다."""
     if settings.image_provider != "openai" or not settings.openai_api_key:
         # mock/로컬 키 없음 상태에서는 userPrompt를 문구로 오해하지 않도록 userCopy만 사용한다.
-        return build_ad_copy(user_copy, copy_mode)
+        return CopyGenerationResult(copy=build_ad_copy(user_copy, copy_mode))
 
     if copy_mode == "preserve" and user_copy.strip():
         # 그대로 사용은 모델 호출보다 사용자 입력 보존이 더 중요하다.
-        return build_ad_copy(user_copy, copy_mode)
+        return CopyGenerationResult(copy=build_ad_copy(user_copy, copy_mode))
 
     return await call_openai_copy(
         settings=settings,

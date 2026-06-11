@@ -7,7 +7,6 @@ from frontend.core.config import (
     BACKEND_URL,
     DEFAULT_BACKEND_URL,
     FORMAT_OPTIONS,
-    FRONTEND_USE_MOCK,
     get_detail_id,
     get_detail_size,
 )
@@ -17,7 +16,6 @@ from frontend.services.prompting import build_user_prompt
 __all__ = [
     "BACKEND_URL",
     "DEFAULT_BACKEND_URL",
-    "FRONTEND_USE_MOCK",
     "GenerationResult",
     "build_user_prompt",
     "create_my_folder",
@@ -39,6 +37,7 @@ __all__ = [
 class GenerationResult:
     image_bytes: bytes
     copy: dict[str, object] | None = None
+    logo: dict[str, object] | None = None
 
 
 def file_to_data_url(uploaded_file) -> str:
@@ -157,7 +156,7 @@ def request_backend(
         "userCopy": user_copy,
         "copyMode": copy_mode,
         "adCopyEnabled": ad_copy_enabled,
-        "logoDataUrl": file_to_data_url(logo_file) if logo_file else None,
+        "logoDataUrl": file_to_data_url(logo_file) if logo_file is not None else None,
         "logoPosition": logo_position,
         "targetWidth": target_size[0],
         "targetHeight": target_size[1],
@@ -184,4 +183,5 @@ def request_backend(
     return GenerationResult(
         image_bytes=data_url_to_bytes(image_data_url),
         copy=data.get("copy"),
+        logo=data.get("logo"),
     )

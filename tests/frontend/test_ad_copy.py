@@ -27,4 +27,3 @@ def test_copy_mode_labels_are_derived_from_options() -> None:
     assert copy_mode_label("polish") == "자연스럽게 다듬기"
     assert copy_mode_label("custom") == "custom"
     assert copy_mode_label(None) == "문구"
-

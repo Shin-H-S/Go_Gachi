@@ -19,9 +19,7 @@ def test_app_delegates_split_module_responsibilities() -> None:
         for node in ast.walk(tree)
         if isinstance(node, ast.ImportFrom) and node.module is not None
     }
-    defined_functions = {
-        node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-    }
+    defined_functions = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
 
     assert app_source.count("\n") + 1 <= 80
     assert {
@@ -30,9 +28,7 @@ def test_app_delegates_split_module_responsibilities() -> None:
         "frontend.pages.work",
         "frontend.styles",
     }.issubset(imported_modules)
-    assert {"api_client", "config", "image_utils", "upload_utils"}.isdisjoint(
-        imported_modules
-    )
+    assert {"api_client", "config", "image_utils", "upload_utils"}.isdisjoint(imported_modules)
     assert defined_functions.isdisjoint(
         {
             "add_css",
@@ -45,6 +41,8 @@ def test_app_delegates_split_module_responsibilities() -> None:
         }
     )
     assert "FRONTEND_USE_MOCK" not in app_source
+    assert "FRONTEND_USE_MOCK" not in generation_source
+    assert "create_mock_banner" not in generation_source
     assert "NETWORK_ERROR" in generation_source
     assert "build_result_context" in work_source
     assert "sync_result_state" in work_source
@@ -76,7 +74,7 @@ def test_work_page_delegates_components_state_and_generation() -> None:
 
     assert "from frontend.work.components import" in work_source
     assert "from frontend.work.generation import handle_generation_request" in work_source
-    assert "from frontend.work.preview import render_image_preview" in work_source
+    assert "from frontend.work.result_panel import render_result_panel" in work_source
     assert "from frontend.work.state import" in work_source
     assert "def build_result_context" not in work_source
     assert "def render_channel_tabs" not in work_source
@@ -87,7 +85,16 @@ def test_image_utils_is_a_compatibility_export_layer() -> None:
     image_utils_source = FRONTEND_IMAGE_UTILS.read_text(encoding="utf-8")
 
     assert "from frontend.media.image_data import bytes_to_data_url" in image_utils_source
-    assert "from frontend.media.mock_banner import create_mock_banner" in image_utils_source
     assert "from frontend.media.preview_canvas import make_preview_canvas" in image_utils_source
-    assert "def create_mock_banner" not in image_utils_source
+    assert "mock_banner" not in image_utils_source
     assert "def make_preview_canvas" not in image_utils_source
+
+
+def test_frontend_mock_mode_env_is_not_documented() -> None:
+    env_example = (ROOT_DIR / "frontend" / ".env.example").read_text(encoding="utf-8")
+    readme = (ROOT_DIR / "frontend" / "README.md").read_text(encoding="utf-8")
+    config_source = (ROOT_DIR / "frontend" / "core" / "config.py").read_text(encoding="utf-8")
+
+    assert "FRONTEND_USE_MOCK" not in env_example
+    assert "FRONTEND_USE_MOCK" not in readme
+    assert "FRONTEND_USE_MOCK" not in config_source

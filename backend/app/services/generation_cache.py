@@ -89,6 +89,8 @@ async def cached_response(
     settings: Settings,
     user_id: str | None,
     user_copy: str | None,
+    text_model: str | None,
+    text_cost_usd: float,
     has_logo: bool,
     logo_position: str | None,
     logo_image_hash: str | None,
@@ -121,6 +123,7 @@ async def cached_response(
             output_path=snapshot["output_path"],
             image_url=None,
             prompt=snapshot["prompt"],
+            text_model=text_model,
             user_id=user_id,
             user_copy=user_copy,
             has_logo=has_logo,
@@ -131,9 +134,10 @@ async def cached_response(
         await crud.record_usage(
             db,
             request_id=generation_id,
-            model=snapshot["model"],
-            operation="image_edit",
-            estimated_cost=0.0,
+            image_model=snapshot["model"],
+            text_model=text_model,
+            image_cost_usd=0.0,
+            text_cost_usd=text_cost_usd,
             cached=True,
         )
     return {

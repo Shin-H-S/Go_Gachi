@@ -28,8 +28,7 @@ def draw_gradient(image: Image.Image, start_hex: str, end_hex: str) -> None:
     for y in range(height):
         ratio = y / max(height - 1, 1)
         color = tuple(
-            round(start[channel] * (1 - ratio) + end[channel] * ratio)
-            for channel in range(3)
+            round(start[channel] * (1 - ratio) + end[channel] * ratio) for channel in range(3)
         )
         draw.line([(0, y), (width, y)], fill=color)
 
@@ -56,7 +55,6 @@ def fit_image_contain(source: Image.Image, target_size: tuple[int, int]) -> Imag
     image = ImageOps.exif_transpose(source).convert("RGB")
     image.thumbnail(target_size, Image.Resampling.LANCZOS)
     return image
-
 
 
 def wrap_text_by_width(
@@ -106,5 +104,3 @@ def draw_wrapped_text(
         bbox = draw.textbbox((x, y), line, font=font)
         y += bbox[3] - bbox[1] + line_gap
     return y
-
-

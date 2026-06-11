@@ -28,13 +28,13 @@ async def get_usage() -> dict[str, object]:
     async with async_session_scope() as db:
         summary = await crud.usage_summary(db)
 
-    estimated_total = float(summary["total_estimated_cost"])
+    cost_total = float(summary["total_cost_usd"])
     response: dict[str, object] = {
         **summary,
         "budget_limit": settings.openai_budget_limit_usd,
         "budget_alert": settings.openai_budget_alert_usd,
         # remaining은 항상 우리 앱 내부 추정 기준으로만 계산한다(조직 전체 비용 섞지 않음).
-        "remaining": max(settings.openai_budget_limit_usd - estimated_total, 0.0),
+        "remaining": max(settings.openai_budget_limit_usd - cost_total, 0.0),
     }
 
     # admin key가 없으면 Costs API 시도조차 안 한다 → 응답도 단순하게 유지.
