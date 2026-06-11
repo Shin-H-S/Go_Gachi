@@ -13,9 +13,8 @@ from frontend.work.components import (
 )
 from frontend.work.copy_controls import render_copy_controls
 from frontend.work.generation import handle_generation_request
-from frontend.work.preview import render_image_preview, render_preview_shell
-from frontend.work.result_copy import render_result_copy
-from frontend.work.result_summary import render_result_summary
+from frontend.work.logo_controls import render_logo_controls, render_logo_preview
+from frontend.work.result_panel import render_result_panel
 from frontend.work.state import build_result_context, get_selected_channel, sync_result_state
 from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_primary_uploaded_file
 
@@ -42,14 +41,13 @@ def render_work_page() -> None:
             )
             uploaded_file = get_primary_uploaded_file(uploaded_files)
 
-        with st.container(border=True, key="left-logo-section"):
-            st.markdown('<p class="section-label">로고 업로드</p>', unsafe_allow_html=True)
-            logo_file = st.file_uploader(
-                "로고 이미지 업로드",
-                accept_multiple_files=False,
-                key="logo_upload",
-                label_visibility="collapsed",
-            )
+        logo_controls_col, logo_preview_col = st.columns([0.52, 0.48], gap="small")
+        with logo_controls_col:
+            with st.container(border=True, key="left-logo-section"):
+                logo_file, logo_position = render_logo_controls()
+        with logo_preview_col:
+            with st.container(border=True, key="left-logo-preview-section"):
+                render_logo_preview(logo_file)
 
         with st.container(border=True, key="left-channel-section"):
             st.markdown('<p class="section-label">광고 채널 선택</p>', unsafe_allow_html=True)
@@ -109,6 +107,7 @@ def render_work_page() -> None:
                 copy_mode=copy_mode,
                 ad_copy_enabled=ad_copy_enabled,
                 logo_file=logo_file,
+                logo_position=logo_position,
             )
             sync_result_state(current_result_context)
 
@@ -148,47 +147,18 @@ def render_work_page() -> None:
         render_generation_lock_css()
 
     with right_col:
-        if is_generating:
-            render_preview_shell(
-                format_label,
-                """
-                <div class="loading-state">
-                    <div class="loading-panel">
-                        <div class="loading-spinner"></div>
-                        <div>제작 중입니다. 잠시만 기다려주세요.</div>
-                    </div>
-                </div>
-                """,
-                detail_label,
-            )
-        elif uploaded_file and "result_bytes" not in st.session_state:
-            render_image_preview(uploaded_file.getvalue(), format_label, detail_label)
-        elif "result_bytes" in st.session_state:
-            render_image_preview(st.session_state["result_bytes"], format_label, detail_label)
-            render_result_summary(st.session_state.get("result_context"))
-            render_result_copy(st.session_state.get("result_copy"))
-            st.download_button(
-                "이미지 다운로드",
-                data=st.session_state["result_bytes"],
-                file_name="cafe_ad_maker_result.png",
-                mime="image/png",
-                use_container_width=True,
-            )
-        else:
-            render_preview_shell(
-                format_label,
-                """
-                <div class="empty-guide">
-                    단순한 배경에서, 광고에 사용할 각도로 촬영한 이미지를 올려주세요.
-                </div>
-                """,
-                detail_label,
-            )
+        render_result_panel(
+            is_generating=is_generating,
+            uploaded_file=uploaded_file,
+            format_label=format_label,
+            detail_label=detail_label,
+        )
 
     handle_generation_request(
         generate=generate,
         uploaded_file=uploaded_file,
         logo_file=logo_file,
+        logo_position=logo_position,
         prompt=prompt,
         ad_copy_prompt=ad_copy_prompt,
         format_label=format_label,

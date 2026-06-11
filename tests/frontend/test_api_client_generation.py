@@ -287,6 +287,37 @@ def test_request_backend_returns_copy_metadata(monkeypatch: pytest.MonkeyPatch) 
     assert result.copy == copy_payload
 
 
+def test_request_backend_returns_logo_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    logo_payload = {"used": True, "position": "top_right"}
+
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        return FakeResponse(
+            {
+                "imageDataUrl": "data:image/png;base64,cmVzdWx0",
+                "logo": logo_payload,
+            }
+        )
+
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    result = api_client.request_backend(
+        uploaded_file,
+        "logo metadata check",
+        "인스타그램",
+        "정사각형 피드",
+    )
+
+    assert result.image_bytes == b"result"
+    assert result.logo == logo_payload
+
+
 def test_request_auto_copy_posts_to_backend_copy_endpoint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

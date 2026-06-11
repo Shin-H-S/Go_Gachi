@@ -33,6 +33,25 @@ def test_result_summary_renders_ad_copy_and_logo_excluded(monkeypatch) -> None:
     assert "로고 미포함" in html
 
 
+def test_result_summary_prefers_backend_logo_metadata(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    monkeypatch.setattr("frontend.work.result_summary.st", fake_st)
+
+    render_result_summary(
+        {
+            "adCopyEnabled": True,
+            "logoUploadHash": "uploaded-logo",
+            "logo": {"used": False, "position": "top_right"},
+        }
+    )
+
+    html = "".join(fake_st.markdowns)
+    assert "logo.used: false" in html
+    assert "logo.position: top_right" in html
+    assert "로고 미적용" in html
+    assert "로고 포함" not in html
+
+
 def test_result_summary_skips_empty_context(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     monkeypatch.setattr("frontend.work.result_summary.st", fake_st)

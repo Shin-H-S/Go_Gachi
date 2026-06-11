@@ -51,11 +51,7 @@ def test_mypage_login_prompt_sets_return_route_before_login() -> None:
 
 def test_app_does_not_import_mypage_until_route_is_selected() -> None:
     tree = ast.parse(FRONTEND_APP.read_text(encoding="utf-8"))
-    top_level_imports = [
-        node.module
-        for node in tree.body
-        if isinstance(node, ast.ImportFrom)
-    ]
+    top_level_imports = [node.module for node in tree.body if isinstance(node, ast.ImportFrom)]
 
     assert "frontend.pages.mypage" not in top_level_imports
 
@@ -151,6 +147,5 @@ def test_sidebar_removes_duplicate_all_folder_action() -> None:
     assert "margin-right: 0" in navigation_styles
     assert 'content: "+"' in navigation_styles
     assert (
-        "render_sidebar(profile: dict, folders: list[dict], view: str, access_token: str)"
-        in source
+        "render_sidebar(profile: dict, folders: list[dict], view: str, access_token: str)" in source
     )

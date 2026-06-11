@@ -33,6 +33,4 @@ def test_instruction_sha256_is_stable_for_blank_inputs() -> None:
 
 
 def test_instruction_sha256_differs_for_distinct_text() -> None:
-    assert crud.instruction_sha256("make it bright") != crud.instruction_sha256(
-        "make it dark"
-    )
+    assert crud.instruction_sha256("make it bright") != crud.instruction_sha256("make it dark")

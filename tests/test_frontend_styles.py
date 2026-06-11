@@ -4,14 +4,15 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 STYLE_BASE_FILE = ROOT_DIR / "frontend" / "css" / "base.py"
 STYLE_WORK_SELECTION_FILE = ROOT_DIR / "frontend" / "css" / "work_selection.py"
 STYLE_WORK_FORMS_FILE = ROOT_DIR / "frontend" / "css" / "work_forms.py"
+STYLE_WORK_UPLOAD_FILE = ROOT_DIR / "frontend" / "css" / "work_upload.py"
 
 
 def test_radio_indicator_keeps_unselected_circle_white() -> None:
     styles = STYLE_WORK_SELECTION_FILE.read_text(encoding="utf-8")
 
     assert 'input[type="radio"]' in styles
-    assert 'background-color: #ffffff !important;' in styles
-    assert 'box-shadow: inset 0 0 0 2px #ffffff !important;' in styles
+    assert "background-color: #ffffff !important;" in styles
+    assert "box-shadow: inset 0 0 0 2px #ffffff !important;" in styles
 
 
 def test_section_labels_render_at_twenty_pixels() -> None:
@@ -39,12 +40,24 @@ def test_copy_mode_radio_heading_is_plain_text_not_button_like() -> None:
     assert "font-size: 15px !important;" in styles
 
 
-def test_text_overlay_checkbox_label_is_forced_black() -> None:
+def test_ad_copy_checkbox_label_is_forced_black() -> None:
     styles = STYLE_WORK_SELECTION_FILE.read_text(encoding="utf-8")
 
-    assert ".st-key-text_overlay_enabled" in styles
+    assert ".st-key-ad_copy_enabled" in styles
+    assert ".st-key-text_overlay_enabled" not in styles
     assert "color: #111111 !important;" in styles
     assert "-webkit-text-fill-color: #111111 !important;" in styles
+
+
+def test_ad_copy_checked_checkbox_icon_stays_visible() -> None:
+    styles = STYLE_WORK_SELECTION_FILE.read_text(encoding="utf-8")
+
+    assert '.st-key-ad_copy_enabled input[type="checkbox"]' in styles
+    assert '.st-key-ad_copy_enabled label[data-baseweb="checkbox"]' in styles
+    assert 'input[type="checkbox"]:checked' in styles
+    assert '.st-key-ad_copy_enabled label[data-baseweb="checkbox"] svg' in styles
+    assert "fill: #ffffff !important;" in styles
+    assert "stroke: #ffffff !important;" in styles
 
 
 def test_streamlit_alert_messages_are_forced_readable() -> None:
@@ -54,3 +67,59 @@ def test_streamlit_alert_messages_are_forced_readable() -> None:
     assert 'div[data-testid="stAlert"] *' in styles
     assert "color: #111111 !important;" in styles
     assert "-webkit-text-fill-color: #111111 !important;" in styles
+
+
+def test_uploaded_file_chip_is_forced_readable() -> None:
+    styles = STYLE_WORK_UPLOAD_FILE.read_text(encoding="utf-8")
+
+    assert 'div[data-testid="stFileUploaderFile"]' in styles
+    assert '[data-testid="stFileUploaderFileName"]' in styles
+    assert '[data-testid="stFileUploaderFileSize"]' in styles
+    assert "background-color: #ffffff !important;" in styles
+    assert "color: #202725 !important;" in styles
+    assert "-webkit-text-fill-color: #202725 !important;" in styles
+
+
+def test_logo_preview_frame_has_fixed_size_and_contained_image() -> None:
+    styles = STYLE_WORK_UPLOAD_FILE.read_text(encoding="utf-8")
+
+    assert ".logo-preview-frame" in styles
+    assert "height: 232px;" in styles
+    assert ".logo-preview-frame img" in styles
+    assert "object-fit: contain;" in styles
+    assert ".logo-preview-placeholder" in styles
+
+
+def test_logo_preview_container_keeps_even_vertical_spacing() -> None:
+    styles = STYLE_WORK_UPLOAD_FILE.read_text(encoding="utf-8")
+
+    assert ".st-key-left-logo-preview-section" in styles
+    assert "min-height: 264px;" in styles
+    assert "padding-bottom: 16px !important;" in styles
+
+
+def test_logo_upload_container_keeps_same_fixed_height_as_preview() -> None:
+    styles = STYLE_WORK_UPLOAD_FILE.read_text(encoding="utf-8")
+
+    assert ".st-key-left-logo-section" in styles
+    assert ".st-key-left-logo-preview-section" in styles
+    assert "min-height: 264px;" in styles
+    assert "height: 264px;" in styles
+
+
+def test_logo_single_upload_hides_extra_add_button_after_file_selected() -> None:
+    styles = STYLE_WORK_UPLOAD_FILE.read_text(encoding="utf-8")
+
+    assert ".st-key-logo_upload:has" in styles
+    assert '[data-testid="stFileUploaderFile"]' in styles
+    assert ".st-key-logo_upload:has" in styles
+    assert 'div:not(:has([data-testid="stFileUploaderFile"])) button' in styles
+    assert 'div:has([data-testid="stFileUploaderFile"]) button' in styles
+    assert '[data-testid="stFileUploaderDropzone"] button' in styles
+    assert '[data-testid="stFileUploaderFile"] button' in styles
+    assert "display: none !important;" in styles
+    assert "display: inline-flex !important;" in styles
+    assert (
+        ".st-key-logo_upload section button {\n                display: none !important;"
+        not in styles
+    )
