@@ -87,7 +87,7 @@ def test_my_generations_supports_page_and_total_count() -> None:
 
     async def _seed() -> None:
         async with async_session_scope() as db:
-            for idx in range(12):
+            for idx in range(14):
                 await crud.create_pending_generation(
                     db,
                     request_id=f"api-page-{idx:02d}",
@@ -124,20 +124,20 @@ def test_my_generations_supports_page_and_total_count() -> None:
         app.dependency_overrides.pop(get_current_user, None)
 
     assert first.status_code == 200
-    assert first.json()["count"] == 10
-    assert first.json()["total_count"] == 12
+    assert first.json()["count"] == 12
+    assert first.json()["total_count"] == 14
     assert [item["request_id"] for item in first.json()["items"]] == [
-        f"api-page-{idx:02d}" for idx in range(11, 1, -1)
+        f"api-page-{idx:02d}" for idx in range(13, 1, -1)
     ]
     assert second.status_code == 200
     assert second.json()["count"] == 2
-    assert second.json()["total_count"] == 12
+    assert second.json()["total_count"] == 14
     assert [item["request_id"] for item in second.json()["items"]] == [
         "api-page-01",
         "api-page-00",
     ]
     assert empty.status_code == 200
-    assert empty.json() == {"items": [], "count": 0, "total_count": 12}
+    assert empty.json() == {"items": [], "count": 0, "total_count": 14}
     assert invalid.status_code == 422
 
 
@@ -245,3 +245,46 @@ def test_my_uploads_returns_unique_original_images_as_data_urls() -> None:
     assert body["items"][0]["used_count"] == 2
     assert body["items"][0]["original_image_url"] == "/uploads/original-menu.png"
     assert body["items"][0]["image_data_url"].startswith("data:image/png;base64,")
+
+
+def test_my_uploads_keeps_r2_url_when_local_file_is_not_available(monkeypatch) -> None:
+    user = _user("user-upload-r2-check")
+
+    async def _override_user() -> AuthUser:
+        return user
+
+    async def _fake_upload_url(path: str | None) -> str | None:
+        return f"https://pub.example/{path}" if path else None
+
+    async def _fake_data_url(path) -> None:  # noqa: ANN001
+        return None
+
+    async def _seed() -> None:
+        async with async_session_scope() as db:
+            await crud.create_pending_generation(
+                db,
+                request_id="r2-upload",
+                image_hash="r2-menu-hash",
+                preset_id="instagram",
+                instruction_hash="instruction-r2-upload",
+                prompt_version="prompt-v-test",
+                model="model-test",
+                original_path="uploads/r2-menu.png",
+                prompt=None,
+                user_id=user.id,
+            )
+
+    asyncio.run(_seed())
+    monkeypatch.setattr("backend.app.api.auth.upload_url_if_exists_async", _fake_upload_url)
+    monkeypatch.setattr("backend.app.api.auth._file_to_image_data_url", _fake_data_url)
+    app.dependency_overrides[get_current_user] = _override_user
+    try:
+        response = client.get("/api/auth/me/uploads")
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 1
+    assert body["items"][0]["original_image_url"] == "https://pub.example/uploads/r2-menu.png"
+    assert body["items"][0]["image_data_url"] is None

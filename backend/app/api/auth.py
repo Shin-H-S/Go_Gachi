@@ -24,7 +24,7 @@ from backend.app.services.storage_url import output_url_if_exists_async, upload_
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
-PAGE_SIZE = 10
+PAGE_SIZE = 12
 
 
 class FolderCreateRequest(BaseModel):
@@ -62,8 +62,6 @@ async def _upload_item(row: Generation, used_count: int) -> dict[str, object] | 
         return None
 
     image_data_url = await _file_to_image_data_url(Path(row.original_path))
-    if image_data_url is None:
-        return None
 
     return {
         "upload_id": row.image_hash,
