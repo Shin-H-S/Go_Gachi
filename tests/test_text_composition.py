@@ -9,6 +9,7 @@ def test_build_ad_copy_preserves_user_prompt_without_metadata() -> None:
     assert copy.cta is None
     assert copy.mode == "preserve"
 
+
 def test_build_ad_copy_polishes_user_prompt() -> None:
     copy = build_ad_copy("  오늘   라떼   4500원  ", "polish")
 

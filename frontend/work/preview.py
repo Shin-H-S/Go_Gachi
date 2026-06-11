@@ -49,5 +49,3 @@ def render_image_preview(
         """,
         detail_label,
     )
-
-

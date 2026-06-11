@@ -12,7 +12,7 @@ frontend/
   core/                 # Config loading and routing helpers
   services/             # Backend API boundary
   work/                 # Work-page state, components, preview, generation, uploads
-  media/                # Image helpers, preview canvas, mock banner
+  media/                # Image helpers and preview canvas
   css/                  # CSS fragments composed by styles.py
   assets/               # Channel/sample image assets
   styles.py             # CSS composer and injector
@@ -73,9 +73,4 @@ FRONTEND_CONFIG_SOURCE=auto
 `targetWidth`와 `targetHeight`는 사용자가 선택한 상세 광고 유형의 최종 다운로드 크기입니다.
 백엔드는 생성 결과를 이 크기의 PNG로 맞춰 반환합니다.
 
-백엔드 연결 실패 시에는 목업으로 대체하지 않고 에러 메시지를 표시합니다.
-프론트 화면만 확인할 때는 아래처럼 명시적으로 목업을 켭니다.
-
-```env
-FRONTEND_USE_MOCK=true
-```
+백엔드 연결 실패 시에는 로컬 성공 결과로 대체하지 않고 에러 메시지를 표시합니다.

@@ -2,6 +2,7 @@ import httpx
 import streamlit as st
 
 from frontend.services.api_client import BACKEND_URL, request_auto_copy
+from frontend.services.backend_errors import format_backend_http_error
 from frontend.work.copy import COPY_MODE_OPTIONS
 
 
@@ -27,14 +28,10 @@ def _fill_auto_copy(format_label: str, detail_label: str, image_prompt: str) -> 
             access_token=st.session_state.get("auth_access_token", ""),
         )
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 501:
-            message = "백엔드 자동 광고 문구 생성 기능이 아직 준비되지 않았습니다."
-        else:
-            message = (
-                f"백엔드 자동 광고 문구 요청 실패 "
-                f"[HTTP {exc.response.status_code}]: {exc.response.text}"
-            )
-        st.session_state["auto_copy_status"] = message
+        st.session_state["auto_copy_status"] = format_backend_http_error(
+            exc,
+            default_title="백엔드 자동 광고 문구 요청 실패",
+        )
         return
     except httpx.HTTPError as exc:
         st.session_state["auto_copy_status"] = (
@@ -72,8 +69,7 @@ def render_copy_controls(
     raw_prompt = st.text_area(
         "광고 문구",
         placeholder=(
-            "직접 넣고 싶은 광고 문구를 입력하세요.\n"
-            "비워두면 자동 문구 생성을 요청합니다."
+            "직접 넣고 싶은 광고 문구를 입력하세요.\n" "비워두면 자동 문구 생성을 요청합니다."
         ),
         height=150,
         key="ad_copy_prompt",
@@ -103,4 +99,3 @@ def render_copy_controls(
     )
     copy_mode = copy_mode_by_label.get(copy_mode_label, "preserve")
     return prompt, ad_copy_enabled, copy_mode
-
