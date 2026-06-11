@@ -19,7 +19,8 @@ PR과 `main` push에서 GitHub Actions가 아래 검증을 실행합니다.
 
 ```text
 uv run ruff check .
-uv run pytest
+uv run pytest -p no:cacheprovider
+uv run python -m compileall backend frontend tests
 ```
 
 ## Runtime Validation
@@ -56,7 +57,20 @@ IMAGE_PROVIDER=openai
 OPENAI_TEXT_MODEL=gpt-5
 OPENAI_IMAGE_MODEL=gpt-image-2
 OPENAI_IMAGE_QUALITY=medium
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+STORAGE_BACKEND=local
 ```
 
 로컬 `.env`는 레포 최상단 파일을 프론트/백엔드 공통 기준으로 사용합니다.
 운영 값은 Cloud Run 환경변수와 Secret Manager에서 관리합니다.
+
+R2 저장소를 사용할 때는 아래 값도 함께 주입합니다.
+
+```env
+STORAGE_BACKEND=r2
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_ENDPOINT_URL=
+R2_BUCKET_NAME=
+R2_PUBLIC_URL=
+```

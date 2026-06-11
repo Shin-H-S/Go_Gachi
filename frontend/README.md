@@ -1,7 +1,7 @@
 # Frontend
 
 카페 메뉴 광고 이미지 제작용 Streamlit 프론트엔드입니다.
-이미지 업로드, 광고 채널 선택, 프롬프트 입력, 생성 중 로딩 UI, 결과 미리보기를 제공합니다.
+이미지 업로드, 광고 채널 선택, 프롬프트 입력, 광고 문구 설정, 로고 업로드, 생성 중 로딩 UI, 결과 미리보기를 제공합니다.
 
 ## Folder Structure
 
@@ -67,11 +67,52 @@ FRONTEND_CONFIG_SOURCE=auto
 현재 백엔드 MVP에서 우선 연동할 API는 아래와 같습니다.
 
 - `GET /api/config`: 광고 프리셋 목록 조회
-- `POST /api/generate`: `imageDataUrl`, `presetId`, `detailType`, `userPrompt`, `targetWidth`, `targetHeight`를 전달해 생성 요청
+- `POST /api/copy/generate`: 광고 문구 자동 생성 요청
+- `POST /api/generate`: 광고 이미지 생성 요청
 
 `detailType`은 사용자가 선택한 상세 광고 유형 ID입니다.
 `targetWidth`와 `targetHeight`는 사용자가 선택한 상세 광고 유형의 최종 다운로드 크기입니다.
 백엔드는 생성 결과를 이 크기의 PNG로 맞춰 반환합니다.
+
+## Generate Payload
+
+프론트가 `/api/generate`로 보내는 주요 필드는 아래와 같습니다.
+
+```json
+{
+  "imageDataUrl": "data:image/png;base64,...",
+  "presetId": "instagram",
+  "detailType": "square_feed",
+  "userPrompt": "광고 유형: 정사각형 피드\n따뜻한 카페 분위기로 만들어줘",
+  "copyMode": "polish",
+  "adCopyEnabled": true,
+  "userCopy": "오늘 아메리카노 2,500원",
+  "logoDataUrl": "data:image/png;base64,...",
+  "logoPosition": "bottom_right",
+  "targetWidth": 1080,
+  "targetHeight": 1080,
+  "resizeMode": "cover"
+}
+```
+
+- `copyMode`: `preserve`, `polish`, `rewrite` 중 하나입니다.
+- `adCopyEnabled`: true이면 백엔드가 문구를 이미지 생성 프롬프트에 포함합니다.
+- `userCopy`: 사용자가 입력한 광고 문구입니다. 문구 기능이 꺼져 있으면 빈 문자열로 보냅니다.
+- `logoDataUrl`: 로고를 업로드한 경우에만 data URL로 보냅니다.
+- `logoPosition`: 현재 기본값은 `bottom_right`입니다. 백엔드는 위치 enum만 허용합니다.
+
+## Copy Generate Payload
+
+자동 문구 생성 버튼은 `/api/copy/generate`를 사용합니다.
+
+```json
+{
+  "presetId": "instagram",
+  "detailType": "square_feed",
+  "userPrompt": "광고 유형: 정사각형 피드\n아메리카노 할인 행사를 강조하고 싶어요.",
+  "copyMode": "rewrite"
+}
+```
 
 백엔드 연결 실패 시에는 목업으로 대체하지 않고 에러 메시지를 표시합니다.
 프론트 화면만 확인할 때는 아래처럼 명시적으로 목업을 켭니다.

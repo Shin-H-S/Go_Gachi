@@ -66,16 +66,48 @@ client.auth.sign_out()
 ```
 - 최신순. 로그인한 본인 기록만 반환.
 
-### `POST /api/generate` — 이미지 생성 (기존 + 토큰 선택)
-- 요청 본문은 **기존과 동일** (`imageDataUrl`, `presetId`, `detailType`, `feedback`, `targetWidth`, `targetHeight`).
+### `POST /api/generate` — 이미지 생성 (토큰 선택)
+- 요청 본문은 현재 생성 API 계약을 따릅니다.
+- 주요 필드는 `imageDataUrl`, `presetId`, `detailType`, `userPrompt`, `copyMode`, `adCopyEnabled`, `userCopy`, `logoDataUrl`, `logoPosition`, `targetWidth`, `targetHeight`, `resizeMode`입니다.
 - 헤더에 `Authorization: Bearer <token>`를 **넣으면** 생성 기록에 그 유저가 소유자로 저장됨(내 작업 기록에 잡힘).
 - 토큰을 안 넣어도 생성은 됨(소유자만 비어있음).
 
 호출 예시:
 ```python
 import httpx
+
+payload = {
+    "imageDataUrl": "data:image/png;base64,...",
+    "presetId": "instagram",
+    "detailType": "square_feed",
+    "userPrompt": "광고 유형: 정사각형 피드\n따뜻한 카페 분위기로 만들어줘",
+    "copyMode": "polish",
+    "adCopyEnabled": True,
+    "userCopy": "오늘 아메리카노 2,500원",
+    "logoDataUrl": None,
+    "logoPosition": "bottom_right",
+    "targetWidth": 1080,
+    "targetHeight": 1080,
+    "resizeMode": "cover",
+}
+
 headers = {"Authorization": f"Bearer {token}"} if token else None
-r = httpx.post(f"{BACKEND_URL}/api/generate", json=payload, headers=headers, timeout=90)
+r = httpx.post(f"{BACKEND_URL}/api/generate", json=payload, headers=headers, timeout=300)
+```
+
+### `POST /api/copy/generate` — 광고 문구 자동 생성
+- 로그인 토큰은 선택입니다.
+- 프론트에서 문구 자동 생성 버튼을 누를 때 사용합니다.
+
+```python
+payload = {
+    "presetId": "instagram",
+    "detailType": "square_feed",
+    "userPrompt": "광고 유형: 정사각형 피드\n아메리카노 할인 행사를 강조하고 싶어요.",
+    "copyMode": "rewrite",
+}
+
+r = httpx.post(f"{BACKEND_URL}/api/copy/generate", json=payload, headers=headers, timeout=60)
 ```
 
 ## 4. 에러 코드 의미
