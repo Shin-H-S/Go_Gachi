@@ -1,4 +1,3 @@
-import base64
 from dataclasses import dataclass
 
 import httpx
@@ -10,7 +9,13 @@ from frontend.core.config import (
     get_detail_id,
     get_detail_size,
 )
+from frontend.services.assets import (
+    data_url_to_bytes,
+    file_to_data_url,
+    request_asset_bytes,
+)
 from frontend.services.copy_client import request_auto_copy
+from frontend.services.generation_jobs_client import request_generate_job_bytes
 from frontend.services.prompting import build_user_prompt
 
 __all__ = [
@@ -38,23 +43,6 @@ class GenerationResult:
     image_bytes: bytes
     copy: dict[str, object] | None = None
     logo: dict[str, object] | None = None
-
-
-def file_to_data_url(uploaded_file) -> str:
-    mime_type = uploaded_file.type or "application/octet-stream"
-    encoded = base64.b64encode(uploaded_file.getvalue()).decode("ascii")
-    return f"data:{mime_type};base64,{encoded}"
-
-
-def data_url_to_bytes(data_url: str) -> bytes:
-    if "," not in data_url:
-        raise ValueError("백엔드 응답 imageDataUrl 형식이 올바르지 않습니다.")
-
-    header, encoded = data_url.split(",", 1)
-    if ";base64" not in header:
-        raise ValueError("백엔드 응답 imageDataUrl은 base64 데이터 URL이어야 합니다.")
-
-    return base64.b64decode(encoded)
 
 
 def _auth_headers(access_token: str) -> dict[str, str]:
@@ -125,13 +113,66 @@ def to_backend_asset_url(path: str | None) -> str | None:
     return f"{BACKEND_URL.rstrip('/')}/{path}"
 
 
-def request_asset_bytes(url: str) -> bytes:
-    if url.startswith("data:"):
-        return data_url_to_bytes(url)
+def _build_generate_payload(
+    uploaded_file,
+    prompt: str,
+    format_label: str,
+    detail_label: str,
+    ad_copy_enabled: bool,
+    copy_mode: str,
+    ad_copy_prompt: str,
+    logo_file,
+    logo_position: str,
+) -> dict[str, object]:
+    target_size = get_detail_size(format_label, detail_label)
+    user_copy = ad_copy_prompt.strip() if ad_copy_enabled else ""
+    return {
+        "imageDataUrl": file_to_data_url(uploaded_file),
+        "presetId": FORMAT_OPTIONS[format_label]["value"],
+        "detailType": get_detail_id(format_label, detail_label),
+        "userPrompt": build_user_prompt(prompt, detail_label),
+        "userCopy": user_copy,
+        "copyMode": copy_mode,
+        "adCopyEnabled": ad_copy_enabled,
+        "logoDataUrl": file_to_data_url(logo_file) if logo_file is not None else None,
+        "logoPosition": logo_position,
+        "targetWidth": target_size[0],
+        "targetHeight": target_size[1],
+    }
 
-    response = httpx.get(url, timeout=30)
+
+def _request_generate_sync(payload: dict[str, object], access_token: str) -> GenerationResult:
+    response = httpx.post(
+        f"{BACKEND_URL}/api/generate",
+        json=payload,
+        headers=_auth_headers(access_token),
+        timeout=300,
+    )
     response.raise_for_status()
-    return response.content
+    data = response.json()
+    image_data_url = data.get("imageDataUrl")
+    if not image_data_url:
+        raise ValueError("백엔드 응답에 imageDataUrl이 없습니다.")
+
+    return GenerationResult(
+        image_bytes=data_url_to_bytes(image_data_url),
+        copy=data.get("copy"),
+        logo=data.get("logo"),
+    )
+
+
+def _request_generate_job(payload: dict[str, object], access_token: str) -> GenerationResult:
+    image_bytes, data = request_generate_job_bytes(payload, access_token)
+    if image_bytes is None:
+        image_data_url = data.get("imageDataUrl")
+        if not image_data_url:
+            raise ValueError("백엔드 job 응답에 imageUrl이 없습니다.")
+        image_bytes = data_url_to_bytes(str(image_data_url))
+    return GenerationResult(
+        image_bytes=image_bytes,
+        copy=data.get("copy") if isinstance(data.get("copy"), dict) else None,
+        logo=data.get("logo") if isinstance(data.get("logo"), dict) else None,
+    )
 
 
 def request_backend(
@@ -146,42 +187,18 @@ def request_backend(
     logo_file=None,
     logo_position: str = "bottom_right",
 ) -> GenerationResult:
-    target_size = get_detail_size(format_label, detail_label)
-    user_copy = ad_copy_prompt.strip() if ad_copy_enabled else ""
-    payload = {
-        "imageDataUrl": file_to_data_url(uploaded_file),
-        "presetId": FORMAT_OPTIONS[format_label]["value"],
-        "detailType": get_detail_id(format_label, detail_label),
-        "userPrompt": build_user_prompt(prompt, detail_label),
-        "userCopy": user_copy,
-        "copyMode": copy_mode,
-        "adCopyEnabled": ad_copy_enabled,
-        "logoDataUrl": file_to_data_url(logo_file) if logo_file is not None else None,
-        "logoPosition": logo_position,
-        "targetWidth": target_size[0],
-        "targetHeight": target_size[1],
-    }
+    payload = _build_generate_payload(
+        uploaded_file,
+        prompt,
+        format_label,
+        detail_label,
+        ad_copy_enabled,
+        copy_mode,
+        ad_copy_prompt,
+        logo_file,
+        logo_position,
+    )
 
-    # 로그인 상태면 JWT를 Authorization 헤더에 담아 백엔드로 전달한다.
-    # 비로그인이면 빈 headers를 보내고, 백엔드는 익명 요청(user_id=None)으로 처리한다.
-    headers = {}
     if access_token:
-        headers["Authorization"] = f"Bearer {access_token}"
-
-    response = httpx.post(
-        f"{BACKEND_URL}/api/generate",
-        json=payload,
-        headers=headers,
-        timeout=300,
-    )
-    response.raise_for_status()
-    data = response.json()
-    image_data_url = data.get("imageDataUrl")
-    if not image_data_url:
-        raise ValueError("백엔드 응답에 imageDataUrl이 없습니다.")
-
-    return GenerationResult(
-        image_bytes=data_url_to_bytes(image_data_url),
-        copy=data.get("copy"),
-        logo=data.get("logo"),
-    )
+        return _request_generate_job(payload, access_token)
+    return _request_generate_sync(payload, access_token)
