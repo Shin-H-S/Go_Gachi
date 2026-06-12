@@ -53,7 +53,7 @@ uv run alembic upgrade head
 ```env
 APP_ENV=production
 IMAGE_PROVIDER=openai
-OPENAI_TEXT_MODEL=gpt-5
+OPENAI_TEXT_MODEL=gpt-5.4-mini
 OPENAI_IMAGE_MODEL=gpt-image-2
 OPENAI_IMAGE_QUALITY=medium
 ```
