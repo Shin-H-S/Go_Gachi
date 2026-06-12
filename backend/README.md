@@ -26,7 +26,7 @@ Railway·Cloud Run 등 컨테이너 기반 운영 환경을 지원하며, 테스
 현재 스키마는 JSON 요청만 사용합니다.
 V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy`)까지 응답합니다.
 `adCopyEnabled=true`이면 문구 처리 결과를 이미지 생성 프롬프트에 포함해 광고 이미지 안에 함께 생성합니다.
-로고 합성은 후속 기능 브랜치에서 연결합니다.
+`logoDataUrl`이 있으면 로고 이미지를 OpenAI 이미지 편집 API의 reference image로 함께 전달합니다.
 
 ```json
 {
@@ -58,6 +58,9 @@ V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy
 - `parentRequestId`: 수정 이력 연결용 부모 생성 ID입니다. 현재 브랜치에서는 스키마만 열어둡니다.
 - `targetWidth`, `targetHeight`: 사용자가 선택한 상세 광고 규격의 최종 출력 픽셀 크기.
   둘 중 하나만 보낼 수 없으며, 생략하면 선택한 상세 광고 유형의 기본 크기를 사용합니다.
+- `api_size`: 요청 필드가 아니라 `config/presets.json`의 상세 유형별 내부 값입니다.
+  백엔드는 선택된 `detailType`의 `api_size`로 OpenAI 생성을 요청하고, 응답 이미지를
+  `targetWidth` x `targetHeight`로 최종 후처리합니다.
 - `resizeMode`: 최종 후처리 방식. 기본값은 `cover`입니다.
   `cover`는 캔버스를 꽉 채우고 중앙 기준으로 일부를 자를 수 있으며,
   `contain`은 원본 전체를 보존하고 남는 영역을 흐림 배경으로 채웁니다.

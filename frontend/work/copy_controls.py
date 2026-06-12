@@ -1,54 +1,6 @@
-import httpx
 import streamlit as st
 
-from frontend.services.api_client import BACKEND_URL, request_auto_copy
-from frontend.services.backend_errors import format_backend_http_error
 from frontend.work.copy import COPY_MODE_OPTIONS
-
-
-def _copy_to_text(copy: dict[str, object]) -> str:
-    lines = []
-    for label, key in (
-        ("헤드라인", "headline"),
-        ("서브카피", "subcopy"),
-        ("CTA", "cta"),
-    ):
-        value = str(copy.get(key) or "").strip()
-        if value:
-            lines.append(f"{label}: {value}")
-    return "\n".join(lines)
-
-
-def _fill_auto_copy(format_label: str, detail_label: str, image_prompt: str) -> None:
-    try:
-        copy = request_auto_copy(
-            image_prompt,
-            format_label,
-            detail_label,
-            access_token=st.session_state.get("auth_access_token", ""),
-        )
-    except httpx.HTTPStatusError as exc:
-        st.session_state["auto_copy_status"] = format_backend_http_error(
-            exc,
-            default_title="백엔드 자동 광고 문구 요청 실패",
-        )
-        return
-    except httpx.HTTPError as exc:
-        st.session_state["auto_copy_status"] = (
-            f"백엔드 연결 실패 [NETWORK_ERROR] {BACKEND_URL}: {type(exc).__name__}: {exc}"
-        )
-        return
-    except Exception as exc:
-        st.session_state["auto_copy_status"] = f"자동 광고 문구 생성 중 오류가 발생했습니다: {exc}"
-        return
-
-    generated_copy = _copy_to_text(copy)
-    if not generated_copy:
-        st.session_state["auto_copy_status"] = "백엔드 응답에 표시할 광고 문구가 없습니다."
-        return
-
-    st.session_state["ad_copy_prompt"] = generated_copy
-    st.session_state.pop("auto_copy_status", None)
 
 
 def render_copy_controls(
@@ -63,29 +15,19 @@ def render_copy_controls(
     )
 
     if not ad_copy_enabled:
-        st.session_state.pop("auto_copy_status", None)
         return "", False, "preserve"
 
     raw_prompt = st.text_area(
         "광고 문구",
         placeholder=(
-            "직접 넣고 싶은 광고 문구를 입력하세요.\n" "비워두면 자동 문구 생성을 요청합니다."
+            "직접 넣고 싶은 광고 문구를 입력하세요.\n"
+            "비워두면 백엔드가 기본 문구를 생성할 수 있습니다."
         ),
         height=150,
         key="ad_copy_prompt",
-        help="비워두면 이미지 생성 시 자동 문구 생성을 요청합니다.",
+        help="비워두면 이미지 생성 시 백엔드가 기본 문구를 생성할 수 있습니다.",
         label_visibility="collapsed",
     )
-    st.button(
-        "광고 문구 자동 생성",
-        key="auto_copy_generate",
-        on_click=_fill_auto_copy,
-        args=(format_label, detail_label, image_prompt),
-        use_container_width=True,
-    )
-    auto_copy_status = st.session_state.pop("auto_copy_status", None)
-    if auto_copy_status:
-        st.info(auto_copy_status)
 
     prompt = raw_prompt
     copy_mode_labels = [label for label, _mode in COPY_MODE_OPTIONS]
