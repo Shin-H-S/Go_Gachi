@@ -11,7 +11,7 @@ from app_prompting import COPY_MODE_LABELS, LOGO_POSITION_LABELS
 from app_state import list_runs
 from runner import load_settings
 
-from backend.app.services.costs import calculate_text_cost
+from backend.app.services.costs import calculate_image_cost, calculate_text_cost
 
 
 def render_compare_tab() -> None:
@@ -103,10 +103,37 @@ def render_compare_tab() -> None:
                     f"- 문구: {('적용 · ' + COPY_MODE_LABELS.get(info_cfg.get('copy_mode'), '-') + ' · 「' + info_cfg.get('copy_text', '') + '」') if info_cfg.get('copy_on') else '미적용'}\n"
                     f"- 유저 프롬프트: {('「' + info_cfg.get('user_prompt') + '」') if info_cfg.get('user_prompt') else '없음'}\n"
                     f"- 장수/품질: {info_cfg.get('count')}장 · {info_cfg.get('quality')} · "
-                    f"모델 {info['results'].get('model')}"
+                    f"모델 {info['results'].get('model')} · "
+                    f"텍스트 모델 {info['results'].get('text_model') or '기록 없음(구버전 실행)'}"
                 )
             else:
                 st.caption("설정 스냅샷(config.json)이 없는 테스트입니다 (CLI 실행 등).")
+
+            info_oks = info["ok_records"]
+            if info_oks:
+                info_quality = info["results"].get("quality", "medium")
+                info_gen_cost = sum(
+                    r["cost_usd"]
+                    if isinstance(r.get("cost_usd"), int | float)
+                    else calculate_image_cost(r.get("usage") or None, quality=info_quality)
+                    for r in info_oks
+                )
+                info_times = [
+                    r["elapsed_s"]
+                    for r in info_oks
+                    if isinstance(r.get("elapsed_s"), int | float)
+                ]
+                time_text = (
+                    f"**{sum(info_times) / len(info_times):.1f}초** "
+                    f"(누적 {sum(info_times):.0f}초 / {len(info_times)}장)"
+                    if info_times
+                    else "-"
+                )
+                st.markdown(
+                    f"- 이미지당 비용: **${info_gen_cost / len(info_oks):.4f}** "
+                    f"(총 ${info_gen_cost:.4f} / {len(info_oks)}장)\n"
+                    f"- 이미지당 생성 시간: {time_text}"
+                )
 
             info_records = info["results"].get("records", [])
             info_prompt = info_records[0].get("prompt", "") if info_records else ""

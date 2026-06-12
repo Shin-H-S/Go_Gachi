@@ -44,7 +44,11 @@ from backend.app.services.generation_inputs import (  # noqa: E402
     target_size_or_detail,
     user_prompt_with_context,
 )
-from backend.app.services.image_processing import normalize_for_openai  # noqa: E402
+from backend.app.services.image_processing import (  # noqa: E402
+    normalize_for_openai,
+    render_target_png,
+)
+from backend.app.services.image_types import TargetSize  # noqa: E402
 from backend.app.services.image_validation import parse_image  # noqa: E402
 from backend.app.services.openai_images import call_openai_edit  # noqa: E402
 
@@ -299,9 +303,16 @@ async def run_one(
                 prompt=job["prompt"],
                 settings=settings,
             )
-            (run_dir / "images" / out_name).write_bytes(
-                base64.b64decode(b64_from_edit_result(edit_result))
+            decoded = base64.b64decode(b64_from_edit_result(edit_result))
+            # 서비스와 동일하게 목표 규격으로 리사이즈/크롭해 저장한다.
+            width, height = (int(v) for v in job["target"].split("x"))
+            target_png = await asyncio.to_thread(
+                render_target_png,
+                decoded,
+                TargetSize(width=width, height=height),
+                job["resize_mode"],
             )
+            (run_dir / "images" / out_name).write_bytes(target_png)
             usage = usage_from_edit_result(edit_result)
             record["usage"] = usage or None
             record["cost_usd"] = calculate_image_cost(
@@ -396,6 +407,7 @@ async def main_async(args: argparse.Namespace) -> None:
         "run_name": matrix.get("run_name", matrix_path.stem),
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "model": settings.openai_image_model,
+        "text_model": settings.openai_text_model,
         "quality": settings.openai_image_quality,
         "repeat": repeat,
         "dry_run": args.dry_run,
