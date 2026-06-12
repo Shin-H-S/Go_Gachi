@@ -108,6 +108,14 @@ def render_compare_tab() -> None:
             else:
                 st.caption("설정 스냅샷(config.json)이 없는 테스트입니다 (CLI 실행 등).")
 
+            info_records = info["results"].get("records", [])
+            info_prompt = info_records[0].get("prompt", "") if info_records else ""
+            with st.expander("이 테스트에 쓰인 프롬프트 전문"):
+                if info_prompt:
+                    st.code(info_prompt, language=None)
+                else:
+                    st.caption("프롬프트 기록이 없습니다.")
+
             info_eval_path = info["run_dir"] / "evaluation.json"
             if info_eval_path.exists():
                 try:
@@ -145,6 +153,12 @@ def render_compare_tab() -> None:
                         st.caption("입력된 점수가 없습니다.")
                 else:
                     st.caption("평가 항목이 비어 있습니다.")
+                memo_text = (info_eval.get("memo") or "").strip()
+                st.markdown("**메모**")
+                if memo_text:
+                    st.text(memo_text)
+                else:
+                    st.caption("저장된 메모가 없습니다.")
             else:
                 st.caption("저장된 평가가 없습니다 ('결과 · 평가' 탭에서 저장하기).")
 

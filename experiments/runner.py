@@ -126,11 +126,11 @@ def load_matrix(path: Path) -> dict[str, Any]:
     if path.suffix in {".yaml", ".yml"}:
         try:
             import yaml
-        except ImportError:
+        except ImportError as exc:
             raise SystemExit(
                 "PyYAML이 없습니다. `uv add --dev pyyaml` 후 다시 실행하거나 "
                 ".json 매트릭스를 사용하세요."
-            ) from None
+            ) from exc
         return yaml.safe_load(text)
     return json.loads(text)
 
