@@ -351,7 +351,8 @@ def render_results_tab() -> None:
                     f"- 문구: {('적용 · ' + COPY_MODE_LABELS.get(saved_cfg.get('copy_mode'), '-') + ' · 「' + saved_cfg.get('copy_text', '') + '」') if saved_cfg.get('copy_on') else '미적용'}\n"
                     f"- 유저 프롬프트: {('「' + saved_cfg.get('user_prompt') + '」') if saved_cfg.get('user_prompt') else '없음'}\n"
                     f"- 장수/품질: {saved_cfg.get('count')}장 · {saved_cfg.get('quality')} · "
-                    f"모델 {results.get('model')}"
+                    f"모델 {results.get('model')} · "
+                    f"텍스트 모델 {results.get('text_model') or '기록 없음(구버전 실행)'}"
                 )
             if records:
                 st.text("사용된 프롬프트 전문:")
@@ -367,22 +368,40 @@ def render_results_tab() -> None:
         )
         token_based = any(record.get("usage") for record in ok_records)
         eval_costs = st.session_state[costs_key]
-        col_c1, col_c2, col_c3 = st.columns(3)
+        elapsed_values = [
+            record["elapsed_s"]
+            for record in ok_records
+            if isinstance(record.get("elapsed_s"), int | float)
+        ]
+        per_image_cost = generation_cost / len(ok_records) if ok_records else 0.0
+        total_elapsed = sum(elapsed_values)
+        avg_elapsed = total_elapsed / len(elapsed_values) if elapsed_values else None
+        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
         col_c1.metric(
             "이미지 생성 비용" + (" (토큰 기반)" if token_based else " (품질 단가 추정)"),
             f"${generation_cost:.4f}",
+            f"장당 ${per_image_cost:.4f}" if ok_records else None,
+            delta_color="off",
         )
         col_c2.metric(
+            "장당 평균 생성 시간",
+            f"{avg_elapsed:.1f}초" if avg_elapsed is not None else "-",
+            f"누적 {total_elapsed:.0f}초 / {len(elapsed_values)}장" if elapsed_values else None,
+            delta_color="off",
+        )
+        col_c3.metric(
             "AI 평가 비용 (토큰 기반)",
             f"${eval_costs.get('eval_usd', 0.0):.4f}",
             f"호출 {eval_costs.get('eval_calls', 0)}회",
             delta_color="off",
         )
-        col_c3.metric("합계", f"${generation_cost + eval_costs.get('eval_usd', 0.0):.4f}")
+        col_c4.metric("합계", f"${generation_cost + eval_costs.get('eval_usd', 0.0):.4f}")
         st.caption(
             "백엔드와 동일한 토큰 단가표(backend/app/services/costs.py)로 계산합니다 — "
             "이미지: 응답 usage 토큰 기반(없으면 품질별 단가 폴백), AI 평가: Responses usage 토큰 기반. "
-            "문구 '다듬기/바꾸기'의 텍스트 생성 비용은 합계에 포함되지 않습니다(백엔드 로그에서 확인)."
+            "문구 '다듬기/바꾸기'의 텍스트 생성 비용은 합계에 포함되지 않습니다(백엔드 로그에서 확인). "
+            "장당 시간은 각 장의 생성 호출 시간 합을 장수로 나눈 값이라, 병렬 생성 시 "
+            "실제 기다린 시간보다 길 수 있습니다."
         )
 
         # ── 메모 ───────────────────────────────────────────────────────────
