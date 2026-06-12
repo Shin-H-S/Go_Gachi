@@ -58,18 +58,13 @@ def test_logo_uploader_uses_shared_image_type_limit() -> None:
     assert multiple_keyword.value.value is False
 
 
-def test_logo_uploader_hides_extra_add_button_after_single_file_selected() -> None:
+def test_logo_uploader_does_not_hide_native_remove_button() -> None:
     logo_source = FRONTEND_LOGO_CONTROLS.read_text(encoding="utf-8")
 
-    assert "if logo_file is not None" in logo_source
-    assert 'div:not(:has([data-testid="stFileUploaderFile"])) button' in logo_source
-    assert 'div:has([data-testid="stFileUploaderFile"]) button' in logo_source
-    assert "display: none !important;" in logo_source
-    assert "display: inline-flex !important;" in logo_source
-    assert (
-        ".st-key-logo_upload section button {\n                display: none !important;"
-        not in logo_source
-    )
+    assert "st.file_uploader" in logo_source
+    assert "if logo_file is not None" not in logo_source
+    assert "display: none !important;" not in logo_source
+    assert 'data-testid="stFileUploaderFile"' not in logo_source
 
 
 def test_logo_preview_is_rendered_as_separate_work_page_box() -> None:

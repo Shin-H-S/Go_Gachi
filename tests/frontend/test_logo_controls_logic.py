@@ -83,19 +83,16 @@ def test_logo_controls_enforce_single_logo_upload_and_default_position(monkeypat
     assert selectbox["kwargs"]["index"] == logo_controls.LOGO_POSITION_OPTIONS.index("bottom_right")
 
 
-def test_logo_controls_hide_extra_add_button_but_keep_remove_button(monkeypatch) -> None:
+def test_logo_controls_do_not_inject_button_hiding_css_after_upload(monkeypatch) -> None:
     fake_st = FakeStreamlit(uploaded_file=_fake_logo_file())
     monkeypatch.setattr(logo_controls, "st", fake_st)
 
     logo_controls.render_logo_controls()
 
     injected_html = "\n".join(str(call["body"]) for call in fake_st.markdowns)
-    normalized_html = " ".join(injected_html.split())
-    assert 'div:not(:has([data-testid="stFileUploaderFile"])) button' in injected_html
-    assert "display: none !important;" in injected_html
-    assert 'div:has([data-testid="stFileUploaderFile"]) button' in injected_html
-    assert "display: inline-flex !important;" in injected_html
-    assert ".st-key-logo_upload section button { display: none !important;" not in normalized_html
+    assert 'data-testid="stFileUploaderFile"' not in injected_html
+    assert "display: none !important;" not in injected_html
+    assert "display: inline-flex !important;" not in injected_html
 
 
 def test_logo_controls_do_not_inject_upload_button_css_without_logo(monkeypatch) -> None:
@@ -107,5 +104,4 @@ def test_logo_controls_do_not_inject_upload_button_css_without_logo(monkeypatch)
     injected_html = "\n".join(str(call["body"]) for call in fake_st.markdowns)
     assert logo_file is None
     assert logo_position == "bottom_right"
-    assert 'div:not(:has([data-testid="stFileUploaderFile"])) button' not in injected_html
     assert "display: none !important;" not in injected_html
