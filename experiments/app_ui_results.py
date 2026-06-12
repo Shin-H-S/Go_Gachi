@@ -41,22 +41,18 @@ def render_results_tab() -> None:
         error_count = sum(1 for r in records if r.get("status") == "error")
         image_numbers = [str(i + 1) for i in range(len(ok_records))]
 
-        # 세션에 평가표 적재. 그리드 위젯의 초기값 원본은 items(dict 리스트)다.
-        # 다른 테스트로 전환했다 돌아오면 Streamlit이 위젯 상태를 청소하므로,
-        # '전환'을 감지하면 evaluation.json(저장된 평가·메모)을 디스크에서 다시 읽는다.
+        # 세션에 평가표 적재 (run별 1회). 그리드 위젯의 초기값 원본은 items(dict 리스트)다.
         items_key = f"eval_items_{run_id}"
         ver_key = f"eval_grid_ver_{run_id}"
         costs_key = f"eval_costs_{run_id}"
-        switched = st.session_state.get("_results_active_run") != run_id
-        if switched or items_key not in st.session_state:
+        if items_key not in st.session_state:
             saved_eval = load_evaluation(run_dir)
             st.session_state[items_key] = saved_eval["items"] or default_eval_items()
-            st.session_state[ver_key] = st.session_state.get(ver_key, 0) + 1
+            st.session_state[ver_key] = 0
             st.session_state[costs_key] = saved_eval.get(
                 "costs", {"eval_usd": 0.0, "eval_calls": 0}
             )
             st.session_state[f"memo_{run_id}"] = saved_eval.get("memo", "")
-            st.session_state["_results_active_run"] = run_id
         grid_ver = st.session_state[ver_key]
 
         def gkey(*parts) -> str:
@@ -105,10 +101,6 @@ def render_results_tab() -> None:
             ai_clicked = st.button("AI가 평가하기", use_container_width=True)
         with col_save:
             save_clicked = st.button("저장하기", type="primary", use_container_width=True)
-        st.caption(
-            "저장된 평가·메모는 테스트를 선택하면 자동으로 불러와집니다. "
-            "다른 테스트로 전환하면 저장하지 않은 변경은 사라지니, 전환 전에 저장하기를 누르세요."
-        )
 
         if ai_clicked:
             items_now = current_items()
@@ -334,8 +326,6 @@ def render_results_tab() -> None:
                 st.session_state.get(f"memo_{run_id}", ""),
                 st.session_state[costs_key],
             )
-            # 세션 캐시도 저장본과 동기화해 전환·복귀 시 어긋남을 막는다.
-            st.session_state[items_key] = items
             st.success("저장 완료 — evaluation.json에 보관되었습니다.")
 
         # ── 설정값 정리 ────────────────────────────────────────────────────
@@ -351,8 +341,7 @@ def render_results_tab() -> None:
                     f"- 문구: {('적용 · ' + COPY_MODE_LABELS.get(saved_cfg.get('copy_mode'), '-') + ' · 「' + saved_cfg.get('copy_text', '') + '」') if saved_cfg.get('copy_on') else '미적용'}\n"
                     f"- 유저 프롬프트: {('「' + saved_cfg.get('user_prompt') + '」') if saved_cfg.get('user_prompt') else '없음'}\n"
                     f"- 장수/품질: {saved_cfg.get('count')}장 · {saved_cfg.get('quality')} · "
-                    f"모델 {results.get('model')} · "
-                    f"텍스트 모델 {results.get('text_model') or '기록 없음(구버전 실행)'}"
+                    f"모델 {results.get('model')}"
                 )
             if records:
                 st.text("사용된 프롬프트 전문:")
@@ -368,40 +357,22 @@ def render_results_tab() -> None:
         )
         token_based = any(record.get("usage") for record in ok_records)
         eval_costs = st.session_state[costs_key]
-        elapsed_values = [
-            record["elapsed_s"]
-            for record in ok_records
-            if isinstance(record.get("elapsed_s"), int | float)
-        ]
-        per_image_cost = generation_cost / len(ok_records) if ok_records else 0.0
-        total_elapsed = sum(elapsed_values)
-        avg_elapsed = total_elapsed / len(elapsed_values) if elapsed_values else None
-        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+        col_c1, col_c2, col_c3 = st.columns(3)
         col_c1.metric(
             "이미지 생성 비용" + (" (토큰 기반)" if token_based else " (품질 단가 추정)"),
             f"${generation_cost:.4f}",
-            f"장당 ${per_image_cost:.4f}" if ok_records else None,
-            delta_color="off",
         )
         col_c2.metric(
-            "장당 평균 생성 시간",
-            f"{avg_elapsed:.1f}초" if avg_elapsed is not None else "-",
-            f"누적 {total_elapsed:.0f}초 / {len(elapsed_values)}장" if elapsed_values else None,
-            delta_color="off",
-        )
-        col_c3.metric(
             "AI 평가 비용 (토큰 기반)",
             f"${eval_costs.get('eval_usd', 0.0):.4f}",
             f"호출 {eval_costs.get('eval_calls', 0)}회",
             delta_color="off",
         )
-        col_c4.metric("합계", f"${generation_cost + eval_costs.get('eval_usd', 0.0):.4f}")
+        col_c3.metric("합계", f"${generation_cost + eval_costs.get('eval_usd', 0.0):.4f}")
         st.caption(
             "백엔드와 동일한 토큰 단가표(backend/app/services/costs.py)로 계산합니다 — "
             "이미지: 응답 usage 토큰 기반(없으면 품질별 단가 폴백), AI 평가: Responses usage 토큰 기반. "
-            "문구 '다듬기/바꾸기'의 텍스트 생성 비용은 합계에 포함되지 않습니다(백엔드 로그에서 확인). "
-            "장당 시간은 각 장의 생성 호출 시간 합을 장수로 나눈 값이라, 병렬 생성 시 "
-            "실제 기다린 시간보다 길 수 있습니다."
+            "문구 '다듬기/바꾸기'의 텍스트 생성 비용은 합계에 포함되지 않습니다(백엔드 로그에서 확인)."
         )
 
         # ── 메모 ───────────────────────────────────────────────────────────

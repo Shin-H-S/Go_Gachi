@@ -13,8 +13,7 @@ from app_prompting import assemble_full_prompt, resolve_ad_copy
 from runner import b64_from_edit_result, load_settings, usage_from_edit_result
 
 from backend.app.services.costs import calculate_image_cost
-from backend.app.services.image_processing import normalize_for_openai, render_target_png
-from backend.app.services.image_types import TargetSize
+from backend.app.services.image_processing import normalize_for_openai
 from backend.app.services.image_validation import parse_image
 from backend.app.services.openai_images import call_openai_edit
 
@@ -77,7 +76,6 @@ async def _batch(cfg: dict, run_dir: Path) -> None:
         "run_name": cfg["name"],
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "model": settings.openai_image_model,
-        "text_model": settings.openai_text_model,
         "quality": settings.openai_image_quality,
         "repeat": cfg["count"],
         "dry_run": False,
@@ -107,15 +105,9 @@ async def _batch(cfg: dict, run_dir: Path) -> None:
                     settings=settings,
                 )
                 out_name = f"{cfg['name']}__r{rep}.png"
-                decoded = base64.b64decode(b64_from_edit_result(edit_result))
-                # 서비스와 동일하게 목표 규격으로 리사이즈/크롭(cover)해 저장한다.
-                target_png = await asyncio.to_thread(
-                    render_target_png,
-                    decoded,
-                    TargetSize(width=cfg["target_w"], height=cfg["target_h"]),
-                    cfg.get("resize_mode", "cover"),
+                (run_dir / "images" / out_name).write_bytes(
+                    base64.b64decode(b64_from_edit_result(edit_result))
                 )
-                (run_dir / "images" / out_name).write_bytes(target_png)
                 usage = usage_from_edit_result(edit_result)
                 record.update(
                     output=f"images/{out_name}",

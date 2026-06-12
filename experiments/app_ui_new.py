@@ -148,12 +148,10 @@ def render_new_tab() -> None:
             "문구 입력",
             key="copy_text",
             height=90,
-            placeholder="예: 가을 신메뉴 고구마 라떼 4,900원 (빈칸이면 AI가 자동 생성)",
+            placeholder="예: 가을 신메뉴 고구마 라떼 4,900원",
             help=(
                 "'그대로 사용'은 입력 전체가 헤드라인 한 줄로 들어갑니다. "
-                "'다듬기/바꾸기'는 AI가 헤드라인·서브카피·CTA로 구성합니다. "
-                "빈칸으로 두면 서비스와 동일하게 채널·유형·유저 프롬프트 맥락으로 "
-                "AI가 문구를 자동 생성합니다 ('직접입력' 모드만 예외로 기본 문구 사용)."
+                "'다듬기/바꾸기'는 AI가 헤드라인·서브카피·CTA로 구성합니다 (서비스와 동일 동작)."
             ),
         )
         mode_label = st.radio(
@@ -223,8 +221,9 @@ def render_new_tab() -> None:
         if detail_label == DIRECT and not detail_custom.strip():
             st.error("유형 프롬프트를 입력해주세요.")
             return None
-        # 문구 빈칸은 막지 않는다 — 서비스와 동일하게 generate_ad_copy가
-        # 채널/유형/유저 프롬프트 맥락으로 문구를 자동 생성한다.
+        if copy_on and not copy_text.strip():
+            st.error("문구 적용을 켰으면 문구를 입력해주세요.")
+            return None
         return {
             "name": (name or "test").strip().replace(" ", "-")[:40],
             "count": int(count),
