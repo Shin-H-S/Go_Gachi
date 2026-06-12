@@ -76,7 +76,7 @@ Cloud Run 배포 기본값:
 - Python `3.11.14`
 - `APP_ENV=production`
 - `IMAGE_PROVIDER=openai`
-- `OPENAI_TEXT_MODEL=gpt-5`
+- `OPENAI_TEXT_MODEL=gpt-5.4-mini`
 - `OPENAI_IMAGE_MODEL=gpt-image-2`
 - `OPENAI_IMAGE_QUALITY=medium`
 - `OPENAI_API_KEY`는 Secret Manager에서 주입
