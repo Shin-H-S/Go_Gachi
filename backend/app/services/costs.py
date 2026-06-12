@@ -43,13 +43,16 @@ def calculate_image_cost(usage: dict[str, object] | None, *, quality: str = "med
     return round(cost, 6)
 
 
-def calculate_text_cost(usage: dict[str, object] | None, *, model: str = "gpt-5") -> float:
+def calculate_text_cost(usage: dict[str, object] | None, *, model: str = "gpt-5.4-mini") -> float:
     """OpenAI 텍스트(Responses API) usage로 호출 비용을 계산한다."""
     if not usage:
         return 0.0
     input_tokens = int(usage.get("input_tokens", 0) or 0)
     output_tokens = int(usage.get("output_tokens", 0) or 0)
-    input_rate, output_rate = _TEXT_COST_BY_MODEL.get(model, _TEXT_COST_BY_MODEL["gpt-5"])
+    input_rate, output_rate = _TEXT_COST_BY_MODEL.get(
+        model,
+        _TEXT_COST_BY_MODEL["gpt-5.4-mini"],
+    )
     cost = input_tokens * input_rate + output_tokens * output_rate
     return round(cost, 6)
 

@@ -39,7 +39,7 @@ Required runtime variables:
 APP_ENV=production
 IMAGE_PROVIDER=openai
 OPENAI_API_KEY=<Secret Manager>
-OPENAI_TEXT_MODEL=gpt-5
+OPENAI_TEXT_MODEL=gpt-5.4-mini
 OPENAI_IMAGE_MODEL=gpt-image-2
 OPENAI_IMAGE_QUALITY=medium
 ```

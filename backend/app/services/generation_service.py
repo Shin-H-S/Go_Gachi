@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import logging
+import time
 
 from backend.app.core.config import Settings
 from backend.app.core.errors import ServiceError
@@ -27,6 +28,11 @@ from backend.app.services.storage_url import output_url
 logger = logging.getLogger(__name__)
 
 
+def _elapsed_ms(start: float) -> float:
+    """구간별 처리 시간을 ms 단위로 계산한다."""
+    return (time.perf_counter() - start) * 1000
+
+
 async def edit_image(
     *,
     image_data_url: str,
@@ -49,6 +55,8 @@ async def edit_image(
     user_id가 있으면 생성 기록에 소유자로 남긴다(비로그인이면 None,
     캐시 조회 키에는 영향을 주지 않는다).
     """
+    total_start = time.perf_counter()
+    preflight_start = time.perf_counter()
     # provider와 무관하게 먼저 입력 이미지를 검증해 프론트 오류를 빠르게 돌려준다.
     uploaded = parse_image(image_data_url, settings.max_upload_bytes)
     logo_uploaded = (
@@ -84,11 +92,32 @@ async def edit_image(
         logo_position=stored_logo_position,
         logo_image_hash=logo_image_hash,
     )
+    logger.info(
+        "generation timing stage=preflight preset=%s detail=%s provider=%s "
+        "has_logo=%s took=%.1fms",
+        preset.id,
+        selected_detail.id,
+        settings.image_provider,
+        has_logo,
+        _elapsed_ms(preflight_start),
+    )
 
     if settings.image_provider == "mock":
         # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
+        mock_render_start = time.perf_counter()
         target_png = render_target_png(uploaded.content, target_size, resize_mode)
         encoded = base64.b64encode(target_png).decode("ascii")
+        logger.info(
+            "generation timing stage=mock_render preset=%s detail=%s target=%sx%s "
+            "bytes=%s took=%.1fms total=%.1fms",
+            preset.id,
+            selected_detail.id,
+            target_size.width,
+            target_size.height,
+            len(target_png),
+            _elapsed_ms(mock_render_start),
+            _elapsed_ms(total_start),
+        )
         return {
             "image_data_url": f"data:image/png;base64,{encoded}",
             # mock은 파일을 저장하지 않으므로 외부에서 받을 수 있는 URL이 없다.
@@ -113,6 +142,7 @@ async def edit_image(
     model = settings.openai_image_model
     prompt_version = PROMPT_VERSION
 
+    cache_start = time.perf_counter()
     cache_snapshot = await find_cache_snapshot(
         settings=settings,
         image_hash=image_hash,
@@ -132,7 +162,20 @@ async def edit_image(
         logo_position=stored_logo_position,
         logo_image_hash=logo_image_hash,
     )
+    logger.info(
+        "generation timing stage=cache_lookup preset=%s detail=%s hit=%s took=%.1fms",
+        preset.id,
+        selected_detail.id,
+        cache_result is not None,
+        _elapsed_ms(cache_start),
+    )
     if cache_result is not None:
+        logger.info(
+            "generation timing stage=cache_total preset=%s detail=%s total=%.1fms",
+            preset.id,
+            selected_detail.id,
+            _elapsed_ms(total_start),
+        )
         return cache_result
     # 캐시 행이 없거나 파일이 사라졌으면 캐시 미스로 떨어져 OpenAI 호출 분기로 이어진다.
 
@@ -147,11 +190,20 @@ async def edit_image(
         short_id(user_id),
     )
     try:
+        storage_prepare_start = time.perf_counter()
         paths = await prepare_storage(
             generation_id=generation_id,
             image_hash=image_hash,
             uploaded=uploaded,
             settings=settings,
+        )
+        logger.info(
+            "generation timing generation_id=%s stage=storage_prepare backend=%s "
+            "original_path=%s took=%.1fms",
+            generation_id,
+            settings.storage_backend,
+            paths.original_path,
+            _elapsed_ms(storage_prepare_start),
         )
     except Exception as exc:
         logger.exception("generation storage prepare failed generation_id=%s", generation_id)
@@ -160,6 +212,7 @@ async def edit_image(
             "이미지 저장소를 준비하지 못했습니다.",
         ) from exc
 
+    pending_db_start = time.perf_counter()
     async with async_session_scope() as db:
         await crud.create_pending_generation(
             db,
@@ -179,6 +232,11 @@ async def edit_image(
             logo_image_hash=logo_image_hash,
             logo_storage_key=None,
         )
+    logger.info(
+        "generation timing generation_id=%s stage=db_pending took=%.1fms",
+        generation_id,
+        _elapsed_ms(pending_db_start),
+    )
     logger.debug(
         "generation pending generation_id=%s model=%s prompt_version=%s",
         generation_id,
@@ -188,12 +246,37 @@ async def edit_image(
 
     try:
         try:
+            normalize_main_start = time.perf_counter()
             openai_uploaded = await asyncio.to_thread(normalize_for_openai, uploaded)
+            logger.info(
+                "generation timing generation_id=%s stage=normalize_main "
+                "original=%sx%s normalized=%sx%s bytes=%s took=%.1fms",
+                generation_id,
+                uploaded.info.width,
+                uploaded.info.height,
+                openai_uploaded.info.width,
+                openai_uploaded.info.height,
+                len(openai_uploaded.content),
+                _elapsed_ms(normalize_main_start),
+            )
+            normalize_logo_start = time.perf_counter()
             openai_logo_uploaded = (
                 await asyncio.to_thread(normalize_for_openai, logo_uploaded)
                 if logo_uploaded
                 else None
             )
+            if openai_logo_uploaded and logo_uploaded:
+                logger.info(
+                    "generation timing generation_id=%s stage=normalize_logo "
+                    "original=%sx%s normalized=%sx%s bytes=%s took=%.1fms",
+                    generation_id,
+                    logo_uploaded.info.width,
+                    logo_uploaded.info.height,
+                    openai_logo_uploaded.info.width,
+                    openai_logo_uploaded.info.height,
+                    len(openai_logo_uploaded.content),
+                    _elapsed_ms(normalize_logo_start),
+                )
         except Exception as exc:
             raise ServiceError(
                 "IMAGE_INPUT_NORMALIZE_FAILED",
@@ -245,12 +328,21 @@ async def edit_image(
             1 if openai_logo_uploaded else 0,
         )
         try:
+            image_api_start = time.perf_counter()
             b64_json, image_usage = await call_openai_edit(
                 uploaded=openai_uploaded,
                 reference_images=[openai_logo_uploaded] if openai_logo_uploaded else None,
                 api_size=selected_detail.api_size,
                 prompt=prompt,
                 settings=settings,
+            )
+            logger.info(
+                "generation timing generation_id=%s stage=openai_image_total "
+                "api_size=%s reference_images=%s took=%.1fms",
+                generation_id,
+                selected_detail.api_size,
+                1 if openai_logo_uploaded else 0,
+                _elapsed_ms(image_api_start),
             )
         except ServiceError:
             raise
@@ -262,7 +354,14 @@ async def edit_image(
 
         try:
             # OpenAI가 응답은 했지만 결과 이미지 base64가 깨졌다면 별도 응답 오류로 본다.
+            decode_start = time.perf_counter()
             decoded = base64.b64decode(b64_json, validate=True)
+            logger.info(
+                "generation timing generation_id=%s stage=decode_result bytes=%s took=%.1fms",
+                generation_id,
+                len(decoded),
+                _elapsed_ms(decode_start),
+            )
         except Exception as exc:
             raise ServiceError(
                 "IMAGE_RESULT_DECODE_FAILED",
@@ -270,11 +369,22 @@ async def edit_image(
             ) from exc
 
         try:
+            render_start = time.perf_counter()
             target_png = await asyncio.to_thread(
                 render_target_png,
                 decoded,
                 target_size,
                 resize_mode,
+            )
+            logger.info(
+                "generation timing generation_id=%s stage=render_target target=%sx%s "
+                "mode=%s bytes=%s took=%.1fms",
+                generation_id,
+                target_size.width,
+                target_size.height,
+                resize_mode,
+                len(target_png),
+                _elapsed_ms(render_start),
             )
         except Exception as exc:
             raise ServiceError(
@@ -283,7 +393,17 @@ async def edit_image(
             ) from exc
 
         try:
+            save_start = time.perf_counter()
             await save_output(output_path=paths.output_path, body=target_png, settings=settings)
+            logger.info(
+                "generation timing generation_id=%s stage=storage_save backend=%s "
+                "output_path=%s bytes=%s took=%.1fms",
+                generation_id,
+                settings.storage_backend,
+                paths.output_path,
+                len(target_png),
+                _elapsed_ms(save_start),
+            )
         except Exception as exc:
             raise ServiceError(
                 "IMAGE_STORAGE_SAVE_FAILED",
@@ -320,6 +440,7 @@ async def edit_image(
     image_url = output_url(paths.output_path)
     # usage가 비어 있으면(테스트·옛 모델) quality 기반 보수적 추정 단가로 폴백한다.
     actual_cost = calculate_image_cost(image_usage, quality=settings.openai_image_quality)
+    success_db_start = time.perf_counter()
     async with async_session_scope() as db:
         await crud.mark_generation_success(
             db,
@@ -337,14 +458,29 @@ async def edit_image(
             cached=False,
         )
     logger.info(
+        "generation timing generation_id=%s stage=db_success took=%.1fms",
+        generation_id,
+        _elapsed_ms(success_db_start),
+    )
+    logger.info(
         "generation success generation_id=%s image_url=%s",
         generation_id,
         image_url,
     )
 
     # 프론트가 별도 파일 저장 없이 바로 미리보기할 수 있도록 data URL로 반환한다.
+    response_encode_start = time.perf_counter()
+    image_data_url = f"data:image/png;base64,{base64.b64encode(target_png).decode('ascii')}"
+    logger.info(
+        "generation timing generation_id=%s stage=response_encode bytes=%s took=%.1fms "
+        "total=%.1fms",
+        generation_id,
+        len(image_data_url),
+        _elapsed_ms(response_encode_start),
+        _elapsed_ms(total_start),
+    )
     return {
-        "image_data_url": f"data:image/png;base64,{base64.b64encode(target_png).decode('ascii')}",
+        "image_data_url": image_data_url,
         "image_url": image_url,
         "provider": "openai",
         "note": None,

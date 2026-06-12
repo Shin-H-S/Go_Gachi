@@ -69,7 +69,7 @@ class Settings(BaseModel):
     image_provider: Literal["mock", "openai"] = "mock"
     openai_api_key: str = ""
     openai_admin_key: str = ""
-    openai_text_model: str = "gpt-5"
+    openai_text_model: str = "gpt-5.4-mini"
     openai_image_model: str = "gpt-image-2"
     openai_image_quality: str = "medium"
     max_upload_bytes: int = 50 * 1024 * 1024
@@ -130,7 +130,7 @@ def get_settings() -> Settings:
         image_provider=provider,
         openai_api_key=api_key,
         openai_admin_key=os.getenv("OPENAI_ADMIN_KEY", ""),
-        openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5"),
+        openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5.4-mini"),
         openai_image_model=os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2"),
         openai_image_quality=os.getenv("OPENAI_IMAGE_QUALITY", "medium"),
         database_url=database_url,

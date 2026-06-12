@@ -131,7 +131,7 @@ def test_generate_uses_user_prompt(
             result = await db.execute(select(Generation.text_model))
             return result.scalar_one()
 
-    assert asyncio.run(_saved_text_model()) == "gpt-5"
+    assert asyncio.run(_saved_text_model()) == "gpt-5.4-mini"
 
 
 def test_generate_uses_default_copy_when_user_copy_is_empty(
@@ -293,4 +293,10 @@ def test_generate_records_text_usage_cost(monkeypatch: pytest.MonkeyPatch) -> No
     )
 
     assert response.status_code == 200
-    assert asyncio.run(_saved_usage()) == ("gpt-image-2", "gpt-5", 0.042, 0.02125, 0.06325)
+    assert asyncio.run(_saved_usage()) == (
+        "gpt-image-2",
+        "gpt-5.4-mini",
+        0.042,
+        0.00975,
+        0.05175,
+    )
