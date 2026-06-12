@@ -6,10 +6,12 @@ from types import SimpleNamespace
 import pytest
 
 from frontend import api_client
+from frontend.work import copy_controls
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 WORK_PAGE = ROOT_DIR / "frontend" / "pages" / "work.py"
 COPY_CONTROLS = ROOT_DIR / "frontend" / "work" / "copy_controls.py"
+RESULT_PANEL = ROOT_DIR / "frontend" / "work" / "result_panel.py"
 
 
 class FakeResponse:
@@ -21,6 +23,34 @@ class FakeResponse:
 
     def json(self) -> dict[str, object]:
         return self.payload
+
+
+class FakeCopyControlStreamlit:
+    def __init__(self, *, checkbox_value: bool) -> None:
+        self.checkbox_value = checkbox_value
+        self.session_state = {}
+        self.text_area_calls: list[dict[str, object]] = []
+        self.button_calls: list[dict[str, object]] = []
+        self.radio_calls: list[dict[str, object]] = []
+        self.info_messages: list[str] = []
+
+    def checkbox(self, *args, **kwargs) -> bool:
+        return self.checkbox_value
+
+    def text_area(self, *args, **kwargs) -> str:
+        self.text_area_calls.append({"args": args, "kwargs": kwargs})
+        return "직접 입력한 문구"
+
+    def button(self, *args, **kwargs) -> bool:
+        self.button_calls.append({"args": args, "kwargs": kwargs})
+        return False
+
+    def radio(self, *args, **kwargs) -> str:
+        self.radio_calls.append({"args": args, "kwargs": kwargs})
+        return "그대로 사용"
+
+    def info(self, message: str) -> None:
+        self.info_messages.append(message)
 
 
 def _keyword(call: ast.Call, name: str) -> ast.keyword | None:
@@ -62,7 +92,7 @@ def test_copy_controls_do_not_render_redundant_ad_copy_section_heading() -> None
     assert '"광고 문구 포함"' in source
 
 
-def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
+def test_copy_controls_do_not_render_auto_copy_button() -> None:
     source = COPY_CONTROLS.read_text(encoding="utf-8")
     tree = ast.parse(source)
     button_calls = [
@@ -72,14 +102,6 @@ def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
         and isinstance(node.func, ast.Attribute)
         and node.func.attr == "button"
     ]
-    text_area_calls = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "text_area"
-    ]
-
     auto_copy_button = next(
         (
             call
@@ -90,21 +112,51 @@ def test_copy_controls_render_auto_copy_button_and_prompt_state_key() -> None:
         ),
         None,
     )
+
+    assert auto_copy_button is None
+    assert "request_auto_copy" not in source
+    assert "build_auto_copy" not in source
+
+
+def test_copy_controls_render_manual_copy_prompt_state_key() -> None:
+    source = COPY_CONTROLS.read_text(encoding="utf-8")
+    tree = ast.parse(source)
     prompt_text_area = next(
         (
             call
-            for call in text_area_calls
-            if (_keyword(call, "key") is not None)
+            for call in ast.walk(tree)
+            if isinstance(call, ast.Call)
+            and isinstance(call.func, ast.Attribute)
+            and call.func.attr == "text_area"
+            and (_keyword(call, "key") is not None)
             and isinstance(_keyword(call, "key").value, ast.Constant)
             and _keyword(call, "key").value.value == "ad_copy_prompt"
         ),
         None,
     )
 
-    assert auto_copy_button is not None
     assert prompt_text_area is not None
-    assert "request_auto_copy" in source
-    assert "build_auto_copy" not in source
+
+
+def test_copy_controls_hide_copy_inputs_when_text_overlay_is_unchecked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_st = FakeCopyControlStreamlit(checkbox_value=False)
+    monkeypatch.setattr(copy_controls, "st", fake_st)
+
+    prompt, text_overlay_enabled, copy_mode = copy_controls.render_copy_controls(
+        "인스타그램",
+        "정사각형 피드",
+        "밝은 배경",
+    )
+
+    assert prompt == ""
+    assert text_overlay_enabled is False
+    assert copy_mode == "preserve"
+    assert fake_st.text_area_calls == []
+    assert fake_st.button_calls == []
+    assert fake_st.radio_calls == []
+    assert "auto_copy_status" not in fake_st.session_state
 
 
 def test_copy_controls_render_manual_copy_mode_selector() -> None:
@@ -159,18 +211,25 @@ def test_work_page_keeps_image_prompt_separate_from_ad_copy() -> None:
 
 def test_work_page_displays_backend_copy_metadata() -> None:
     work_source = WORK_PAGE.read_text(encoding="utf-8")
+    result_panel_source = RESULT_PANEL.read_text(encoding="utf-8")
 
-    assert "from frontend.work.result_copy import render_result_copy" in work_source
-    assert 'st.session_state.get("result_copy")' in work_source
-    assert "render_result_copy(" in work_source
+    assert "from frontend.work.result_panel import render_result_panel" in work_source
+    assert "from frontend.work.result_copy import render_result_copy" in result_panel_source
+    assert 'st.session_state.get("result_copy")' in result_panel_source
+    assert "render_result_copy(" in result_panel_source
 
 
 def test_work_page_displays_result_inclusion_summary() -> None:
     work_source = WORK_PAGE.read_text(encoding="utf-8")
+    result_panel_source = RESULT_PANEL.read_text(encoding="utf-8")
 
-    assert "from frontend.work.result_summary import render_result_summary" in work_source
-    assert 'st.session_state.get("result_context")' in work_source
-    assert "render_result_summary(" in work_source
+    assert "from frontend.work.result_panel import render_result_panel" in work_source
+    assert (
+        "from frontend.work.result_summary import render_result_summary"
+        in result_panel_source
+    )
+    assert 'st.session_state.get("result_context")' in result_panel_source
+    assert "render_result_summary(" in result_panel_source
 
 
 def test_request_backend_sends_ad_copy_disabled(monkeypatch: pytest.MonkeyPatch) -> None:

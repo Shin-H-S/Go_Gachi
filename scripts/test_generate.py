@@ -12,7 +12,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-API_URL = "http://localhost:8080/api/generate"
+API_URL = "http://localhost:8000/api/generate"
 
 if len(sys.argv) < 2:
     print("사용: uv run python scripts/test_generate.py <이미지경로>")

@@ -5,16 +5,20 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.auth import router as auth_router
 from backend.app.api.internal import router as internal_router
 from backend.app.api.middlewares import AccessLogMiddleware, RequestIDMiddleware
 from backend.app.core.auth import AuthUser, get_optional_user
-from backend.app.core.config import get_settings
+from backend.app.core.config import Settings, get_settings
+from backend.app.core.errors import ServiceError, error_detail
 from backend.app.core.logging_config import setup_logging
 from backend.app.core.logging_utils import short_id
 from backend.app.core.presets import default_preset, get_presets
+from backend.app.db import crud
+from backend.app.db.database import async_session_scope
 from backend.app.schemas import (
     ConfigResponse,
     CopyGenerateRequest,
@@ -23,6 +27,8 @@ from backend.app.schemas import (
     GenerateResponse,
     LogoResponse,
 )
+from backend.app.services.costs import calculate_text_cost
+from backend.app.services.generation_files import new_generation_id
 from backend.app.services.image_edit import edit_image
 from backend.app.services.openai_copy import generate_ad_copy
 
@@ -30,6 +36,32 @@ logger = logging.getLogger(__name__)
 IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
     "이미지 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
 )
+COPY_GENERATION_UNAVAILABLE_MESSAGE = (
+    "광고 문구 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
+)
+
+
+def _service_http_error(exc: ServiceError) -> HTTPException:
+    """서비스 계층 에러를 프론트가 분기 가능한 HTTP 에러로 변환한다."""
+    return HTTPException(status_code=exc.status_code, detail=exc.to_detail())
+
+
+async def _record_text_usage(
+    *,
+    settings: Settings,
+    usage: dict[str, object],
+) -> None:
+    text_cost = calculate_text_cost(usage, model=settings.openai_text_model)
+    async with async_session_scope() as db:
+        await crud.record_usage(
+            db,
+            request_id=new_generation_id(),
+            image_model=None,
+            text_model=settings.openai_text_model,
+            image_cost_usd=0.0,
+            text_cost_usd=text_cost,
+            cached=False,
+        )
 
 
 @asynccontextmanager
@@ -40,6 +72,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
 
 
 app = FastAPI(title="Cafe Ad Maker V1", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # add_middleware는 역순으로 실행되므로 RequestIDMiddleware를 나중에 등록한다.
 app.add_middleware(AccessLogMiddleware)
@@ -119,7 +159,10 @@ async def generate_copy(
     if preset is None:
         raise HTTPException(
             status_code=400,
-            detail=f"지원하지 않는 presetId입니다: {request.preset_id}",
+            detail=error_detail(
+                "UNSUPPORTED_PRESET_ID",
+                f"지원하지 않는 presetId입니다: {request.preset_id}",
+            ),
         )
     detail = (
         preset.find_detail(request.detail_type) if request.detail_type else preset.default_detail()
@@ -127,7 +170,10 @@ async def generate_copy(
     if detail is None:
         raise HTTPException(
             status_code=400,
-            detail=f"지원하지 않는 detailType입니다: {request.detail_type}",
+            detail=error_detail(
+                "UNSUPPORTED_DETAIL_TYPE",
+                f"지원하지 않는 detailType입니다: {request.detail_type}",
+            ),
         )
     logger.info(
         "auto copy requested preset=%s detail=%s mode=%s user_id=%s",
@@ -137,7 +183,7 @@ async def generate_copy(
         short_id(user.id) if user else "-",
     )
     try:
-        ad_copy = await generate_ad_copy(
+        copy_result = await generate_ad_copy(
             settings=settings,
             preset=preset,
             detail=detail,
@@ -145,10 +191,18 @@ async def generate_copy(
             user_copy="",
             copy_mode=request.copy_mode,
         )
+    except ServiceError as exc:
+        logger.exception("auto copy generation failed")
+        raise _service_http_error(exc) from exc
     except RuntimeError as exc:
         logger.exception("auto copy generation failed")
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return CopyResponse(**ad_copy.model_dump())
+        raise HTTPException(
+            status_code=503,
+            detail=error_detail("COPY_GENERATION_FAILED", COPY_GENERATION_UNAVAILABLE_MESSAGE),
+        ) from exc
+    if copy_result.used_openai:
+        await _record_text_usage(settings=settings, usage=copy_result.usage)
+    return CopyResponse(**copy_result.copy.model_dump())
 
 
 @app.post("/api/generate", response_model=GenerateResponse, response_model_by_alias=True)
@@ -164,7 +218,10 @@ async def generate(
         if preset is None:
             raise HTTPException(
                 status_code=400,
-                detail=f"지원하지 않는 presetId입니다: {request.preset_id}",
+                detail=error_detail(
+                    "UNSUPPORTED_PRESET_ID",
+                    f"지원하지 않는 presetId입니다: {request.preset_id}",
+                ),
             )
     else:
         preset = default_preset()
@@ -175,7 +232,10 @@ async def generate(
     if detail is None:
         raise HTTPException(
             status_code=400,
-            detail=f"지원하지 않는 detailType입니다: {request.detail_type}",
+            detail=error_detail(
+                "UNSUPPORTED_DETAIL_TYPE",
+                f"지원하지 않는 detailType입니다: {request.detail_type}",
+            ),
         )
 
     logger.info(
@@ -187,12 +247,13 @@ async def generate(
 
     ad_copy = None
     copy_info = None
+    text_cost_usd = 0.0
     if request.ad_copy_enabled:
         # userPrompt는 이미지 생성 방향, userCopy는 이미지에 넣을 실제 문구로 분리한다.
         # userCopy가 비어 있으면 텍스트 AI가 userPrompt/채널 맥락을 보고 광고 문구를 만든다.
         copy_source = request.user_copy or ""
         try:
-            ad_copy = await generate_ad_copy(
+            copy_result = await generate_ad_copy(
                 settings=settings,
                 preset=preset,
                 detail=detail,
@@ -200,9 +261,21 @@ async def generate(
                 user_copy=copy_source,
                 copy_mode=request.copy_mode,
             )
+        except ServiceError as exc:
+            logger.exception("copy generation failed")
+            raise _service_http_error(exc) from exc
         except RuntimeError as exc:
             logger.exception("copy generation failed")
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=503,
+                detail=error_detail("COPY_GENERATION_FAILED", COPY_GENERATION_UNAVAILABLE_MESSAGE),
+            ) from exc
+        if copy_result.used_openai:
+            text_cost_usd = calculate_text_cost(
+                copy_result.usage,
+                model=settings.openai_text_model,
+            )
+        ad_copy = copy_result.copy
         copy_info = CopyResponse(**ad_copy.model_dump())
 
     try:
@@ -222,16 +295,23 @@ async def generate(
             logo_data_url=request.logo_data_url,
             logo_position=request.logo_position,
             text_copy=ad_copy,
+            text_cost_usd=text_cost_usd,
         )
     except ValueError as exc:
         # 사용자 입력 문제는 프론트가 처리할 수 있게 400으로 돌려준다.
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400,
+            detail=error_detail("INVALID_IMAGE_INPUT", str(exc)),
+        ) from exc
+    except ServiceError as exc:
+        logger.exception("image generation failed code=%s", exc.code)
+        raise _service_http_error(exc) from exc
     except RuntimeError as exc:
         # 서버 설정/외부 이미지 API 문제는 내부 로그에만 원인을 남기고 사용자 메시지는 일반화한다.
         logger.exception("image generation failed")
         raise HTTPException(
             status_code=503,
-            detail=IMAGE_GENERATION_UNAVAILABLE_MESSAGE,
+            detail=error_detail("IMAGE_GENERATION_FAILED", IMAGE_GENERATION_UNAVAILABLE_MESSAGE),
         ) from exc
 
     logger.debug(

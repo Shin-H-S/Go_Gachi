@@ -33,9 +33,7 @@ def test_login_route_is_registered_and_dispatched() -> None:
 def test_login_page_has_email_password_only_copy_and_english_brand() -> None:
     source = read_source(FRONTEND_LOGIN_PAGE)
     tree = ast.parse(source)
-    defined_functions = {
-        node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-    }
+    defined_functions = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
 
     assert "render_login_page" in defined_functions
     assert "이메일" in source
@@ -132,3 +130,35 @@ def test_auth_session_state_defaults_and_save(monkeypatch) -> None:
     assert fake_st.session_state["auth_access_token"] == "token-123"
     assert fake_st.session_state["auth_user_id"] == "user-123"
     assert fake_st.session_state["auth_user_email"] == "owner@example.com"
+
+
+def test_login_success_uses_pending_auth_redirect(monkeypatch) -> None:
+    login_page = importlib.import_module("frontend.pages.login")
+    navigated: list[str] = []
+
+    fake_st = SimpleNamespace(
+        session_state={
+            "login_email": "owner@example.com",
+            "login_password": "password123",
+            "auth_redirect_page": "mypage",
+        },
+        rerun=lambda: None,
+    )
+
+    monkeypatch.setattr(login_page, "st", fake_st)
+    monkeypatch.setattr(
+        login_page,
+        "login_with_email",
+        lambda email, password: SimpleNamespace(
+            access_token="token-123",
+            user_id="user-123",
+            email=email,
+        ),
+    )
+    monkeypatch.setattr(login_page, "navigate_to", navigated.append)
+
+    assert login_page._handle_login_submit() == ""
+
+    assert navigated == ["mypage"]
+    assert fake_st.session_state["auth_redirect_page"] == ""
+    assert fake_st.session_state["auth_access_token"] == "token-123"

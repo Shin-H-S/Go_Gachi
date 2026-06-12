@@ -9,14 +9,13 @@ FRONTEND_DIR = Path(__file__).resolve().parents[1]
 ROOT_DIR = FRONTEND_DIR.parent
 CONFIG_PRESETS_PATH = ROOT_DIR / "config" / "presets.json"
 CHANNEL_ASSET_DIR = FRONTEND_DIR / "assets"
-DEFAULT_BACKEND_URL = "http://127.0.0.1:8080"
+DEFAULT_BACKEND_URL = "http://127.0.0.1:8000"
 
 # 공통 설정은 레포 최상단 .env에서 읽고, 프론트 전용 .env가 있으면 그 값으로 덮어쓴다.
 load_dotenv(ROOT_DIR / ".env")
 load_dotenv(FRONTEND_DIR / ".env", override=True)
 
 BACKEND_URL = os.getenv("BACKEND_URL", DEFAULT_BACKEND_URL).rstrip("/")
-FRONTEND_USE_MOCK = os.getenv("FRONTEND_USE_MOCK", "").lower() in {"1", "true", "yes"}
 FRONTEND_CONFIG_SOURCE = os.getenv("FRONTEND_CONFIG_SOURCE", "auto").lower()
 
 
@@ -38,7 +37,7 @@ def _load_backend_presets() -> list[dict[str, object]]:
 
 def load_presets() -> list[dict[str, object]]:
     """설정 소스 우선순위에 따라 프리셋 목록을 가져온다."""
-    if FRONTEND_CONFIG_SOURCE == "local" or FRONTEND_USE_MOCK:
+    if FRONTEND_CONFIG_SOURCE == "local":
         return _load_local_presets()
 
     if FRONTEND_CONFIG_SOURCE == "backend":

@@ -14,9 +14,7 @@ def test_main_page_module_exposes_route_and_copy() -> None:
     main_source = FRONTEND_MAIN_PAGE.read_text(encoding="utf-8")
     router_source = FRONTEND_ROUTER.read_text(encoding="utf-8")
     tree = ast.parse(main_source)
-    defined_functions = {
-        node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-    }
+    defined_functions = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
 
     assert "render_main_page" in defined_functions
     assert "get_current_page" in router_source
@@ -38,9 +36,8 @@ def test_main_page_module_exposes_route_and_copy() -> None:
 
 
 def test_main_page_styles_match_linktree_inspired_hero() -> None:
-    styles = (
-        STYLE_MAIN_LAYOUT_FILE.read_text(encoding="utf-8")
-        + STYLE_MAIN_VISUAL_FILE.read_text(encoding="utf-8")
+    styles = STYLE_MAIN_LAYOUT_FILE.read_text(encoding="utf-8") + STYLE_MAIN_VISUAL_FILE.read_text(
+        encoding="utf-8"
     )
 
     assert ".main-landing" in styles

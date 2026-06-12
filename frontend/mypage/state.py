@@ -57,7 +57,7 @@ def folder_name_by_id(folders: list[dict], folder_id: int | None) -> str:
 
 def view_title(view: str, folders: list[dict]) -> str:
     if view == RECENT_VIEW:
-        return "최근 작업"
+        return "전체 작업"
     if view == UPLOADS_VIEW:
         return "업로드한 메뉴 사진"
     if view == ACCOUNT_VIEW:

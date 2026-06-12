@@ -47,6 +47,36 @@ div[data-testid="stSegmentedControl"] button * {
     line-height: 1.2 !important;
 }
 
+.st-key-ad_copy_enabled label,
+.st-key-ad_copy_enabled label *,
+.st-key-ad_copy_enabled p {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+}
+
+.st-key-ad_copy_enabled input[type="checkbox"] {
+    accent-color: #ff5a5f !important;
+}
+
+.st-key-ad_copy_enabled label[data-baseweb="checkbox"] > div:first-child {
+    background-color: #ffffff !important;
+    border-color: rgba(32, 39, 37, 0.22) !important;
+}
+
+.st-key-ad_copy_enabled label[data-baseweb="checkbox"]:has(input[type="checkbox"]:checked)
+    > div:first-child {
+    background-color: #ff5a5f !important;
+    border-color: #ff5a5f !important;
+}
+
+.st-key-ad_copy_enabled label[data-baseweb="checkbox"] svg,
+.st-key-ad_copy_enabled label[data-baseweb="checkbox"] svg * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+}
+
 div[data-testid="stRadio"] label,
 div[role="radiogroup"] label {
     border: 1px solid rgba(32, 39, 37, 0.12);

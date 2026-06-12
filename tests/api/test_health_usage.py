@@ -19,7 +19,7 @@ def test_internal_usage_returns_budget_keys() -> None:
 
     assert response.status_code == 200
     for key in (
-        "total_estimated_cost",
+        "total_cost_usd",
         "generation_count",
         "cached_count",
         "budget_limit",
@@ -30,7 +30,7 @@ def test_internal_usage_returns_budget_keys() -> None:
     assert "actual_total_cost" not in body
     assert "actual_currency" not in body
     assert "cost_sync_error" not in body
-    assert body["total_estimated_cost"] == 0.0
+    assert body["total_cost_usd"] == 0.0
     assert body["generation_count"] == 0
     assert body["cached_count"] == 0
     assert body["remaining"] == body["budget_limit"]
@@ -56,7 +56,7 @@ def test_internal_usage_includes_actual_cost_when_admin_key_set(
     body = response.json()
 
     assert response.status_code == 200
-    assert body["total_estimated_cost"] == 0.0
+    assert body["total_cost_usd"] == 0.0
     assert body["actual_total_cost"] == 1.59
     assert body["actual_currency"] == "usd"
     assert body["remaining"] == body["budget_limit"]
