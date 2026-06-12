@@ -65,7 +65,7 @@ def test_generate_openai_result_matches_target_size(monkeypatch: pytest.MonkeyPa
     assert body["imageUrl"].endswith(".png")
     assert image_size_from_data_url(body["imageDataUrl"]) == (1080, 1920)
     assert "1080x1920" in body["prompt"]
-    assert captured_call["api_size"] == "1024x1536"
+    assert captured_call["api_size"] == "1088x1920"
 
 
 def test_generate_uses_user_prompt(
