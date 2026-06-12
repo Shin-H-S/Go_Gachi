@@ -10,7 +10,7 @@
         "label": "정사각형 피드",
         "width": 1080,
         "height": 1080,
-        "api_size": "1024x1024",
+        "api_size": "1088x1088",
         "prompt_hint": "Compose for a 1:1 Instagram feed layout. Place the product at the visual center while maintaining balanced margins and stable spacing. Keep product occupancy around 50–55% of canvas height and preserve clean surrounding negative space. Create subtle environmental depth and soft separation from the background while avoiding oversized rendering, crowded composition, and unnecessary decorative props."
       },
       {
@@ -18,7 +18,7 @@
         "label": "세로형 피드",
         "width": 1080,
         "height": 1350,
-        "api_size": "1024x1536",
+        "api_size": "1088x1360",
         "prompt_hint": "Optimize composition for a 4:5 Instagram portrait feed layout. Reduce product scale compared with square layouts and maintain full product visibility. Target approximately 45–50% canvas height occupancy and preserve generous upper and lower margins. Create calm vertical breathing room with natural environmental continuity and layered depth. Avoid full-screen object filling, excessive decoration, object cropping, and isolated cutout appearance."
       },
       {
@@ -26,7 +26,7 @@
         "label": "스토리 이미지",
         "width": 1080,
         "height": 1920,
-        "api_size": "1024x1536",
+        "api_size": "1088x1920",
         "prompt_hint": "Optimize composition for a 9:16 Instagram Story layout. Position the product near the lower-middle area while maintaining full visibility and natural scale. Preserve generous upper negative space for readable ad copy or platform elements when requested, and maintain immersive vertical composition. Build clean environmental depth and smooth visual flow while avoiding oversized rendering, cluttered layouts, and edge cropping."
       }
     ]
@@ -42,7 +42,7 @@
         "label": "단색 배경 이미지",
         "width": 1280,
         "height": 960,
-        "api_size": "1536x1024",
+        "api_size": "1280x960",
         "prompt_hint": "Use a clean solid background with subtle shadow and stable commercial lighting. Keep the product centered, fully visible, and clearly separated from the background. Maintain minimal composition and maximize thumbnail readability."
       },
       {
@@ -50,7 +50,7 @@
         "label": "공간 배경 이미지",
         "width": 1280,
         "height": 960,
-        "api_size": "1536x1024",
+        "api_size": "1280x960",
         "prompt_hint": "Use a clean real-space background with simple environmental context. Keep the product visually dominant in the foreground and maintain clear separation from the background. Avoid excessive atmosphere, clutter, and decorative elements while preserving delivery-app readability."
       }
     ]
@@ -66,7 +66,7 @@
         "label": "메뉴 이미지",
         "width": 1080,
         "height": 1080,
-        "api_size": "1024x1024",
+        "api_size": "1088x1088",
         "prompt_hint": "Create a simple local product image optimized for Danggeun posts. Preserve accurate product appearance and natural presentation while maintaining clean composition and approachable local-community visual quality. Avoid excessive styling and keep the scene feeling practical and authentic."
       },
       {
@@ -74,7 +74,7 @@
         "label": "할인/이벤트 이미지",
         "width": 1280,
         "height": 960,
-        "api_size": "1536x1024",
+        "api_size": "1280x960",
         "prompt_hint": "Create an event-ready promotional image optimized for Danggeun posts. Keep the product central and easy to recognize while creating a brighter and more attention-catching composition suitable for local promotions or seasonal offer campaigns. Preserve clean space and maintain approachable local-community visual quality."
       }
     ]

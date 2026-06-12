@@ -15,6 +15,11 @@ from backend.app.services.copywriting import AdCopy
 from backend.app.services.image_edit import parse_image
 
 
+def _parse_api_size(api_size: str) -> tuple[int, int]:
+    width, height = api_size.split("x", maxsplit=1)
+    return int(width), int(height)
+
+
 def test_presets() -> None:
     presets = get_presets()
 
@@ -26,10 +31,26 @@ def test_presets() -> None:
     assert presets["daangn"].label == "당근"
     assert presets["instagram"].channel_prompt
     assert presets["instagram"].default_detail().id == "square_feed"
-    assert presets["instagram"].find_detail("story_image").api_size == "1024x1536"
+    assert presets["instagram"].find_detail("story_image").api_size == "1088x1920"
     assert presets["baemin"].find_detail("solid_background") is not None
     assert presets["daangn"].find_detail("menu_image") is not None
     assert presets["daangn"].find_detail("promotion_image") is None
+
+
+def test_preset_api_sizes_match_generation_constraints() -> None:
+    """프리셋 API 규격은 gpt-image-2 제약과 상세 출력 비율에 맞춰 관리한다."""
+    for preset in get_presets().values():
+        for detail in preset.details:
+            api_width, api_height = _parse_api_size(detail.api_size)
+            detail_ratio = detail.width / detail.height
+            api_ratio = api_width / api_height
+
+            assert api_width % 16 == 0
+            assert api_height % 16 == 0
+            assert max(api_width, api_height) <= 3840
+            assert max(api_width, api_height) / min(api_width, api_height) <= 3
+            assert 655_360 <= api_width * api_height <= 8_294_400
+            assert abs(api_ratio - detail_ratio) < 0.01
 
 
 def test_channel_detail_prompt_presets_are_specific() -> None:
