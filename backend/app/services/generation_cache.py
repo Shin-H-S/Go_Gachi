@@ -1,4 +1,4 @@
-"""이미지 생성 캐시 조회와 cache hit 응답 처리를 담당한다."""
+"""이미지 생성 캐시 조회와 cache hit 응답 처리."""
 
 import asyncio
 import base64
@@ -10,7 +10,6 @@ from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Generation
-from backend.app.services.generation_files import new_generation_id
 from backend.app.services.storage import get_storage
 from backend.app.services.storage_url import output_url
 
@@ -54,7 +53,7 @@ async def find_cache_snapshot(
     model: str,
     prompt_version: str,
 ) -> CacheSnapshot | None:
-    """세션 밖에서도 안전하게 쓸 수 있도록 캐시 행의 필요한 값만 dict로 복사한다."""
+    """세션 밖에서도 안전하게 쓸 수 있도록 캐시 row의 필요한 값만 복사한다."""
     async with async_session_scope() as db:
         rows = await crud.list_cached_generations(
             db,
@@ -74,7 +73,7 @@ async def find_cache_snapshot(
 
 
 async def _load_cached_bytes(output_path: str, settings: Settings) -> bytes | None:
-    """저장 모드에 맞춰 캐시된 결과 이미지의 바이트를 읽는다(없으면 None)."""
+    """현재 storage backend에서 캐시 결과 이미지를 읽는다."""
     storage = get_storage(settings)
     try:
         return await storage.read_bytes(output_path)
@@ -86,6 +85,7 @@ async def _load_cached_bytes(output_path: str, settings: Settings) -> bytes | No
 async def cached_response(
     snapshot: CacheSnapshot | None,
     *,
+    generation_id: str,
     settings: Settings,
     user_id: str | None,
     user_copy: str | None,
@@ -95,14 +95,13 @@ async def cached_response(
     logo_position: str | None,
     logo_image_hash: str | None,
 ) -> dict[str, str | None] | None:
-    """캐시 객체가 살아있으면 cached 행과 비용 0 사용량을 기록하고 응답을 만든다."""
+    """캐시가 있으면 cached row와 비용 0 사용 row를 기록하고 응답을 만든다."""
     if snapshot is None or snapshot["output_path"] is None:
         return None
 
     encoded = await asyncio.to_thread(base64.b64encode, snapshot["target_bytes"])
     image_data_url = f"data:image/png;base64,{encoded.decode('ascii')}"
     image_url = output_url(snapshot["output_path"])
-    generation_id = new_generation_id()
     logger.info(
         "cache hit generation_id=%s image_hash=%s preset=%s user_id=%s",
         generation_id,

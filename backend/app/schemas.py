@@ -105,3 +105,28 @@ class GenerateResponse(BaseModel):
     revision_info: RevisionResponse | None = Field(default=None, alias="revision")
     note: str | None = None
     prompt: str | None = None
+
+
+class GenerateJobCreateResponse(BaseModel):
+    """비동기 이미지 생성 job 생성 응답."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    request_id: str = Field(alias="requestId")
+    job_id: str = Field(alias="jobId")
+    status: str
+
+
+class GenerateJobStatusResponse(BaseModel):
+    """비동기 이미지 생성 job 상태 조회 응답."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    request_id: str = Field(alias="requestId")
+    job_id: str = Field(alias="jobId")
+    status: str
+    image_url: str | None = Field(default=None, alias="imageUrl")
+    original_image_url: str | None = Field(default=None, alias="originalImageUrl")
+    error: str | None = None
+    created_at: str | None = Field(default=None, alias="createdAt")
+    updated_at: str | None = Field(default=None, alias="updatedAt")
