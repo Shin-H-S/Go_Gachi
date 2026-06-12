@@ -1,6 +1,7 @@
 """FastAPI 진입점."""
 
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -39,6 +40,11 @@ IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
 COPY_GENERATION_UNAVAILABLE_MESSAGE = (
     "광고 문구 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
 )
+
+
+def _elapsed_ms(start: float) -> float:
+    """구간별 처리 시간을 ms 단위로 계산한다."""
+    return (time.perf_counter() - start) * 1000
 
 
 def _service_http_error(exc: ServiceError) -> HTTPException:
@@ -153,6 +159,7 @@ async def generate_copy(
     request: CopyGenerateRequest,
     user: AuthUser | None = Depends(get_optional_user),
 ) -> CopyResponse:
+    route_start = time.perf_counter()
     settings = get_settings()
     presets = get_presets()
     preset = presets.get(request.preset_id) if request.preset_id else default_preset()
@@ -183,6 +190,7 @@ async def generate_copy(
         short_id(user.id) if user else "-",
     )
     try:
+        copy_start = time.perf_counter()
         copy_result = await generate_ad_copy(
             settings=settings,
             preset=preset,
@@ -190,6 +198,16 @@ async def generate_copy(
             user_prompt=request.user_prompt,
             user_copy="",
             copy_mode=request.copy_mode,
+        )
+        logger.info(
+            "copy timing stage=copy preset=%s detail=%s mode=%s used_openai=%s "
+            "took=%.1fms total=%.1fms",
+            preset.id,
+            detail.id,
+            request.copy_mode,
+            copy_result.used_openai,
+            _elapsed_ms(copy_start),
+            _elapsed_ms(route_start),
         )
     except ServiceError as exc:
         logger.exception("auto copy generation failed")
@@ -210,6 +228,7 @@ async def generate(
     request: GenerateRequest,
     user: AuthUser | None = Depends(get_optional_user),
 ) -> GenerateResponse:
+    route_start = time.perf_counter()
     # presetId가 없으면 기본 프리셋을 쓰고, 잘못된 값은 연동 오류를 빨리 찾도록 400으로 돌려준다.
     settings = get_settings()
     presets = get_presets()
@@ -253,6 +272,7 @@ async def generate(
         # userCopy가 비어 있으면 텍스트 AI가 userPrompt/채널 맥락을 보고 광고 문구를 만든다.
         copy_source = request.user_copy or ""
         try:
+            copy_start = time.perf_counter()
             copy_result = await generate_ad_copy(
                 settings=settings,
                 preset=preset,
@@ -260,6 +280,15 @@ async def generate(
                 user_prompt=request.user_prompt,
                 user_copy=copy_source,
                 copy_mode=request.copy_mode,
+            )
+            logger.info(
+                "generate timing stage=copy preset=%s detail=%s mode=%s "
+                "used_openai=%s took=%.1fms",
+                preset.id,
+                detail.id,
+                request.copy_mode,
+                copy_result.used_openai,
+                _elapsed_ms(copy_start),
             )
         except ServiceError as exc:
             logger.exception("copy generation failed")
@@ -280,6 +309,7 @@ async def generate(
 
     try:
         # 이미지 검증, mock/openai 분기, 외부 API 호출은 service 계층에 위임한다.
+        image_start = time.perf_counter()
         result = await edit_image(
             image_data_url=request.image_data_url,
             preset=preset,
@@ -296,6 +326,15 @@ async def generate(
             logo_position=request.logo_position,
             text_copy=ad_copy,
             text_cost_usd=text_cost_usd,
+        )
+        logger.info(
+            "generate timing stage=image_service preset=%s detail=%s provider=%s "
+            "took=%.1fms total=%.1fms",
+            preset.id,
+            detail.id,
+            result["provider"] or settings.image_provider,
+            _elapsed_ms(image_start),
+            _elapsed_ms(route_start),
         )
     except ValueError as exc:
         # 사용자 입력 문제는 프론트가 처리할 수 있게 400으로 돌려준다.
