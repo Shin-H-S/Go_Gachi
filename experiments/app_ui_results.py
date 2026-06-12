@@ -41,18 +41,22 @@ def render_results_tab() -> None:
         error_count = sum(1 for r in records if r.get("status") == "error")
         image_numbers = [str(i + 1) for i in range(len(ok_records))]
 
-        # 세션에 평가표 적재 (run별 1회). 그리드 위젯의 초기값 원본은 items(dict 리스트)다.
+        # 세션에 평가표 적재. 그리드 위젯의 초기값 원본은 items(dict 리스트)다.
+        # 다른 테스트로 전환했다 돌아오면 Streamlit이 위젯 상태를 청소하므로,
+        # '전환'을 감지하면 evaluation.json(저장된 평가·메모)을 디스크에서 다시 읽는다.
         items_key = f"eval_items_{run_id}"
         ver_key = f"eval_grid_ver_{run_id}"
         costs_key = f"eval_costs_{run_id}"
-        if items_key not in st.session_state:
+        switched = st.session_state.get("_results_active_run") != run_id
+        if switched or items_key not in st.session_state:
             saved_eval = load_evaluation(run_dir)
             st.session_state[items_key] = saved_eval["items"] or default_eval_items()
-            st.session_state[ver_key] = 0
+            st.session_state[ver_key] = st.session_state.get(ver_key, 0) + 1
             st.session_state[costs_key] = saved_eval.get(
                 "costs", {"eval_usd": 0.0, "eval_calls": 0}
             )
             st.session_state[f"memo_{run_id}"] = saved_eval.get("memo", "")
+            st.session_state["_results_active_run"] = run_id
         grid_ver = st.session_state[ver_key]
 
         def gkey(*parts) -> str:
@@ -101,6 +105,10 @@ def render_results_tab() -> None:
             ai_clicked = st.button("AI가 평가하기", use_container_width=True)
         with col_save:
             save_clicked = st.button("저장하기", type="primary", use_container_width=True)
+        st.caption(
+            "저장된 평가·메모는 테스트를 선택하면 자동으로 불러와집니다. "
+            "다른 테스트로 전환하면 저장하지 않은 변경은 사라지니, 전환 전에 저장하기를 누르세요."
+        )
 
         if ai_clicked:
             items_now = current_items()
@@ -326,6 +334,8 @@ def render_results_tab() -> None:
                 st.session_state.get(f"memo_{run_id}", ""),
                 st.session_state[costs_key],
             )
+            # 세션 캐시도 저장본과 동기화해 전환·복귀 시 어긋남을 막는다.
+            st.session_state[items_key] = items
             st.success("저장 완료 — evaluation.json에 보관되었습니다.")
 
         # ── 설정값 정리 ────────────────────────────────────────────────────
