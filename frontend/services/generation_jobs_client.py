@@ -43,7 +43,7 @@ def request_generate_job_result(
             image_url = data.get("imageUrl")
             asset_url = to_backend_asset_url(str(image_url) if image_url else None)
             if not asset_url:
-                raise ValueError("백엔드 job 응답에 imageUrl이 없습니다.")
+                raise ValueError("백엔드 job 응답에 imageUrl 또는 imageDataUrl이 없습니다.")
             data["imageUrl"] = asset_url
             return data
 

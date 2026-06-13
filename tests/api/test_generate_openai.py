@@ -1,6 +1,8 @@
 import asyncio
+from io import BytesIO
 
 import pytest
+from PIL import Image
 from sqlalchemy import select
 
 from backend.app.db.database import async_session_scope
@@ -13,7 +15,6 @@ from tests.api.helpers import (
     TINY_PNG_DATA_URL,
     client,
     force_openai_mode,
-    image_size_from_data_url,
 )
 
 
@@ -44,7 +45,7 @@ def test_generate_openai_result_matches_target_size(monkeypatch: pytest.MonkeyPa
         return TINY_PNG_B64, {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
-    force_openai_mode(monkeypatch)
+    real_settings = force_openai_mode(monkeypatch)
 
     response = client.post(
         "/api/generate",
@@ -63,7 +64,10 @@ def test_generate_openai_result_matches_target_size(monkeypatch: pytest.MonkeyPa
     assert body["provider"] == "openai"
     assert body["imageUrl"].startswith("/outputs/")
     assert body["imageUrl"].endswith(".png")
-    assert image_size_from_data_url(body["imageDataUrl"]) == (1080, 1920)
+    assert body["imageDataUrl"] is None
+    output_path = real_settings.output_dir / body["imageUrl"].rsplit("/", 1)[-1]
+    with Image.open(BytesIO(output_path.read_bytes())) as image:
+        assert image.size == (1080, 1920)
     assert "1080x1920" in body["prompt"]
     assert captured_call["api_size"] == "1088x1920"
 

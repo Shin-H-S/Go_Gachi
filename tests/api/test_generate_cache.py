@@ -319,6 +319,8 @@ def test_generate_cache_hit_stores_rendered_user_copy(monkeypatch: pytest.Monkey
     assert first.status_code == 200
     assert second.status_code == 200
     assert second.json()["note"] == "캐시된 결과 재사용"
+    assert second.json()["imageUrl"].startswith("/outputs/")
+    assert second.json()["imageDataUrl"] is None
 
     async def _db_state() -> list[tuple[str, str | None]]:
         async with async_session_scope() as db:

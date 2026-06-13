@@ -66,7 +66,8 @@ V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy
 
 ```json
 {
-  "imageDataUrl": "data:image/png;base64,...",
+  "imageUrl": "/outputs/20260613_120000_ab12cd.png",
+  "imageDataUrl": null,
   "provider": "openai",
   "preset": {
     "id": "instagram",
@@ -79,9 +80,13 @@ V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy
 }
 ```
 
+- `imageUrl`: 생성 결과를 받을 수 있는 URL입니다. 로컬 저장소는 `/outputs/...`,
+  R2 저장소는 공개 URL을 반환합니다. 프론트 미리보기는 이 값을 우선 사용합니다.
+- `imageDataUrl`: URL이 없는 mock/fallback 응답에서만 내려주는 base64 data URL입니다.
+  OpenAI 성공/캐시 응답은 응답 크기를 줄이기 위해 보통 `null`입니다.
 - `prompt`: `APP_ENV=production`에서는 내부 프롬프트 보호를 위해 `null`로 응답합니다.
   `local`/`dev` 환경에서는 디버깅을 위해 생성에 사용한 프롬프트가 포함될 수 있습니다.
-- 응답 `imageDataUrl`의 PNG는 `targetWidth` x `targetHeight` 크기로 후처리되어 반환됩니다.
+- 생성 결과 PNG는 저장 전에 `targetWidth` x `targetHeight` 크기로 후처리됩니다.
 - `copy`: `adCopyEnabled=true`일 때 문구 처리 결과를 내려줍니다. OpenAI 생성 경로에서는 이 문구를 이미지 생성 프롬프트에 포함합니다.
 - `revision`: V3 후속 브랜치에서 수정 이력 처리 결과를 채울 예정입니다.
 
