@@ -18,12 +18,9 @@ def cache_instruction(
     text_copy: AdCopy | None,
     *,
     user_copy: str | None = None,
-    has_logo: bool = False,
-    logo_position: str | None = None,
-    logo_image_hash: str | None = None,
 ) -> str:
-    """캐시 키에 광고 문구와 로고 reference 정보를 반영한다."""
-    if text_copy is None and not user_copy and not has_logo:
+    """캐시 키에 사용자 입력 문구와 이미지에 들어갈 광고 문구를 반영한다."""
+    if text_copy is None and not user_copy:
         return generation_user_prompt
 
     parts = [generation_user_prompt]
@@ -37,14 +34,6 @@ def cache_instruction(
                 f"headline={text_copy.headline or ''}",
                 f"subcopy={text_copy.subcopy or ''}",
                 f"cta={text_copy.cta or ''}",
-            ]
-        )
-    if has_logo:
-        parts.extend(
-            [
-                "[Logo metadata]",
-                f"logoPosition={logo_position or ''}",
-                f"logoImageHash={logo_image_hash or ''}",
             ]
         )
     return "\n".join(parts)

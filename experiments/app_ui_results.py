@@ -7,7 +7,7 @@ import json
 
 import streamlit as st
 from app_evaluation import default_eval_items, load_evaluation, run_ai_eval, save_evaluation
-from app_prompting import COPY_MODE_LABELS, LOGO_POSITION_LABELS
+from app_prompting import COPY_MODE_LABELS
 from app_state import list_runs
 from runner import load_settings
 
@@ -347,7 +347,6 @@ def render_results_tab() -> None:
                 st.markdown(
                     f"- 채널: **{saved_cfg.get('channel_label')}** / 유형: "
                     f"**{saved_cfg.get('detail_label')}** (API {saved_cfg.get('api_size')})\n"
-                    f"- 로고: {'있음 · ' + ('직접입력 프롬프트' if saved_cfg.get('logo_prompt_custom') else '기본 · 위치 ' + LOGO_POSITION_LABELS.get(saved_cfg.get('logo_position'), '-')) if saved_cfg.get('has_logo') else '없음'}\n"
                     f"- 문구: {('적용 · ' + COPY_MODE_LABELS.get(saved_cfg.get('copy_mode'), '-') + ' · 「' + saved_cfg.get('copy_text', '') + '」') if saved_cfg.get('copy_on') else '미적용'}\n"
                     f"- 유저 프롬프트: {('「' + saved_cfg.get('user_prompt') + '」') if saved_cfg.get('user_prompt') else '없음'}\n"
                     f"- 장수/품질: {saved_cfg.get('count')}장 · {saved_cfg.get('quality')} · "
@@ -413,7 +412,7 @@ def render_results_tab() -> None:
         # ── AI 평가 가이드 ─────────────────────────────────────────────────
         st.caption(
             "**AI 평가에 적합한 항목** — 시각적으로 판별 가능한 객관 기준: "
-            "「로고가 오른쪽 상단에 있다」 「지정한 문구와 가격이 정확히 표기됐다」 "
+            "「지정한 문구와 가격이 정확히 표기됐다」 "
             "「사람·손이 등장하지 않는다」 「제품 형태가 원본과 동일하다」 "
             "「불필요한 텍스트·워터마크가 없다」 「여백이 충분하다」.  \n"
             "**AI 평가에 부적합한 항목** — 주관·감성·맥락 의존 기준: "

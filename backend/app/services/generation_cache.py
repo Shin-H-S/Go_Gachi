@@ -91,9 +91,6 @@ async def cached_response(
     user_copy: str | None,
     text_model: str | None,
     text_cost_usd: float,
-    has_logo: bool,
-    logo_position: str | None,
-    logo_image_hash: str | None,
 ) -> dict[str, str | None] | None:
     """캐시가 있으면 cached row와 비용 0 사용 row를 기록하고 응답을 만든다."""
     if snapshot is None or snapshot["output_path"] is None:
@@ -125,10 +122,6 @@ async def cached_response(
             text_model=text_model,
             user_id=user_id,
             user_copy=user_copy,
-            has_logo=has_logo,
-            logo_position=logo_position,
-            logo_image_hash=logo_image_hash,
-            logo_storage_key=None,
         )
         await crud.record_usage(
             db,

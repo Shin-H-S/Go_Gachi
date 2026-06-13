@@ -181,7 +181,7 @@ def test_generate_reuses_original_file_for_same_image(
     assert Path(original_paths[0]).exists()
 
 
-def test_generate_stores_logo_reference_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generate_does_not_store_logo_reference_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
     captured_call: dict[str, object] = {}
 
     async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
@@ -199,8 +199,6 @@ def test_generate_stores_logo_reference_metadata(monkeypatch: pytest.MonkeyPatch
             "detailType": "square_feed",
             "userPrompt": "bright mood",
             "userCopy": "lemonade menu copy",
-            "logoDataUrl": TINY_PNG_DATA_URL,
-            "logoPosition": "bottom_right",
         },
     )
 
@@ -228,12 +226,12 @@ def test_generate_stores_logo_reference_metadata(monkeypatch: pytest.MonkeyPatch
         logo_storage_key,
     ) = asyncio.run(_db_state())
     assert user_copy is None
-    assert has_logo is True
-    assert logo_position == "bottom_right"
-    assert logo_image_hash == crud.image_sha256(base64.b64decode(TINY_PNG_B64))
+    assert has_logo is False
+    assert logo_position is None
+    assert logo_image_hash is None
     assert instruction_hash != crud.instruction_sha256("bright mood")
     assert logo_storage_key is None
-    assert len(captured_call["reference_images"]) == 1
+    assert "reference_images" not in captured_call
 
 
 def test_generate_stores_rendered_user_copy(monkeypatch: pytest.MonkeyPatch) -> None:
