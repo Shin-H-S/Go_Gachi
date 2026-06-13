@@ -5,7 +5,7 @@ from backend.app.services.copywriting import AdCopy
 
 # 프롬프트 본문/구조가 바뀌면 이 라벨도 올려 캐시 무효화한다. env가 아니라 코드 상수로
 # 두는 이유: 프롬프트 변경과 항상 같은 커밋에 들어가야 어긋남이 없어서.
-PROMPT_VERSION = "2026-06-12-v4-product-preservation-policy"
+PROMPT_VERSION = "2026-06-12-v4-instagram-ad-enhancement"
 
 
 def _clean_parts(parts: list[str]) -> list[str]:
@@ -37,7 +37,9 @@ def build_system_prompt(
                 "Improve lighting, color, sharpness, appetizing texture, background cleanliness, "
                 "and commercial food styling."
             ),
-            "Use a realistic cafe mood with subtle props only when they support the menu item.",
+            # 구버전: "Use a realistic cafe mood with subtle props only when they support the menu item."
+            # 분위기 조정 제약 없어 어둡게 해석하는 경우 방지 → 따듯하고 밝은 느낌으로 수정
+            "Use a warm, inviting cafe mood with soft ambient lighting and consistent color temperature. Maintain a bright and appetizing atmosphere. Avoid dark, cold, or low-contrast lighting that diminishes the product's visual appeal.",
         ]
     )
     if image_copy:
