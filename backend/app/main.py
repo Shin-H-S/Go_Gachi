@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.auth import router as auth_router
+from backend.app.api.generation_jobs import router as generation_jobs_router
 from backend.app.api.internal import router as internal_router
 from backend.app.api.middlewares import AccessLogMiddleware, RequestIDMiddleware
 from backend.app.core.auth import AuthUser, get_optional_user
@@ -93,6 +94,7 @@ app.add_middleware(RequestIDMiddleware)
 
 # 인증 라우트(/api/auth/me 등)는 환경과 무관하게 항상 등록한다.
 app.include_router(auth_router)
+app.include_router(generation_jobs_router)
 
 # production에서는 내부 모니터링 라우터를 아예 등록하지 않는다. 로컬/dev에선 그대로 열림.
 # 운영에서도 사용량을 봐야 한다면 별도 토큰 인증 라우터로 교체하면 됨.
@@ -282,8 +284,7 @@ async def generate(
                 copy_mode=request.copy_mode,
             )
             logger.info(
-                "generate timing stage=copy preset=%s detail=%s mode=%s "
-                "used_openai=%s took=%.1fms",
+                "generate timing stage=copy preset=%s detail=%s mode=%s used_openai=%s took=%.1fms",
                 preset.id,
                 detail.id,
                 request.copy_mode,

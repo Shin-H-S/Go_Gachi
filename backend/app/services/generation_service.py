@@ -49,6 +49,7 @@ async def edit_image(
     logo_position: str | None = None,
     text_copy: AdCopy | None = None,
     text_cost_usd: float = 0.0,
+    generation_id: str | None = None,
 ) -> dict[str, str | None]:
     """설정된 provider에 따라 mock 반환 또는 OpenAI 이미지 편집을 수행한다.
 
@@ -93,8 +94,7 @@ async def edit_image(
         logo_image_hash=logo_image_hash,
     )
     logger.info(
-        "generation timing stage=preflight preset=%s detail=%s provider=%s "
-        "has_logo=%s took=%.1fms",
+        "generation timing stage=preflight preset=%s detail=%s provider=%s has_logo=%s took=%.1fms",
         preset.id,
         selected_detail.id,
         settings.image_provider,
@@ -141,6 +141,7 @@ async def edit_image(
     instruction_hash = crud.instruction_sha256(cache_input)
     model = settings.openai_image_model
     prompt_version = PROMPT_VERSION
+    generation_id = generation_id or new_generation_id()
 
     cache_start = time.perf_counter()
     cache_snapshot = await find_cache_snapshot(
@@ -153,6 +154,7 @@ async def edit_image(
     )
     cache_result = await cached_response(
         cache_snapshot,
+        generation_id=generation_id,
         settings=settings,
         user_id=user_id,
         user_copy=stored_user_copy,
@@ -180,7 +182,6 @@ async def edit_image(
     # 캐시 행이 없거나 파일이 사라졌으면 캐시 미스로 떨어져 OpenAI 호출 분기로 이어진다.
 
     # 3) 캐시 미스: pending 행 먼저 만든 뒤 OpenAI 호출. 실패해도 흔적 남기기 위함.
-    generation_id = new_generation_id()
     logger.info(
         "cache miss generation_id=%s image_hash=%s preset=%s detail=%s user_id=%s",
         generation_id,
