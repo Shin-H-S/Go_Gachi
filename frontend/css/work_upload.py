@@ -55,47 +55,6 @@ div[data-testid="stFileUploader"] button {
     border: 1px solid rgba(32, 39, 37, 0.14) !important;
 }
 
-.st-key-left-logo-section,
-.st-key-left-logo-preview-section {
-    height: 294px;
-    min-height: 294px;
-}
-
-.st-key-left-logo-preview-section {
-    padding-bottom: 16px !important;
-}
-
-.logo-preview-frame {
-    width: 100%;
-    height: 262px;
-    min-height: 262px;
-    box-sizing: border-box;
-    border: 1px dashed rgba(15, 143, 127, 0.42);
-    border-radius: 8px;
-    background: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    padding: 8px;
-}
-
-.logo-preview-frame img {
-    display: block;
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-}
-
-.logo-preview-placeholder {
-    color: #7a8581;
-    -webkit-text-fill-color: #7a8581;
-    font-size: 18px;
-    font-weight: 700;
-}
-
 div[role="radiogroup"] {
     gap: 6px;
 }

@@ -105,8 +105,6 @@ def test_result_context_uses_trimmed_prompt_upload_hash_and_selected_preset() ->
         "adCopyPrompt": "Headline: Fresh coffee",
         "copyMode": "polish",
         "adCopyEnabled": True,
-        "logoUploadHash": None,
-        "logoPosition": "bottom_right",
         "uploadHash": hashlib.sha256(image_bytes).hexdigest(),
     }
 
@@ -121,41 +119,6 @@ def test_result_context_requires_upload_only() -> None:
 
     assert context is not None
     assert context["prompt"] == ""
-
-
-def test_result_context_tracks_logo_upload_hash() -> None:
-    work_state = import_frontend_module("frontend.work.state")
-    format_label, detail = first_format_and_detail(work_state.FORMAT_OPTIONS)
-    uploaded_file = SimpleNamespace(getvalue=lambda: b"uploaded image")
-    logo_file = SimpleNamespace(getvalue=lambda: b"logo image")
-
-    context = work_state.build_result_context(
-        uploaded_file,
-        "prompt",
-        format_label,
-        str(detail["label"]),
-        logo_file=logo_file,
-    )
-
-    assert context is not None
-    assert context["logoUploadHash"] == hashlib.sha256(b"logo image").hexdigest()
-
-
-def test_result_context_tracks_logo_position() -> None:
-    work_state = import_frontend_module("frontend.work.state")
-    format_label, detail = first_format_and_detail(work_state.FORMAT_OPTIONS)
-    uploaded_file = SimpleNamespace(getvalue=lambda: b"uploaded image")
-
-    context = work_state.build_result_context(
-        uploaded_file,
-        "prompt",
-        format_label,
-        str(detail["label"]),
-        logo_position="top_left",
-    )
-
-    assert context is not None
-    assert context["logoPosition"] == "top_left"
 
 
 def test_sync_result_state_clears_stale_generated_result(monkeypatch) -> None:

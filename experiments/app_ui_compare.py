@@ -7,7 +7,7 @@ import json
 
 import streamlit as st
 from app_evaluation import COMPARE_MODEL, compare_cost_estimate, compare_prompts
-from app_prompting import COPY_MODE_LABELS, LOGO_POSITION_LABELS
+from app_prompting import COPY_MODE_LABELS
 from app_state import list_runs
 from runner import load_settings
 
@@ -99,7 +99,6 @@ def render_compare_tab() -> None:
                 st.markdown(
                     f"- 채널: **{info_cfg.get('channel_label')}** / 유형: "
                     f"**{info_cfg.get('detail_label')}** (API {info_cfg.get('api_size')})\n"
-                    f"- 로고: {'있음 · ' + ('직접입력 프롬프트' if info_cfg.get('logo_prompt_custom') else '기본 · 위치 ' + LOGO_POSITION_LABELS.get(info_cfg.get('logo_position'), '-')) if info_cfg.get('has_logo') else '없음'}\n"
                     f"- 문구: {('적용 · ' + COPY_MODE_LABELS.get(info_cfg.get('copy_mode'), '-') + ' · 「' + info_cfg.get('copy_text', '') + '」') if info_cfg.get('copy_on') else '미적용'}\n"
                     f"- 유저 프롬프트: {('「' + info_cfg.get('user_prompt') + '」') if info_cfg.get('user_prompt') else '없음'}\n"
                     f"- 장수/품질: {info_cfg.get('count')}장 · {info_cfg.get('quality')} · "

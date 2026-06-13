@@ -14,7 +14,6 @@ def handle_generation_request(
     *,
     generate,
     uploaded_file,
-    logo_file,
     prompt: str,
     ad_copy_prompt: str,
     format_label: str,
@@ -22,7 +21,6 @@ def handle_generation_request(
     current_result_context,
     ad_copy_enabled: bool,
     copy_mode: str,
-    logo_position: str = "bottom_right",
 ) -> None:
     if generate:
         if not uploaded_file:
@@ -40,12 +38,8 @@ def handle_generation_request(
                     ad_copy_enabled=ad_copy_enabled,
                     copy_mode=copy_mode,
                     ad_copy_prompt=ad_copy_prompt,
-                    logo_file=logo_file,
-                    logo_position=logo_position,
                 )
                 result_context = dict(current_result_context or {})
-                if result.logo is not None:
-                    result_context["logo"] = result.logo
 
                 st.session_state["result_bytes"] = result.image_bytes
                 st.session_state["result_copy"] = result.copy

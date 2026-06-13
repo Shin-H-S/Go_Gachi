@@ -30,19 +30,17 @@ def _run_generation(monkeypatch, fake_st: FakeStreamlit, fake_request_backend) -
     generation.handle_generation_request(
         generate=True,
         uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
-        logo_file=None,
-        logo_position="bottom_right",
         prompt="make it bright",
         ad_copy_prompt="Fresh coffee",
         format_label="인스타그램",
         detail_label="정사각형 피드",
-        current_result_context={"logoPosition": "bottom_right"},
+        current_result_context={"prompt": "make it bright"},
         ad_copy_enabled=True,
         copy_mode="preserve",
     )
 
 
-def test_generation_request_passes_selected_logo_position(monkeypatch) -> None:
+def test_generation_request_passes_generation_options(monkeypatch) -> None:
     captured_kwargs: dict[str, object] = {}
 
     def fake_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
@@ -58,29 +56,26 @@ def test_generation_request_passes_selected_logo_position(monkeypatch) -> None:
     generation.handle_generation_request(
         generate=True,
         uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
-        logo_file=SimpleNamespace(getvalue=lambda: b"logo-image"),
-        logo_position="top_left",
         prompt="make it bright",
         ad_copy_prompt="Fresh coffee",
         format_label="인스타그램",
         detail_label="정사각형 피드",
-        current_result_context={"logoPosition": "top_left"},
+        current_result_context={"prompt": "make it bright"},
         ad_copy_enabled=True,
         copy_mode="preserve",
     )
 
-    assert captured_kwargs["logo_position"] == "top_left"
+    assert "logo_file" not in captured_kwargs
+    assert "logo_position" not in captured_kwargs
+    assert captured_kwargs["copy_mode"] == "preserve"
     assert fake_st.session_state["result_bytes"] == b"result-image"
 
 
-def test_generation_request_stores_logo_metadata_in_result_context(monkeypatch) -> None:
-    logo_payload = {"used": True, "position": "center_bottom"}
-
+def test_generation_request_stores_existing_result_context(monkeypatch) -> None:
     def fake_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
         return GenerationResult(
             image_bytes=b"result-image",
             copy=None,
-            logo=logo_payload,
         )
 
     fake_st = FakeStreamlit()
@@ -92,18 +87,16 @@ def test_generation_request_stores_logo_metadata_in_result_context(monkeypatch) 
     generation.handle_generation_request(
         generate=True,
         uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
-        logo_file=SimpleNamespace(getvalue=lambda: b"logo-image"),
-        logo_position="center_bottom",
         prompt="make it bright",
         ad_copy_prompt="Fresh coffee",
         format_label="인스타그램",
         detail_label="정사각형 피드",
-        current_result_context={"logoPosition": "center_bottom"},
+        current_result_context={"prompt": "make it bright"},
         ad_copy_enabled=True,
         copy_mode="preserve",
     )
 
-    assert fake_st.session_state["result_context"]["logo"] == logo_payload
+    assert fake_st.session_state["result_context"] == {"prompt": "make it bright"}
 
 
 def test_generation_request_shows_backend_string_detail(monkeypatch) -> None:
@@ -157,7 +150,7 @@ def test_generation_request_falls_back_when_backend_detail_message_missing(
     request = httpx.Request("POST", "https://backend.example/api/generate")
     response = httpx.Response(
         400,
-        json={"detail": {"code": "VALIDATION_ERROR", "field": "logoPosition"}},
+        json={"detail": {"code": "VALIDATION_ERROR", "field": "targetWidth"}},
         request=request,
     )
 
@@ -169,5 +162,5 @@ def test_generation_request_falls_back_when_backend_detail_message_missing(
     _run_generation(monkeypatch, fake_st, fake_request_backend)
 
     assert fake_st.errors == [
-        "백엔드 생성 요청 실패 [HTTP 400]: {'code': 'VALIDATION_ERROR', 'field': 'logoPosition'}"
+        "백엔드 생성 요청 실패 [HTTP 400]: {'code': 'VALIDATION_ERROR', 'field': 'targetWidth'}"
     ]

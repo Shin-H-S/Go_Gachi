@@ -31,10 +31,10 @@ def test_extract_backend_error_info_uses_object_detail_message() -> None:
 
 def test_extract_backend_error_info_keeps_string_detail() -> None:
     error_info = extract_backend_error_info(
-        _status_error(400, {"detail": "지원하지 않는 logoPosition입니다."})
+        _status_error(400, {"detail": "지원하지 않는 detailType입니다."})
     )
 
-    assert error_info.message == "지원하지 않는 logoPosition입니다."
+    assert error_info.message == "지원하지 않는 detailType입니다."
     assert error_info.code is None
 
 

@@ -101,8 +101,6 @@ def test_generate_uses_user_prompt(
             "userCopy": "오늘 아메리카노 2500원",
             "copyMode": "polish",
             "adCopyEnabled": True,
-            "logoDataUrl": TINY_PNG_DATA_URL,
-            "logoPosition": "top_right",
             "parentRequestId": "parent-generation-id",
             "targetWidth": 1080,
             "targetHeight": 1080,
@@ -120,11 +118,10 @@ def test_generate_uses_user_prompt(
         "cta": None,
         "copyMode": "polish",
     }
-    assert body["logo"] == {"used": True, "position": "top_right"}
+    assert "logo" not in body
     assert body["revision"] is None
-    assert "A second reference image contains the shop logo" in body["prompt"]
-    assert "top right" in body["prompt"]
-    assert len(captured_call["reference_images"]) == 1
+    assert "shop logo" not in body["prompt"]
+    assert "reference_images" not in captured_call
 
     async def _saved_text_model() -> str | None:
         async with async_session_scope() as db:

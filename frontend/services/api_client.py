@@ -43,7 +43,6 @@ __all__ = [
 class GenerationResult:
     image_bytes: bytes
     copy: dict[str, object] | None = None
-    logo: dict[str, object] | None = None
 
 
 def _auth_headers(access_token: str) -> dict[str, str]:
@@ -113,8 +112,6 @@ def _build_generate_payload(
     ad_copy_enabled: bool,
     copy_mode: str,
     ad_copy_prompt: str,
-    logo_file,
-    logo_position: str,
 ) -> dict[str, object]:
     target_size = get_detail_size(format_label, detail_label)
     user_copy = ad_copy_prompt.strip() if ad_copy_enabled else ""
@@ -126,8 +123,6 @@ def _build_generate_payload(
         "userCopy": user_copy,
         "copyMode": copy_mode,
         "adCopyEnabled": ad_copy_enabled,
-        "logoDataUrl": file_to_data_url(logo_file) if logo_file is not None else None,
-        "logoPosition": logo_position,
         "targetWidth": target_size[0],
         "targetHeight": target_size[1],
     }
@@ -149,7 +144,6 @@ def _request_generate_sync(payload: dict[str, object], access_token: str) -> Gen
     return GenerationResult(
         image_bytes=data_url_to_bytes(image_data_url),
         copy=data.get("copy"),
-        logo=data.get("logo"),
     )
 
 
@@ -163,7 +157,6 @@ def _request_generate_job(payload: dict[str, object], access_token: str) -> Gene
     return GenerationResult(
         image_bytes=image_bytes,
         copy=data.get("copy") if isinstance(data.get("copy"), dict) else None,
-        logo=data.get("logo") if isinstance(data.get("logo"), dict) else None,
     )
 
 
@@ -176,8 +169,6 @@ def request_backend(
     ad_copy_enabled: bool = True,
     copy_mode: str = "preserve",
     ad_copy_prompt: str = "",
-    logo_file=None,
-    logo_position: str = "bottom_right",
 ) -> GenerationResult:
     payload = _build_generate_payload(
         uploaded_file,
@@ -187,8 +178,6 @@ def request_backend(
         ad_copy_enabled,
         copy_mode,
         ad_copy_prompt,
-        logo_file,
-        logo_position,
     )
 
     if access_token:

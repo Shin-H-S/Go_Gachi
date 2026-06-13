@@ -22,7 +22,6 @@ sys.path.insert(0, str(ROOT_DIR))
 
 KIND_LABELS = {
     "system": "시스템",
-    "logo": "로고",
     "copy": "문구",
     "user": "유저 입력",
     "mixed": "혼합",
@@ -46,7 +45,7 @@ thead th { background:#f4f4f4; position:sticky; top:0; z-index:3; }
 thead img { width:72px; height:72px; object-fit:cover; border-radius:4px; display:block; margin:4px auto; }
 .kind-badge { display:inline-block; font-size:11px; border-radius:4px; padding:2px 6px;
   color:#fff; margin-right:6px; }
-.kind-system{background:#5470c6}.kind-logo{background:#91cc75}.kind-copy{background:#fac858;color:#222}
+.kind-system{background:#5470c6}.kind-copy{background:#fac858;color:#222}
 .kind-user{background:#ee6666}.kind-mixed{background:#73c0de}
 .case-id { font-weight:600; font-size:13px; }
 .case-sub { color:var(--muted); margin-top:4px; line-height:1.5; word-break:break-all; }
@@ -92,7 +91,7 @@ function scoreBlock(j) {
   if (j.error) return `<div class="judge-box">채점 실패: ${j.error}</div>`;
   const rows = [
     ['제품 보존', j.product_preserved], ['구도/레이아웃', j.composition],
-    ['문구 정확도', j.copy_text_accuracy], ['로고 준수', j.logo_compliance],
+    ['문구 정확도', j.copy_text_accuracy],
     ['금지 요소 없음', j.no_unwanted_elements], ['종합', j.overall],
   ].filter(([, v]) => v !== null && v !== undefined)
    .map(([k, v]) => `${k}: <b>${v}</b>/5`).join(' · ');
@@ -154,8 +153,6 @@ def case_header(record: dict[str, Any]) -> str:
         copy_def = record["copy"]
         joined = " / ".join(str(v) for v in copy_def.values() if v)
         parts.append(f"문구: {joined}")
-    if record.get("has_logo"):
-        parts.append(f"로고: {record.get('logo_position') or '-'}")
     if record.get("user_prompt"):
         parts.append(f"유저: {record['user_prompt']}")
     if record.get("system_append"):
@@ -180,7 +177,7 @@ def build_report(run_dir: Path) -> Path:
     images = list(dict.fromkeys(r["image"] for r in records))
     reps = sorted({r["rep"] for r in records})
     case_ids = list(dict.fromkeys(r["case_id"] for r in records))
-    kind_order = ["system", "logo", "copy", "user", "mixed"]
+    kind_order = ["system", "copy", "user", "mixed"]
     case_ids.sort(
         key=lambda cid: kind_order.index(
             next(r["kind"] for r in records if r["case_id"] == cid)
