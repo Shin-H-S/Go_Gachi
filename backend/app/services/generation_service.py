@@ -404,19 +404,14 @@ async def edit_image(
         image_url,
     )
 
-    # 프론트가 별도 파일 저장 없이 바로 미리보기할 수 있도록 data URL로 반환한다.
-    response_encode_start = time.perf_counter()
-    image_data_url = f"data:image/png;base64,{base64.b64encode(target_png).decode('ascii')}"
     logger.info(
-        "generation timing generation_id=%s stage=response_encode bytes=%s took=%.1fms "
-        "total=%.1fms",
+        "generation timing generation_id=%s stage=response_ready image_url=%s total=%.1fms",
         generation_id,
-        len(image_data_url),
-        _elapsed_ms(response_encode_start),
+        image_url,
         _elapsed_ms(total_start),
     )
     return {
-        "image_data_url": image_data_url,
+        "image_data_url": None,
         "image_url": image_url,
         "provider": "openai",
         "note": None,

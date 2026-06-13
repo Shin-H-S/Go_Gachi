@@ -6,6 +6,7 @@ from frontend.core.config import (
     get_detail_labels,
     get_detail_size,
 )
+from frontend.services.api_client import request_asset_bytes
 from frontend.work.components import (
     render_channel_tabs,
     render_generation_lock_css,
@@ -128,7 +129,15 @@ def render_work_page() -> None:
         if redo_clicked:
             st.info("다시 실행할 다음 결과가 아직 없습니다.")
         if "result_bytes" not in st.session_state and "save_clicked" in locals() and save_clicked:
-            st.info("저장할 결과 이미지를 먼저 만들어주세요.")
+            result_url = st.session_state.get("result_image_url")
+            if isinstance(result_url, str) and result_url:
+                try:
+                    st.session_state["result_bytes"] = request_asset_bytes(result_url)
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"결과 이미지를 다운로드할 수 없습니다: {exc}")
+            else:
+                st.info("저장할 결과 이미지를 먼저 만들어주세요.")
 
     is_generating = bool(generate and uploaded_file)
 

@@ -1,7 +1,5 @@
 """이미지 생성 캐시 조회와 cache hit 응답 처리."""
 
-import asyncio
-import base64
 import logging
 from typing import TypedDict
 
@@ -26,10 +24,9 @@ class CacheSnapshot(TypedDict):
     output_path: str | None
     image_url: str | None
     prompt: str | None
-    target_bytes: bytes
 
 
-def _snapshot(row: Generation, target_bytes: bytes) -> CacheSnapshot:
+def _snapshot(row: Generation) -> CacheSnapshot:
     return {
         "image_hash": row.image_hash,
         "preset_id": row.preset_id,
@@ -40,7 +37,6 @@ def _snapshot(row: Generation, target_bytes: bytes) -> CacheSnapshot:
         "output_path": row.output_path,
         "image_url": row.image_url,
         "prompt": row.prompt,
-        "target_bytes": target_bytes,
     }
 
 
@@ -66,20 +62,19 @@ async def find_cache_snapshot(
     for row in rows:
         if row.output_path is None:
             continue
-        target_bytes = await _load_cached_bytes(row.output_path, settings)
-        if target_bytes is not None:
-            return _snapshot(row, target_bytes)
+        if await _cached_file_exists(row.output_path, settings):
+            return _snapshot(row)
     return None
 
 
-async def _load_cached_bytes(output_path: str, settings: Settings) -> bytes | None:
-    """현재 storage backend에서 캐시 결과 이미지를 읽는다."""
+async def _cached_file_exists(output_path: str, settings: Settings) -> bool:
+    """현재 storage backend에서 캐시 결과 이미지가 실제로 있는지 확인한다."""
     storage = get_storage(settings)
     try:
-        return await storage.read_bytes(output_path)
+        return await storage.exists(output_path)
     except Exception:
-        logger.exception("cache hit storage read failed path=%s", output_path)
-        return None
+        logger.exception("cache hit storage exists check failed path=%s", output_path)
+        return False
 
 
 async def cached_response(
@@ -96,8 +91,6 @@ async def cached_response(
     if snapshot is None or snapshot["output_path"] is None:
         return None
 
-    encoded = await asyncio.to_thread(base64.b64encode, snapshot["target_bytes"])
-    image_data_url = f"data:image/png;base64,{encoded.decode('ascii')}"
     image_url = output_url(snapshot["output_path"])
     logger.info(
         "cache hit generation_id=%s image_hash=%s preset=%s user_id=%s",
@@ -133,7 +126,7 @@ async def cached_response(
             cached=True,
         )
     return {
-        "image_data_url": image_data_url,
+        "image_data_url": None,
         "image_url": image_url,
         "provider": "openai",
         "note": "캐시된 결과 재사용",

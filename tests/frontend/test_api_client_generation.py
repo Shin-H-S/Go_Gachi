@@ -64,6 +64,58 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
     }
 
 
+def test_request_backend_prefers_image_url_without_decoding_image_data(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        return FakeResponse({"imageUrl": "/outputs/result.png", "imageDataUrl": None})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    result = api_client.request_backend(
+        uploaded_file,
+        "제품이 크게 보여요",
+        "인스타그램",
+        "정사각형 피드",
+    )
+
+    assert result.image_url == "https://backend.example/outputs/result.png"
+    assert result.image_bytes is None
+
+
+def test_request_backend_falls_back_to_image_data_url_when_image_url_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    result = api_client.request_backend(
+        uploaded_file,
+        "제품이 크게 보여요",
+        "인스타그램",
+        "정사각형 피드",
+    )
+
+    assert result.image_url is None
+    assert result.image_bytes == b"result"
+
+
 def test_request_backend_attaches_authorization_header_when_token_given(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -320,7 +372,9 @@ def test_request_backend_uses_default_local_backend_url(
     assert captured_request["url"] == "http://127.0.0.1:8000/api/generate"
 
 
-def test_request_backend_rejects_missing_image_data_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_request_backend_rejects_missing_image_url_and_image_data_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def fake_post(
         url: str,  # noqa: ARG001
         json: dict[str, str],  # noqa: ARG001
@@ -333,7 +387,7 @@ def test_request_backend_rejects_missing_image_data_url(monkeypatch: pytest.Monk
     monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
     monkeypatch.setattr(api_client.httpx, "post", fake_post)
 
-    with pytest.raises(ValueError, match="imageDataUrl"):
+    with pytest.raises(ValueError, match="imageUrl 또는 imageDataUrl"):
         api_client.request_backend(
             uploaded_file,
             "제품이 크게 보여요",

@@ -359,7 +359,7 @@ async def generate(
     )
 
     return GenerateResponse(
-        imageDataUrl=result["image_data_url"],
+        imageDataUrl=result.get("image_data_url"),
         imageUrl=result.get("image_url"),
         provider=result["provider"] or settings.image_provider,
         preset=preset,

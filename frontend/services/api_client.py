@@ -138,13 +138,17 @@ def _request_generate_sync(payload: dict[str, object], access_token: str) -> Gen
     )
     response.raise_for_status()
     data = response.json()
+    image_url = to_backend_asset_url(str(data.get("imageUrl") or ""))
     image_data_url = data.get("imageDataUrl")
-    if not image_data_url:
-        raise ValueError("백엔드 응답에 imageDataUrl이 없습니다.")
+    image_bytes = None
+    if image_url is None:
+        if not image_data_url:
+            raise ValueError("백엔드 응답에 imageUrl 또는 imageDataUrl이 없습니다.")
+        image_bytes = data_url_to_bytes(str(image_data_url))
 
     return GenerationResult(
-        image_bytes=data_url_to_bytes(image_data_url),
-        image_url=to_backend_asset_url(str(data.get("imageUrl") or "")),
+        image_bytes=image_bytes,
+        image_url=image_url,
         copy=data.get("copy"),
     )
 
@@ -156,7 +160,7 @@ def _request_generate_job(payload: dict[str, object], access_token: str) -> Gene
     if not image_url:
         image_data_url = data.get("imageDataUrl")
         if not image_data_url:
-            raise ValueError("백엔드 job 응답에 imageUrl이 없습니다.")
+            raise ValueError("백엔드 job 응답에 imageUrl 또는 imageDataUrl이 없습니다.")
         image_bytes = data_url_to_bytes(str(image_data_url))
     return GenerationResult(
         image_bytes=image_bytes,
