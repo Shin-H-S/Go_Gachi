@@ -34,6 +34,9 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
             raise
 
         elapsed_ms = (time.perf_counter() - start) * 1000
+        if request.url.path == "/api/health":
+            return response
+
         logger.info(
             "%s %s status=%d took=%.1fms",
             request.method,
