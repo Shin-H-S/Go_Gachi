@@ -49,3 +49,19 @@ def render_image_preview(
         """,
         detail_label,
     )
+
+
+def render_image_url_preview(
+    image_url: str,
+    format_label: str,
+    detail_label: str | None = None,
+) -> None:
+    render_preview_shell(
+        format_label,
+        f"""
+        <div class="preview-image-frame">
+            <img src="{image_url}" alt="미리보기 이미지" />
+        </div>
+        """,
+        detail_label,
+    )

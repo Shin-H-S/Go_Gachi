@@ -126,6 +126,7 @@ def test_sync_result_state_clears_stale_generated_result(monkeypatch) -> None:
     fake_st = SimpleNamespace(
         session_state={
             "result_bytes": b"old-result",
+            "result_image_url": "https://assets.example/old.png",
             "result_copy": {"headline": "old"},
             "result_context": {"prompt": "old"},
         }
@@ -135,6 +136,7 @@ def test_sync_result_state_clears_stale_generated_result(monkeypatch) -> None:
     work_state.sync_result_state({"prompt": "new"})
 
     assert "result_bytes" not in fake_st.session_state
+    assert "result_image_url" not in fake_st.session_state
     assert "result_copy" not in fake_st.session_state
     assert "result_context" not in fake_st.session_state
 
@@ -145,6 +147,7 @@ def test_sync_result_state_keeps_matching_generated_result(monkeypatch) -> None:
     fake_st = SimpleNamespace(
         session_state={
             "result_bytes": b"current-result",
+            "result_image_url": "https://assets.example/current.png",
             "result_copy": {"headline": "current"},
             "result_context": result_context,
         }
@@ -154,5 +157,6 @@ def test_sync_result_state_keeps_matching_generated_result(monkeypatch) -> None:
     work_state.sync_result_state(result_context)
 
     assert fake_st.session_state["result_bytes"] == b"current-result"
+    assert fake_st.session_state["result_image_url"] == "https://assets.example/current.png"
     assert fake_st.session_state["result_copy"] == {"headline": "current"}
     assert fake_st.session_state["result_context"] == result_context

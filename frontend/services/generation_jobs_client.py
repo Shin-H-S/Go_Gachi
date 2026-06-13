@@ -3,32 +3,17 @@ import time
 import httpx
 
 from frontend.core.config import BACKEND_URL
+from frontend.services.assets import to_backend_asset_url
 
 
 def _auth_headers(access_token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {access_token}"} if access_token else {}
 
 
-def _to_backend_asset_url(path: str | None) -> str | None:
-    if not path:
-        return None
-    if path.startswith(("http://", "https://", "data:")):
-        return path
-    if path.startswith("/"):
-        return f"{BACKEND_URL.rstrip('/')}{path}"
-    return f"{BACKEND_URL.rstrip('/')}/{path}"
-
-
-def request_asset_bytes(url: str) -> bytes:
-    response = httpx.get(url, timeout=30)
-    response.raise_for_status()
-    return response.content
-
-
-def request_generate_job_bytes(
+def request_generate_job_result(
     payload: dict[str, object],
     access_token: str,
-) -> tuple[bytes | None, dict[str, object]]:
+) -> dict[str, object]:
     create_response = httpx.post(
         f"{BACKEND_URL}/api/generate/jobs",
         json=payload,
@@ -39,7 +24,7 @@ def request_generate_job_bytes(
     create_data = create_response.json()
     request_id = create_data.get("requestId")
     if not request_id:
-        return None, create_data
+        return create_data
 
     deadline = time.monotonic() + 300
     last_status = "pending"
@@ -56,10 +41,11 @@ def request_generate_job_bytes(
 
         if last_status in {"success", "cached"}:
             image_url = data.get("imageUrl")
-            asset_url = _to_backend_asset_url(image_url)
+            asset_url = to_backend_asset_url(str(image_url) if image_url else None)
             if not asset_url:
                 raise ValueError("백엔드 job 응답에 imageUrl이 없습니다.")
-            return request_asset_bytes(asset_url), data
+            data["imageUrl"] = asset_url
+            return data
 
         if last_status == "failed":
             error = data.get("error") or "GENERATION_JOB_FAILED"
