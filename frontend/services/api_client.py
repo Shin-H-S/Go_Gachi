@@ -9,6 +9,7 @@ from frontend.core.config import (
     get_detail_id,
     get_detail_size,
 )
+from frontend.services import mypage_client
 from frontend.services.assets import (
     data_url_to_bytes,
     file_to_data_url,
@@ -49,43 +50,33 @@ def _auth_headers(access_token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {access_token}"} if access_token else {}
 
 
-def _get_json(path: str, access_token: str, timeout: int = 30) -> dict:
-    response = httpx.get(
-        f"{BACKEND_URL}{path}",
-        headers=_auth_headers(access_token),
-        timeout=timeout,
-    )
-    response.raise_for_status()
-    return response.json()
+def _sync_mypage_backend_url() -> None:
+    mypage_client.BACKEND_URL = BACKEND_URL
 
 
 def request_me(access_token: str) -> dict:
-    return _get_json("/api/auth/me", access_token)
+    _sync_mypage_backend_url()
+    return mypage_client.request_me(access_token)
 
 
 def request_my_generations(access_token: str, page: int = 1) -> dict:
-    page = max(1, int(page))
-    path = "/api/auth/me/generations" if page == 1 else f"/api/auth/me/generations?page={page}"
-    return _get_json(path, access_token)
+    _sync_mypage_backend_url()
+    return mypage_client.request_my_generations(access_token, page)
 
 
 def request_my_folders(access_token: str) -> dict:
-    return _get_json("/api/auth/me/folders", access_token)
+    _sync_mypage_backend_url()
+    return mypage_client.request_my_folders(access_token)
 
 
 def request_my_uploads(access_token: str) -> dict:
-    return _get_json("/api/auth/me/uploads", access_token)
+    _sync_mypage_backend_url()
+    return mypage_client.request_my_uploads(access_token)
 
 
 def create_my_folder(access_token: str, name: str) -> dict:
-    response = httpx.post(
-        f"{BACKEND_URL}/api/auth/me/folders",
-        json={"name": name},
-        headers=_auth_headers(access_token),
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.json()
+    _sync_mypage_backend_url()
+    return mypage_client.create_my_folder(access_token, name)
 
 
 def move_generation_to_folder(
@@ -93,14 +84,8 @@ def move_generation_to_folder(
     request_id: str,
     folder_id: int | None,
 ) -> dict:
-    response = httpx.patch(
-        f"{BACKEND_URL}/api/auth/me/generations/{request_id}/folder",
-        json={"folder_id": folder_id},
-        headers=_auth_headers(access_token),
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.json()
+    _sync_mypage_backend_url()
+    return mypage_client.move_generation_to_folder(access_token, request_id, folder_id)
 
 
 def to_backend_asset_url(path: str | None) -> str | None:
