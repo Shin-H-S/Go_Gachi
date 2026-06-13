@@ -1,6 +1,6 @@
 # 프롬프트 배치 테스트 (prompt lab)
 
-시스템/로고/문구/유저 프롬프트를 [케이스 × 이미지 × 반복] 조합으로 한 번에 생성하고,
+시스템/문구/유저 프롬프트를 [케이스 × 이미지 × 반복] 조합으로 한 번에 생성하고,
 HTML 그리드에서 결과를 한눈에 비교하며, AI가 프롬프트 준수 여부를 자동 채점한다.
 
 서비스의 프롬프트 조립 코드(`backend/app/core/prompts.py`)를 그대로 import해서 쓰므로
@@ -23,7 +23,7 @@ uv run streamlit run experiments/app.py
 ```
 
 탭1 (새 테스트): 테스트명(기본값=날짜·시간) → 설정 불러오기(이전 테스트 재사용) →
-이미지/로고 업로드 → 채널·유형·로고·문구 프롬프트 선택(전부 직접입력 가능) → 갯수 정해 생성.
+이미지 업로드 → 채널·유형·문구 프롬프트 선택(전부 직접입력 가능) → 갯수 정해 생성.
 백그라운드로 돌기 때문에 기다리지 않고 바로 다음 테스트를 돌릴 수 있다.
 
 탭2 (결과·평가): 생성 이미지가 번호와 함께 표로 나오고, 그 아래 평가표에서
@@ -62,22 +62,20 @@ uv run python experiments/report.py experiments/runs/<run_id>
 | 필드 | 설명 |
 |---|---|
 | `id` | 케이스 고유 이름 (결과 파일명·리포트 행 제목) |
-| `kind` | `system` / `logo` / `copy` / `user` / `mixed` — 리포트 필터용 분류 |
+| `kind` | `system` / `copy` / `user` / `mixed` — 리포트 필터용 분류 |
 | `preset`, `detail` | `config/presets.json`의 채널/상세 유형 id |
 | `user_prompt` | 유저 입력 프롬프트 |
 | `copy` | `{headline, subcopy, cta}` — 이미지에 렌더할 광고 문구 |
-| `logo` | `true`(전역 logo 사용) 또는 개별 로고 경로 |
-| `logo_position` | `top_left` / `top_right` / `bottom_left` / `bottom_right` |
 | `system_append` | 기존 시스템 프롬프트 뒤에 한 줄 추가 (A/B 비교에 적합) |
 | `system_override` | 시스템 프롬프트 전체 교체 (새 프롬프트 실험) |
 | `resize_mode` | `cover`(기본) / `contain` |
 
-전역 옵션: `repeat`(반복 횟수), `concurrency`, `quality`, `model`, `logo`, `run_name`.
+전역 옵션: `repeat`(반복 횟수), `concurrency`, `quality`, `model`, `run_name`.
 CLI로도 덮어쓸 수 있다: `--repeat 3 --quality low --limit 5 --yes` 등.
 
 ## 채점 항목 (judge.py)
 
-제품 보존 / 구도·레이아웃 / 문구 정확도(문구 케이스만) / 로고 준수(로고 케이스만) /
+제품 보존 / 구도·레이아웃 / 문구 정확도(문구 케이스만) /
 금지 요소 없음 / 종합(1~5) + verdict(pass/warn/fail) + 발견된 문제 목록.
 케이스별 평균과 min~max가 터미널에 출력되고, 리포트 셀 우상단에 점수 배지가 붙는다.
 

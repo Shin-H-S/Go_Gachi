@@ -127,14 +127,14 @@ def test_4_rewrite_mode_sends_user_copy_and_keeps_rewritten_copy_response(
     assert result.copy == rewritten_copy
 
 
-def test_3_logo_fields_are_omitted_from_generate_payload(monkeypatch) -> None:
+def test_3_generate_payload_omits_logo_fields(monkeypatch) -> None:
     captured_json = _capture_generate_payload(monkeypatch)
     uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
     format_label, detail_label = _labels_for_instagram_square()
 
     api_client.request_backend(
         uploaded_file,
-        "로고가 어울리게 배치해줘",
+        "깔끔하게 만들어줘",
         format_label,
         detail_label,
     )
@@ -142,19 +142,8 @@ def test_3_logo_fields_are_omitted_from_generate_payload(monkeypatch) -> None:
     assert "logoDataUrl" not in captured_json
     assert "logoPosition" not in captured_json
 
-    captured_json_without_logo = _capture_generate_payload(monkeypatch)
-    api_client.request_backend(
-        uploaded_file,
-        "로고 없이 만들어줘",
-        format_label,
-        detail_label,
-    )
 
-    assert "logoDataUrl" not in captured_json_without_logo
-    assert "logoPosition" not in captured_json_without_logo
-
-
-def test_1_to_3_result_context_tracks_copy_mode_and_ad_copy_only() -> None:
+def test_1_to_3_result_context_tracks_copy_mode_and_ad_copy() -> None:
     uploaded_file = SimpleNamespace(getvalue=lambda: b"source-image")
     format_label, detail_label = _labels_for_instagram_square()
 

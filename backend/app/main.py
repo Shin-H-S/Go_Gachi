@@ -27,7 +27,6 @@ from backend.app.schemas import (
     CopyResponse,
     GenerateRequest,
     GenerateResponse,
-    LogoResponse,
 )
 from backend.app.services.costs import calculate_text_cost
 from backend.app.services.generation_files import new_generation_id
@@ -323,8 +322,6 @@ async def generate(
             # 로그인했으면 생성 기록에 소유자로 남긴다(비로그인이면 None).
             user_id=user.id if user else None,
             user_copy=request.user_copy,
-            logo_data_url=request.logo_data_url,
-            logo_position=request.logo_position,
             text_copy=ad_copy,
             text_cost_usd=text_cost_usd,
         )
@@ -367,11 +364,6 @@ async def generate(
         provider=result["provider"] or settings.image_provider,
         preset=preset,
         copy=copy_info,
-        logo=(
-            LogoResponse(used=True, position=request.logo_position)
-            if request.logo_data_url and request.logo_data_url.strip()
-            else None
-        ),
         note=result["note"],
         # production에서는 내부 프롬프트 노출을 막고, local/dev에서는 디버깅용으로 유지한다.
         prompt=result["prompt"] if settings.app_env != "production" else None,

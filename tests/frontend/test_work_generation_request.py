@@ -34,13 +34,13 @@ def _run_generation(monkeypatch, fake_st: FakeStreamlit, fake_request_backend) -
         ad_copy_prompt="Fresh coffee",
         format_label="인스타그램",
         detail_label="정사각형 피드",
-        current_result_context={},
+        current_result_context={"prompt": "make it bright"},
         ad_copy_enabled=True,
         copy_mode="preserve",
     )
 
 
-def test_generation_request_does_not_pass_logo_kwargs(monkeypatch) -> None:
+def test_generation_request_passes_generation_options(monkeypatch) -> None:
     captured_kwargs: dict[str, object] = {}
 
     def fake_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
@@ -60,17 +60,18 @@ def test_generation_request_does_not_pass_logo_kwargs(monkeypatch) -> None:
         ad_copy_prompt="Fresh coffee",
         format_label="인스타그램",
         detail_label="정사각형 피드",
-        current_result_context={},
+        current_result_context={"prompt": "make it bright"},
         ad_copy_enabled=True,
         copy_mode="preserve",
     )
 
     assert "logo_file" not in captured_kwargs
     assert "logo_position" not in captured_kwargs
+    assert captured_kwargs["copy_mode"] == "preserve"
     assert fake_st.session_state["result_bytes"] == b"result-image"
 
 
-def test_generation_request_does_not_store_logo_metadata_in_result_context(monkeypatch) -> None:
+def test_generation_request_stores_existing_result_context(monkeypatch) -> None:
     def fake_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
         return GenerationResult(
             image_bytes=b"result-image",
@@ -90,12 +91,12 @@ def test_generation_request_does_not_store_logo_metadata_in_result_context(monke
         ad_copy_prompt="Fresh coffee",
         format_label="인스타그램",
         detail_label="정사각형 피드",
-        current_result_context={},
+        current_result_context={"prompt": "make it bright"},
         ad_copy_enabled=True,
         copy_mode="preserve",
     )
 
-    assert "logo" not in fake_st.session_state["result_context"]
+    assert fake_st.session_state["result_context"] == {"prompt": "make it bright"}
 
 
 def test_generation_request_stores_image_url_without_downloading_bytes(monkeypatch) -> None:
@@ -165,7 +166,7 @@ def test_generation_request_falls_back_when_backend_detail_message_missing(
     request = httpx.Request("POST", "https://backend.example/api/generate")
     response = httpx.Response(
         400,
-        json={"detail": {"code": "VALIDATION_ERROR", "field": "logoPosition"}},
+        json={"detail": {"code": "VALIDATION_ERROR", "field": "targetWidth"}},
         request=request,
     )
 
@@ -177,5 +178,5 @@ def test_generation_request_falls_back_when_backend_detail_message_missing(
     _run_generation(monkeypatch, fake_st, fake_request_backend)
 
     assert fake_st.errors == [
-        "백엔드 생성 요청 실패 [HTTP 400]: {'code': 'VALIDATION_ERROR', 'field': 'logoPosition'}"
+        "백엔드 생성 요청 실패 [HTTP 400]: {'code': 'VALIDATION_ERROR', 'field': 'targetWidth'}"
     ]
