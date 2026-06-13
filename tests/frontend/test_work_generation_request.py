@@ -30,19 +30,17 @@ def _run_generation(monkeypatch, fake_st: FakeStreamlit, fake_request_backend) -
     generation.handle_generation_request(
         generate=True,
         uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
-        logo_file=None,
-        logo_position="bottom_right",
         prompt="make it bright",
         ad_copy_prompt="Fresh coffee",
         format_label="인스타그램",
         detail_label="정사각형 피드",
-        current_result_context={"logoPosition": "bottom_right"},
+        current_result_context={},
         ad_copy_enabled=True,
         copy_mode="preserve",
     )
 
 
-def test_generation_request_passes_selected_logo_position(monkeypatch) -> None:
+def test_generation_request_does_not_pass_logo_kwargs(monkeypatch) -> None:
     captured_kwargs: dict[str, object] = {}
 
     def fake_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
@@ -58,29 +56,25 @@ def test_generation_request_passes_selected_logo_position(monkeypatch) -> None:
     generation.handle_generation_request(
         generate=True,
         uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
-        logo_file=SimpleNamespace(getvalue=lambda: b"logo-image"),
-        logo_position="top_left",
         prompt="make it bright",
         ad_copy_prompt="Fresh coffee",
         format_label="인스타그램",
         detail_label="정사각형 피드",
-        current_result_context={"logoPosition": "top_left"},
+        current_result_context={},
         ad_copy_enabled=True,
         copy_mode="preserve",
     )
 
-    assert captured_kwargs["logo_position"] == "top_left"
+    assert "logo_file" not in captured_kwargs
+    assert "logo_position" not in captured_kwargs
     assert fake_st.session_state["result_bytes"] == b"result-image"
 
 
-def test_generation_request_stores_logo_metadata_in_result_context(monkeypatch) -> None:
-    logo_payload = {"used": True, "position": "center_bottom"}
-
+def test_generation_request_does_not_store_logo_metadata_in_result_context(monkeypatch) -> None:
     def fake_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
         return GenerationResult(
             image_bytes=b"result-image",
             copy=None,
-            logo=logo_payload,
         )
 
     fake_st = FakeStreamlit()
@@ -92,18 +86,16 @@ def test_generation_request_stores_logo_metadata_in_result_context(monkeypatch) 
     generation.handle_generation_request(
         generate=True,
         uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
-        logo_file=SimpleNamespace(getvalue=lambda: b"logo-image"),
-        logo_position="center_bottom",
         prompt="make it bright",
         ad_copy_prompt="Fresh coffee",
         format_label="인스타그램",
         detail_label="정사각형 피드",
-        current_result_context={"logoPosition": "center_bottom"},
+        current_result_context={},
         ad_copy_enabled=True,
         copy_mode="preserve",
     )
 
-    assert fake_st.session_state["result_context"]["logo"] == logo_payload
+    assert "logo" not in fake_st.session_state["result_context"]
 
 
 def test_generation_request_shows_backend_string_detail(monkeypatch) -> None:
