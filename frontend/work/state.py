@@ -8,6 +8,7 @@ from frontend.core.config import FORMAT_OPTIONS, get_detail_id, get_detail_size
 def clear_result_state() -> None:
     """현재 입력과 맞지 않는 생성 결과를 세션에서 제거한다."""
     st.session_state.pop("result_bytes", None)
+    st.session_state.pop("result_image_url", None)
     st.session_state.pop("result_copy", None)
     st.session_state.pop("result_context", None)
 
@@ -43,7 +44,7 @@ def build_result_context(
 
 def sync_result_state(current_context) -> None:
     """입력 조건이 바뀐 경우 이전 생성 결과를 숨긴다."""
-    if "result_bytes" not in st.session_state:
+    if "result_bytes" not in st.session_state and "result_image_url" not in st.session_state:
         st.session_state.pop("result_context", None)
         return
 
