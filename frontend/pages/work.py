@@ -13,7 +13,6 @@ from frontend.work.components import (
 )
 from frontend.work.copy_controls import render_copy_controls
 from frontend.work.generation import handle_generation_request
-from frontend.work.logo_controls import render_logo_controls, render_logo_preview
 from frontend.work.result_panel import render_result_panel
 from frontend.work.state import build_result_context, get_selected_channel, sync_result_state
 from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_primary_uploaded_file
@@ -40,14 +39,6 @@ def render_work_page() -> None:
                 label_visibility="collapsed",
             )
             uploaded_file = get_primary_uploaded_file(uploaded_files)
-
-        logo_controls_col, logo_preview_col = st.columns([0.52, 0.48], gap="small")
-        with logo_controls_col:
-            with st.container(border=True, key="left-logo-section"):
-                logo_file, logo_position = render_logo_controls()
-        with logo_preview_col:
-            with st.container(border=True, key="left-logo-preview-section"):
-                render_logo_preview(logo_file)
 
         with st.container(border=True, key="left-channel-section"):
             st.markdown('<p class="section-label">광고 채널 선택</p>', unsafe_allow_html=True)
@@ -106,8 +97,6 @@ def render_work_page() -> None:
                 ad_copy_prompt=ad_copy_prompt,
                 copy_mode=copy_mode,
                 ad_copy_enabled=ad_copy_enabled,
-                logo_file=logo_file,
-                logo_position=logo_position,
             )
             sync_result_state(current_result_context)
 
@@ -157,8 +146,6 @@ def render_work_page() -> None:
     handle_generation_request(
         generate=generate,
         uploaded_file=uploaded_file,
-        logo_file=logo_file,
-        logo_position=logo_position,
         prompt=prompt,
         ad_copy_prompt=ad_copy_prompt,
         format_label=format_label,
