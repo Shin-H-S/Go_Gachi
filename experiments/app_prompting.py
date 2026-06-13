@@ -26,7 +26,11 @@ IMPROVE_LINE = (
     "Improve lighting, color, sharpness, appetizing texture, background cleanliness, "
     "and commercial food styling."
 )
-MOOD_LINE = "Use a warm, inviting cafe mood with soft ambient lighting and consistent color temperature. Maintain a bright and appetizing atmosphere. Avoid dark, cold, or low-contrast lighting that diminishes the product's visual appeal."
+MOOD_LINE = (
+    "Use a warm, inviting cafe mood with soft ambient lighting and consistent color "
+    "temperature. Maintain a bright and appetizing atmosphere. Avoid dark, cold, or "
+    "low-contrast lighting that diminishes the product's visual appeal."
+)
 NEGATIVE_SPACE_LINE = (
     "Keep the image ready for later ad copy by leaving calm negative space near the edges."
 )
@@ -74,6 +78,7 @@ API_SIZES = [
 API_SIZE_LABELS = {api: label for label, api, _, _ in API_SIZES}
 DIRECT = "직접입력"
 REPO_DEFAULT = "레포 기본"
+
 
 def _logo_place_line(position: str) -> str:
     return (
