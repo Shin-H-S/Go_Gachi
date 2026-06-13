@@ -40,14 +40,16 @@ def test_result_summary_ignores_legacy_logo_metadata(monkeypatch) -> None:
     render_result_summary(
         {
             "adCopyEnabled": True,
-            "logoUploadHash": "uploaded-logo",
-            "logo": {"used": False, "position": "top_right"},
+            "logoUploadHash": "legacy-logo-hash",
+            "logo": {"used": True, "position": "bottom_right"},
         }
     )
 
     html = "".join(fake_st.markdowns)
+    assert "광고 문구 포함" in html
     assert "logo.used" not in html
     assert "logo.position" not in html
+    assert "logo" not in html.lower()
     assert "로고" not in html
 
 

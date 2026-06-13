@@ -14,7 +14,6 @@ def render_result_summary(result_context: dict[str, object] | None) -> None:
 
     has_ad_copy = bool(result_context.get("adCopyEnabled"))
     ad_copy_label = "광고 문구 포함" if has_ad_copy else "광고 문구 미포함"
-
     chips = [_status_chip(ad_copy_label, included=has_ad_copy)]
 
     st.markdown(

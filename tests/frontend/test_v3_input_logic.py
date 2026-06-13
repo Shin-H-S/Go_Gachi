@@ -142,6 +142,7 @@ def test_3_generate_payload_omits_logo_fields(monkeypatch) -> None:
     assert "logoDataUrl" not in captured_json
     assert "logoPosition" not in captured_json
 
+
 def test_1_to_3_result_context_tracks_copy_mode_and_ad_copy() -> None:
     uploaded_file = SimpleNamespace(getvalue=lambda: b"source-image")
     format_label, detail_label = _labels_for_instagram_square()
@@ -161,3 +162,5 @@ def test_1_to_3_result_context_tracks_copy_mode_and_ad_copy() -> None:
     assert context["adCopyPrompt"] == "헤드라인: 오늘의 메뉴"
     assert context["copyMode"] == "polish"
     assert context["adCopyEnabled"] is True
+    assert "logoUploadHash" not in context
+    assert "logoPosition" not in context

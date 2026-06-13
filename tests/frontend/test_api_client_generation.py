@@ -252,7 +252,6 @@ def test_request_backend_returns_copy_metadata(monkeypatch: pytest.MonkeyPatch) 
     assert result.image_bytes == b"result"
     assert result.copy == copy_payload
 
-
 def test_request_auto_copy_posts_to_backend_copy_endpoint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
