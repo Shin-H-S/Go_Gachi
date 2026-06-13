@@ -80,39 +80,11 @@ def test_uploaded_file_chip_is_forced_readable() -> None:
     assert "-webkit-text-fill-color: #202725 !important;" in styles
 
 
-def test_logo_preview_frame_has_fixed_size_and_contained_image() -> None:
+def test_work_upload_styles_do_not_include_logo_specific_layout() -> None:
     styles = STYLE_WORK_UPLOAD_FILE.read_text(encoding="utf-8")
 
-    assert ".logo-preview-frame" in styles
-    assert "height: 262px;" in styles
-    assert ".logo-preview-frame img" in styles
-    assert "object-fit: contain;" in styles
-    assert ".logo-preview-placeholder" in styles
-
-
-def test_logo_preview_container_keeps_even_vertical_spacing() -> None:
-    styles = STYLE_WORK_UPLOAD_FILE.read_text(encoding="utf-8")
-
-    assert ".st-key-left-logo-preview-section" in styles
-    assert "min-height: 294px;" in styles
-    assert "padding-bottom: 16px !important;" in styles
-
-
-def test_logo_upload_container_keeps_same_fixed_height_as_preview() -> None:
-    styles = STYLE_WORK_UPLOAD_FILE.read_text(encoding="utf-8")
-
-    assert ".st-key-left-logo-section" in styles
-    assert ".st-key-left-logo-preview-section" in styles
-    assert "min-height: 294px;" in styles
-    assert "height: 294px;" in styles
-
-
-def test_logo_single_upload_does_not_hide_native_file_buttons() -> None:
-    styles = STYLE_WORK_UPLOAD_FILE.read_text(encoding="utf-8")
-
-    assert '[data-testid="stFileUploaderFile"]' in styles
-    assert '[data-testid="stFileUploaderFile"] button' in styles
-    assert ".st-key-logo_upload:has" not in styles
-    assert 'div:not(:has([data-testid="stFileUploaderFile"])) button' not in styles
-    assert '[data-testid="stFileUploaderDropzone"] button' not in styles
-    assert "display: none !important;" not in styles
+    assert ".st-key-left-logo-section" not in styles
+    assert ".st-key-left-logo-preview-section" not in styles
+    assert ".logo-preview-frame" not in styles
+    assert ".logo-preview-placeholder" not in styles
+    assert ".st-key-logo_upload" not in styles

@@ -17,7 +17,6 @@ def build_system_prompt(
     preset: Preset,
     detail: PresetDetail | None = None,
     image_copy: AdCopy | None = None,
-    logo_position: str | None = None,
 ) -> str:
     """프리셋 기반의 고정 규칙을 system 성격 프롬프트로 만든다."""
     parts = _clean_parts(
@@ -71,25 +70,10 @@ def build_system_prompt(
     else:
         parts.extend(
             [
-                _no_copy_instruction(allow_logo=bool(logo_position)),
+                _no_copy_instruction(),
                 (
                     "Keep the image ready for later ad copy by leaving calm negative space "
                     "near the edges."
-                ),
-            ]
-        )
-    if logo_position:
-        parts.extend(
-            [
-                (
-                    "A second reference image contains the shop logo. Use that logo once in "
-                    "the final advertisement while preserving its shape, wordmark, colors, "
-                    "and visual identity as much as possible."
-                ),
-                (
-                    f"Place the logo near the {logo_position.replace('_', ' ')} area with "
-                    "clean margins. Keep it smaller than the main product and do not invent "
-                    "additional logos or brand marks."
                 ),
             ]
         )
@@ -109,14 +93,8 @@ def _image_copy_instruction(image_copy: AdCopy) -> str:
     return "\n".join(lines)
 
 
-def _no_copy_instruction(*, allow_logo: bool) -> str:
+def _no_copy_instruction() -> str:
     """광고 문구를 쓰지 않을 때 금지할 요소를 만든다."""
-    if allow_logo:
-        return (
-            "Do not add, draw, render, or imitate any text, typography, price tag, "
-            "watermark, UI, or poster copy except for the provided logo reference. "
-            "Do not add unrelated logos or unrelated brand marks."
-        )
     return (
         "Do not add, draw, render, or imitate any text, typography, logo, price tag, "
         "watermark, UI, poster copy, or brand mark."
@@ -158,9 +136,8 @@ def build_prompt(
     user_prompt: str = "",
     detail: PresetDetail | None = None,
     image_copy: AdCopy | None = None,
-    logo_position: str | None = None,
 ) -> str:
     """프리셋 규칙과 사용자 요청을 현재 Images API용 단일 지시문으로 만든다."""
-    system_prompt = build_system_prompt(preset, detail, image_copy, logo_position)
+    system_prompt = build_system_prompt(preset, detail, image_copy)
     user_prompt_text = build_user_prompt(user_prompt)
     return merge_image_prompt(system_prompt, user_prompt_text)

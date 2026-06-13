@@ -125,8 +125,6 @@ async def run_generation_job(
             settings=settings,
             user_id=user_id,
             user_copy=request.user_copy,
-            logo_data_url=request.logo_data_url,
-            logo_position=request.logo_position,
             text_copy=ad_copy,
             text_cost_usd=text_cost_usd,
             generation_id=request_id,

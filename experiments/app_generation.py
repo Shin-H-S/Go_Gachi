@@ -40,31 +40,22 @@ async def _batch(cfg: dict, run_dir: Path) -> None:
     prompt = assemble_full_prompt(cfg, ad_copy)
 
     uploaded = parse_image(cfg["image_data_url"], settings.max_upload_bytes)
-    logo_uploaded = (
-        parse_image(cfg["logo_data_url"], settings.max_upload_bytes) if cfg["has_logo"] else None
-    )
     openai_uploaded = await asyncio.to_thread(normalize_for_openai, uploaded)
-    openai_logo = (
-        await asyncio.to_thread(normalize_for_openai, logo_uploaded) if logo_uploaded else None
-    )
 
     copy_dict = (
         {"headline": ad_copy.headline, "subcopy": ad_copy.subcopy, "cta": ad_copy.cta}
         if ad_copy
         else None
     )
-    kind = "copy" if ad_copy else ("logo" if cfg["has_logo"] else "system")
+    kind = "copy" if ad_copy else "system"
     base_record = {
         "case_id": cfg["name"],
         "kind": kind,
         "preset": cfg["channel_id"],
         "detail": cfg["detail_id"],
         "image": cfg["image_name"],
-        "logo": cfg["logo_name"],
         "prompt": prompt,
         "copy": copy_dict,
-        "has_logo": cfg["has_logo"],
-        "logo_position": cfg["logo_position"] if cfg["has_logo"] else None,
         "user_prompt": cfg.get("user_prompt", ""),
         "system_override": False,
         "system_append": None,
@@ -101,7 +92,6 @@ async def _batch(cfg: dict, run_dir: Path) -> None:
             try:
                 edit_result = await call_openai_edit(
                     uploaded=openai_uploaded,
-                    reference_images=[openai_logo] if openai_logo else None,
                     api_size=cfg["api_size"],
                     prompt=prompt,
                     settings=settings,
@@ -156,8 +146,6 @@ def start_run(cfg: dict) -> str:
     (run_dir / "images").mkdir(parents=True, exist_ok=True)
     (run_dir / "inputs").mkdir(parents=True, exist_ok=True)
     (run_dir / "inputs" / cfg["image_name"]).write_bytes(cfg["image_bytes"])
-    if cfg["has_logo"]:
-        (run_dir / "inputs" / cfg["logo_name"]).write_bytes(cfg["logo_bytes"])
     config_snapshot = {
         k: v for k, v in cfg.items() if not k.endswith("_bytes") and not k.endswith("_data_url")
     }
