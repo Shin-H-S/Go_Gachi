@@ -60,8 +60,15 @@ def request_me(access_token: str) -> dict:
 
 
 def request_my_generations(access_token: str, page: int = 1) -> dict:
-    _sync_mypage_backend_url()
-    return mypage_client.request_my_generations(access_token, page)
+    page = max(1, int(page))
+    path = "/api/auth/me/generations" if page == 1 else f"/api/auth/me/generations?page={page}"
+    response = httpx.get(
+        f"{BACKEND_URL}{path}",
+        headers=_auth_headers(access_token),
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()
 
 
 def request_my_folders(access_token: str) -> dict:
