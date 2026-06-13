@@ -41,7 +41,14 @@ def handle_generation_request(
                 )
                 result_context = dict(current_result_context or {})
 
-                st.session_state["result_bytes"] = result.image_bytes
+                if result.image_bytes is not None:
+                    st.session_state["result_bytes"] = result.image_bytes
+                else:
+                    st.session_state.pop("result_bytes", None)
+                if result.image_url:
+                    st.session_state["result_image_url"] = result.image_url
+                else:
+                    st.session_state.pop("result_image_url", None)
                 st.session_state["result_copy"] = result.copy
                 st.session_state["result_context"] = result_context
                 st.rerun()

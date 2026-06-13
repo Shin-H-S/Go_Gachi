@@ -99,6 +99,22 @@ def test_generation_request_stores_existing_result_context(monkeypatch) -> None:
     assert fake_st.session_state["result_context"] == {"prompt": "make it bright"}
 
 
+def test_generation_request_stores_image_url_without_downloading_bytes(monkeypatch) -> None:
+    def fake_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
+        return GenerationResult(
+            image_bytes=None,
+            image_url="https://assets.example/result.png",
+            copy=None,
+        )
+
+    fake_st = FakeStreamlit()
+
+    _run_generation(monkeypatch, fake_st, fake_request_backend)
+
+    assert fake_st.session_state["result_image_url"] == "https://assets.example/result.png"
+    assert "result_bytes" not in fake_st.session_state
+
+
 def test_generation_request_shows_backend_string_detail(monkeypatch) -> None:
     request = httpx.Request("POST", "https://backend.example/api/generate")
     response = httpx.Response(

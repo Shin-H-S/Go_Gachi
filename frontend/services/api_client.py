@@ -16,7 +16,7 @@ from frontend.services.assets import (
     request_asset_bytes,
 )
 from frontend.services.copy_client import request_auto_copy
-from frontend.services.generation_jobs_client import request_generate_job_bytes
+from frontend.services.generation_jobs_client import request_generate_job_result
 from frontend.services.prompting import build_user_prompt
 
 __all__ = [
@@ -41,7 +41,8 @@ __all__ = [
 
 @dataclass(frozen=True)
 class GenerationResult:
-    image_bytes: bytes
+    image_bytes: bytes | None
+    image_url: str | None = None
     copy: dict[str, object] | None = None
 
 
@@ -143,19 +144,23 @@ def _request_generate_sync(payload: dict[str, object], access_token: str) -> Gen
 
     return GenerationResult(
         image_bytes=data_url_to_bytes(image_data_url),
+        image_url=to_backend_asset_url(str(data.get("imageUrl") or "")),
         copy=data.get("copy"),
     )
 
 
 def _request_generate_job(payload: dict[str, object], access_token: str) -> GenerationResult:
-    image_bytes, data = request_generate_job_bytes(payload, access_token)
-    if image_bytes is None:
+    data = request_generate_job_result(payload, access_token)
+    image_url = to_backend_asset_url(str(data.get("imageUrl") or ""))
+    image_bytes = None
+    if not image_url:
         image_data_url = data.get("imageDataUrl")
         if not image_data_url:
             raise ValueError("백엔드 job 응답에 imageUrl이 없습니다.")
         image_bytes = data_url_to_bytes(str(image_data_url))
     return GenerationResult(
         image_bytes=image_bytes,
+        image_url=image_url,
         copy=data.get("copy") if isinstance(data.get("copy"), dict) else None,
     )
 
