@@ -29,7 +29,7 @@ def request_generate_job_result(
     deadline = time.monotonic() + 300
     last_status = "pending"
     while time.monotonic() < deadline:
-        time.sleep(2)
+        time.sleep(1)
         status_response = httpx.get(
             f"{BACKEND_URL}/api/generate/jobs/{request_id}",
             headers=_auth_headers(access_token),

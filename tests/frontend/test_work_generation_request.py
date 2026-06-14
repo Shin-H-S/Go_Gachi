@@ -1,3 +1,4 @@
+from time import perf_counter
 from types import SimpleNamespace
 
 import httpx
@@ -25,8 +26,6 @@ class FakeStreamlit:
 def _run_generation(monkeypatch, fake_st: FakeStreamlit, fake_request_backend) -> None:
     monkeypatch.setattr(generation, "st", fake_st)
     monkeypatch.setattr(generation, "request_backend", fake_request_backend)
-    monkeypatch.setattr(generation.time, "sleep", lambda seconds: None)
-
     generation.handle_generation_request(
         generate=True,
         uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
@@ -51,8 +50,6 @@ def test_generation_request_passes_generation_options(monkeypatch) -> None:
 
     monkeypatch.setattr(generation, "st", fake_st)
     monkeypatch.setattr(generation, "request_backend", fake_request_backend)
-    monkeypatch.setattr(generation.time, "sleep", lambda seconds: None)
-
     generation.handle_generation_request(
         generate=True,
         uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
@@ -71,6 +68,31 @@ def test_generation_request_passes_generation_options(monkeypatch) -> None:
     assert fake_st.session_state["result_bytes"] == b"result-image"
 
 
+def test_generation_request_starts_backend_without_artificial_delay(monkeypatch) -> None:
+    def fake_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
+        return GenerationResult(image_bytes=b"result-image", copy=None)
+
+    fake_st = FakeStreamlit()
+    monkeypatch.setattr(generation, "st", fake_st)
+    monkeypatch.setattr(generation, "request_backend", fake_request_backend)
+
+    started_at = perf_counter()
+    generation.handle_generation_request(
+        generate=True,
+        uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
+        prompt="make it bright",
+        ad_copy_prompt="Fresh coffee",
+        format_label="?몄뒪?洹몃옩",
+        detail_label="?뺤궗媛곹삎 ?쇰뱶",
+        current_result_context={"prompt": "make it bright"},
+        ad_copy_enabled=True,
+        copy_mode="preserve",
+    )
+
+    assert perf_counter() - started_at < 0.5
+    assert fake_st.session_state["result_bytes"] == b"result-image"
+
+
 def test_generation_request_stores_existing_result_context(monkeypatch) -> None:
     def fake_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
         return GenerationResult(
@@ -82,8 +104,6 @@ def test_generation_request_stores_existing_result_context(monkeypatch) -> None:
 
     monkeypatch.setattr(generation, "st", fake_st)
     monkeypatch.setattr(generation, "request_backend", fake_request_backend)
-    monkeypatch.setattr(generation.time, "sleep", lambda seconds: None)
-
     generation.handle_generation_request(
         generate=True,
         uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),

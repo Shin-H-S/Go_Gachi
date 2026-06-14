@@ -1,5 +1,3 @@
-import time
-
 import httpx
 import streamlit as st
 
@@ -27,7 +25,6 @@ def handle_generation_request(
             st.warning("메뉴 사진을 먼저 업로드해주세요.")
         else:
             try:
-                time.sleep(1.2)
                 access_token = st.session_state.get("auth_access_token", "")
                 result = request_backend(
                     uploaded_file,

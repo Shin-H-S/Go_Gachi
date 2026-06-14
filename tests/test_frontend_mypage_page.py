@@ -7,6 +7,7 @@ FRONTEND_MYPAGE_PAGE = ROOT_DIR / "frontend" / "pages" / "mypage.py"
 FRONTEND_ROUTER = ROOT_DIR / "frontend" / "core" / "router.py"
 FRONTEND_API_CLIENT = ROOT_DIR / "frontend" / "services" / "api_client.py"
 FRONTEND_MYPAGE_CARD = ROOT_DIR / "frontend" / "mypage" / "generation_card.py"
+FRONTEND_MYPAGE_SECTIONS = ROOT_DIR / "frontend" / "mypage" / "page_sections.py"
 FRONTEND_MYPAGE_VIEWS = ROOT_DIR / "frontend" / "mypage" / "views.py"
 FRONTEND_MYPAGE_SIDEBAR = ROOT_DIR / "frontend" / "mypage" / "sidebar.py"
 FRONTEND_STYLES = ROOT_DIR / "frontend" / "styles.py"
@@ -20,19 +21,26 @@ def test_mypage_page_is_routed_and_split_into_focused_renderers() -> None:
     app_source = FRONTEND_APP.read_text(encoding="utf-8")
     router_source = FRONTEND_ROUTER.read_text(encoding="utf-8")
     page_source = FRONTEND_MYPAGE_PAGE.read_text(encoding="utf-8")
-    tree = ast.parse(page_source)
-    defined_functions = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+    sections_source = FRONTEND_MYPAGE_SECTIONS.read_text(encoding="utf-8")
+    page_tree = ast.parse(page_source)
+    sections_tree = ast.parse(sections_source)
+    page_functions = {
+        node.name for node in ast.walk(page_tree) if isinstance(node, ast.FunctionDef)
+    }
+    section_functions = {
+        node.name for node in ast.walk(sections_tree) if isinstance(node, ast.FunctionDef)
+    }
 
     assert '"mypage"' in router_source
     assert "render_mypage_page" in app_source
     assert 'current_page == "mypage"' in app_source
+    assert "render_mypage_page" in page_functions
     assert {
-        "render_mypage_page",
         "render_recent_work",
         "render_folder_view",
         "render_uploads",
         "render_account_settings",
-    }.issubset(defined_functions)
+    }.issubset(section_functions)
     assert "닉네임의 마이페이지" in page_source
     assert "업로드한 메뉴 사진" in page_source
     assert "계정 설정" in page_source
