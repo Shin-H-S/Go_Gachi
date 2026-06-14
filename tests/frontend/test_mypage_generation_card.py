@@ -1,9 +1,11 @@
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 
+from frontend.css.mypage_parts.cards import MYPAGE_CARDS_CSS
 from frontend.mypage import generation_card
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
-MYPAGE_CARD_CSS = ROOT_DIR / "frontend" / "css" / "mypage_parts" / "cards.py"
+
+def _created_at_minutes_ago(minutes: int) -> str:
+    return (datetime.now(UTC) - timedelta(minutes=minutes)).isoformat()
 
 
 class FakeStreamlit:
@@ -117,6 +119,99 @@ def test_generation_card_keeps_meta_on_one_line_and_disables_missing_download(
     assert fake_st.downloads[0]["data"] == b""
 
 
+def test_generation_card_shows_loading_state_for_pending_image(
+    monkeypatch,
+) -> None:
+    fake_st = FakeStreamlit()
+    monkeypatch.setattr(generation_card, "st", fake_st)
+
+    generation_card._render_generation_card(
+        {
+            "request_id": "pending-request",
+            "image_url": None,
+            "original_image_url": "/uploads/source.png",
+            "preset_id": "instagram",
+            "status": "pending",
+            "created_at": _created_at_minutes_ago(1),
+        },
+        [],
+        "jwt",
+    )
+
+    rendered_html = "".join(fake_st.markdowns)
+    assert "mypage-generating-thumb" in rendered_html
+    assert "mypage-generating-spinner" in rendered_html
+    assert "이미지 생성중" in rendered_html
+    assert "이미지 없음" not in rendered_html
+    assert fake_st.downloads[0]["disabled"] is True
+
+
+def test_generation_card_marks_old_pending_image_as_timed_out(
+    monkeypatch,
+) -> None:
+    fake_st = FakeStreamlit()
+    monkeypatch.setattr(generation_card, "st", fake_st)
+
+    generation_card._render_generation_card(
+        {
+            "request_id": "old-pending-request",
+            "image_url": None,
+            "original_image_url": "/uploads/source.png",
+            "preset_id": "instagram",
+            "status": "pending",
+            "created_at": _created_at_minutes_ago(10),
+        },
+        [],
+        "jwt",
+    )
+
+    rendered_html = "".join(fake_st.markdowns)
+    assert "mypage-stale-thumb" in rendered_html
+    assert "mypage-generating-thumb" not in rendered_html
+    assert "mypage-generating-spinner" not in rendered_html
+    assert "timeout" in rendered_html
+    assert fake_st.downloads[0]["disabled"] is True
+
+
+def test_generation_waiting_helper_tracks_only_fresh_pending_without_image() -> None:
+    assert generation_card.has_generation_waiting_for_image(
+        [
+            {
+                "image_url": None,
+                "status": "pending",
+                "created_at": _created_at_minutes_ago(1),
+            }
+        ]
+    )
+    assert not generation_card.has_generation_waiting_for_image(
+        [
+            {
+                "image_url": "/outputs/result.png",
+                "status": "pending",
+                "created_at": _created_at_minutes_ago(1),
+            }
+        ]
+    )
+    assert not generation_card.has_generation_waiting_for_image(
+        [
+            {
+                "image_url": None,
+                "status": "pending",
+                "created_at": _created_at_minutes_ago(10),
+            }
+        ]
+    )
+    assert not generation_card.has_generation_waiting_for_image(
+        [
+            {
+                "image_url": None,
+                "status": "success",
+                "created_at": _created_at_minutes_ago(1),
+            }
+        ]
+    )
+
+
 def test_generation_grid_uses_four_equal_columns(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     rendered_items: list[str] = []
@@ -142,16 +237,19 @@ def test_generation_grid_uses_four_equal_columns(monkeypatch) -> None:
 
 
 def test_generation_card_css_keeps_cards_and_images_uniform() -> None:
-    source = MYPAGE_CARD_CSS.read_text(encoding="utf-8")
+    source = MYPAGE_CARDS_CSS
 
     assert "height: 330px" in source
     assert "height: 150px" in source
     assert "object-fit: contain" in source
     assert "overflow: hidden" in source
+    assert ".mypage-generating-thumb" in source
+    assert ".mypage-generating-spinner" in source
+    assert ".mypage-stale-thumb" in source
 
 
 def test_generation_card_meta_stays_inside_fixed_card_width() -> None:
-    source = MYPAGE_CARD_CSS.read_text(encoding="utf-8")
+    source = MYPAGE_CARDS_CSS
 
     assert ".mypage-card-meta" in source
     assert "grid-template-columns" in source
@@ -162,7 +260,7 @@ def test_generation_card_meta_stays_inside_fixed_card_width() -> None:
 
 
 def test_generation_card_controls_share_thumbnail_width() -> None:
-    source = MYPAGE_CARD_CSS.read_text(encoding="utf-8")
+    source = MYPAGE_CARDS_CSS
 
     assert "--mypage-generation-content-width: 267px" in source
     assert '[class*="st-key-mypage-generation-card-"]' in source
@@ -176,14 +274,14 @@ def test_generation_card_controls_share_thumbnail_width() -> None:
 
 
 def test_generation_card_css_does_not_wait_for_inner_marker() -> None:
-    source = MYPAGE_CARD_CSS.read_text(encoding="utf-8")
+    source = MYPAGE_CARDS_CSS
 
     assert "mypage-generation-card-marker" not in source
     assert ":has(.mypage-generation-card-marker)" not in source
 
 
 def test_generation_card_action_buttons_have_matching_size_and_distinct_colors() -> None:
-    source = MYPAGE_CARD_CSS.read_text(encoding="utf-8")
+    source = MYPAGE_CARDS_CSS
 
     assert '[class*="st-key-mypage-original-"] a' in source
     assert '[class*="st-key-mypage-original-"] button' in source

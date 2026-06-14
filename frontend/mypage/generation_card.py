@@ -3,6 +3,11 @@ from html import escape
 import httpx
 import streamlit as st
 
+from frontend.mypage.generation_status import (
+    has_generation_waiting_for_image,
+    is_generation_in_progress,
+    is_stale_in_progress,
+)
 from frontend.mypage.state import folder_choices, folder_name_by_id, format_date
 from frontend.services.api_client import (
     move_generation_to_folder,
@@ -12,6 +17,7 @@ from frontend.services.api_client import (
 
 GENERATION_CARD_COLUMNS = 4
 GENERATION_CARD_HEIGHT = 330
+__all__ = ["has_generation_waiting_for_image", "render_generation_grid"]
 
 
 def _assign_generation_folder(
@@ -49,16 +55,40 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
     original_image_url = to_backend_asset_url(item.get("original_image_url"))
     preset_id = str(item.get("preset_id") or "channel")
     status = str(item.get("status") or "-")
-    created_at = format_date(item.get("created_at"))
+    created_at_value = item.get("created_at")
+    created_at = format_date(created_at_value)
+    stale_in_progress = is_stale_in_progress(status, created_at_value)
+    display_status = "timeout" if stale_in_progress else status
     if image_url:
         st.image(image_url, use_container_width=True)
+    elif stale_in_progress:
+        st.markdown(
+            """
+            <div class="mypage-stale-thumb" role="status">
+                <strong>생성 시간이 초과되었습니다</strong>
+                <span>다시 생성해 주세요.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    elif is_generation_in_progress(status):
+        st.markdown(
+            """
+            <div class="mypage-generating-thumb" role="status" aria-live="polite">
+                <div class="mypage-generating-spinner"></div>
+                <strong>이미지 생성중</strong>
+                <span>완료되면 이미지가 표시됩니다.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     else:
         st.markdown('<div class="mypage-empty-thumb">이미지 없음</div>', unsafe_allow_html=True)
     st.markdown(
         f"""
         <div class="mypage-card-meta">
             <span>{escape(preset_id)}</span>
-            <span>{escape(created_at)}: {escape(status)}</span>
+            <span>{escape(created_at)}: {escape(display_status)}</span>
         </div>
         """,
         unsafe_allow_html=True,

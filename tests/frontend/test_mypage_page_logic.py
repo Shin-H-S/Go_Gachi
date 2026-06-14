@@ -1,5 +1,11 @@
+from datetime import UTC, datetime, timedelta
+
 from frontend.mypage import state, views
 from frontend.pages import mypage as mypage_page
+
+
+def _created_at_minutes_ago(minutes: int) -> str:
+    return (datetime.now(UTC) - timedelta(minutes=minutes)).isoformat()
 
 
 class FakeStreamlit:
@@ -234,3 +240,42 @@ def test_render_mypage_page_normalizes_legacy_all_view_to_recent(monkeypatch) ->
     assert calls["topbar"][0] == state.RECENT_VIEW
     assert calls["recent"][3] == {"total_count": 12, "current_page": 1}
     assert fake_st.container_keys == ["mypage-shell"]
+
+
+def test_pending_generation_auto_refresh_runs_only_for_fresh_pending(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    refresh_calls: list[str] = []
+    monkeypatch.setattr(mypage_page, "st", fake_st)
+    monkeypatch.setattr(
+        mypage_page,
+        "_pending_generation_auto_refresh",
+        lambda: refresh_calls.append("refresh"),
+    )
+
+    mypage_page._maybe_render_pending_generation_auto_refresh(
+        [
+            {
+                "image_url": None,
+                "status": "pending",
+                "created_at": _created_at_minutes_ago(1),
+            }
+        ]
+    )
+
+    assert refresh_calls == ["refresh"]
+
+    refresh_calls.clear()
+    fake_st.session_state[mypage_page.PENDING_REFRESH_SESSION_KEY] = 123.0
+
+    mypage_page._maybe_render_pending_generation_auto_refresh(
+        [
+            {
+                "image_url": None,
+                "status": "pending",
+                "created_at": _created_at_minutes_ago(10),
+            }
+        ]
+    )
+
+    assert refresh_calls == []
+    assert mypage_page.PENDING_REFRESH_SESSION_KEY not in fake_st.session_state
