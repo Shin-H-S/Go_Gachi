@@ -61,7 +61,7 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
     assert "readable ad copy or platform elements" in (
         presets["instagram"].find_detail("story_image").prompt_hint
     )
-    assert "seasonal offer" in presets["daangn"].find_detail("discount_event").prompt_hint
+    assert "limited offers" in presets["daangn"].find_detail("discount_event").prompt_hint
     assert PROMPT_VERSION == "2026-06-15-v4-channel-copy-rendering-policy"
 
 
