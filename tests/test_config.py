@@ -191,7 +191,7 @@ def test_prompt_without_copy_rejects_logos_and_brand_marks() -> None:
     prompt = build_prompt(preset, "깔끔하게", detail)
 
     assert "provided logo reference" not in prompt
-    assert "Do not add, draw, render, or imitate any text" in prompt
+    assert "Do not add, draw, render, suggest, or imitate any text" in prompt
     assert "brand mark" in prompt
 
 
