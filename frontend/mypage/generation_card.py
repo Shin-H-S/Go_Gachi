@@ -1,6 +1,5 @@
 from html import escape
 
-import httpx
 import streamlit as st
 
 from frontend.mypage.generation_status import (
@@ -11,7 +10,6 @@ from frontend.mypage.generation_status import (
 from frontend.mypage.state import folder_choices, folder_name_by_id, format_date
 from frontend.services.api_client import (
     move_generation_to_folder,
-    request_asset_bytes,
     to_backend_asset_url,
 )
 
@@ -32,47 +30,16 @@ def _assign_generation_folder(
     move_generation_to_folder(access_token, request_id, mapping[selected_label])
 
 
-def _download_file_name(item: dict) -> str:
-    request_id = str(item.get("request_id") or "").strip()
-    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
-    return f"go_gachi_ad_{suffix}.png"
-
-
 def _card_container_key(item: dict, index: int) -> str:
     request_id = str(item.get("request_id") or "").strip()
     suffix = request_id.replace("/", "-").replace("\\", "-") or str(index)
     return f"mypage-generation-card-{suffix}"
 
 
-def _download_state_key(request_id: str) -> str:
-    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
-    return f"mypage-download-bytes-{suffix}"
-
-
-def _download_error_key(request_id: str) -> str:
-    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
-    return f"mypage-download-error-{suffix}"
-
-
-@st.cache_data(show_spinner=False)
-def _cached_asset_bytes(url: str) -> bytes:
-    return request_asset_bytes(url)
-
-
-def _prepare_download(request_id: str, image_url: str) -> None:
-    data_key = _download_state_key(request_id)
-    error_key = _download_error_key(request_id)
-    try:
-        st.session_state[data_key] = _cached_asset_bytes(image_url)
-        st.session_state.pop(error_key, None)
-    except httpx.HTTPError:
-        st.session_state.pop(data_key, None)
-        st.session_state[error_key] = True
-
-
 def _render_generation_card(item: dict, folders: list[dict], access_token: str) -> None:
     request_id = str(item.get("request_id") or "")
     image_url = to_backend_asset_url(item.get("image_url"))
+    download_url = to_backend_asset_url(item.get("download_url")) or image_url
     original_image_url = to_backend_asset_url(item.get("original_image_url"))
     preset_id = str(item.get("preset_id") or "channel")
     status = str(item.get("status") or "-")
@@ -80,6 +47,7 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
     created_at = format_date(created_at_value)
     stale_in_progress = is_stale_in_progress(status, created_at_value)
     display_status = "timeout" if stale_in_progress else status
+
     if image_url:
         st.image(image_url, use_container_width=True)
     elif stale_in_progress:
@@ -105,6 +73,7 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
         )
     else:
         st.markdown('<div class="mypage-empty-thumb">이미지 없음</div>', unsafe_allow_html=True)
+
     st.markdown(
         f"""
         <div class="mypage-card-meta">
@@ -114,6 +83,7 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
         """,
         unsafe_allow_html=True,
     )
+
     labels, mapping = folder_choices(folders)
     current_label = folder_name_by_id(folders, item.get("folder_id"))
     select_key = f"mypage-folder-select-{request_id}"
@@ -126,6 +96,7 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
         on_change=_assign_generation_folder,
         args=(access_token, request_id, mapping, select_key),
     )
+
     original_col, download_col = st.columns(2, gap="small")
     with original_col:
         if original_image_url:
@@ -142,30 +113,21 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
                 key=f"mypage-original-{request_id}",
                 use_container_width=True,
             )
-    data_key = _download_state_key(request_id)
-    error_key = _download_error_key(request_id)
-    if st.session_state.get(error_key):
-        st.error("이미지를 다운로드할 수 없습니다.")
 
     with download_col:
-        download_data = st.session_state.get(data_key)
-        if isinstance(download_data, bytes):
-            st.download_button(
+        if download_url:
+            st.link_button(
                 "다운로드",
-                data=download_data,
-                file_name=_download_file_name(item),
-                mime="image/png",
-                use_container_width=True,
+                download_url,
                 key=f"mypage-download-{request_id}",
+                use_container_width=True,
             )
         else:
             st.button(
                 "다운로드",
-                disabled=not image_url,
+                disabled=True,
                 key=f"mypage-download-{request_id}",
                 use_container_width=True,
-                on_click=_prepare_download if image_url else None,
-                args=(request_id, image_url) if image_url else None,
             )
 
 
@@ -181,6 +143,7 @@ def render_generation_grid(items: list[dict], folders: list[dict], access_token:
             unsafe_allow_html=True,
         )
         return
+
     st.markdown('<div class="mypage-card-grid-marker"></div>', unsafe_allow_html=True)
     columns = st.columns(GENERATION_CARD_COLUMNS, gap="medium")
     for index, item in enumerate(items):
