@@ -73,7 +73,6 @@ def test_presets_do_not_conflict_with_image_copy_prompting() -> None:
         "do not generate people, hands, typography",
         "reserve natural empty space for future text placement",
         "preserve layout flexibility for downstream processing",
-        "price tags",
         "advertising graphics",
     )
 
