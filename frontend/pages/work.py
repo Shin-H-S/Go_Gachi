@@ -16,7 +16,7 @@ from frontend.work.copy_controls import render_copy_controls
 from frontend.work.generation import handle_generation_request
 from frontend.work.result_panel import render_result_panel
 from frontend.work.state import build_result_context, get_selected_channel, sync_result_state
-from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_primary_uploaded_file
+from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_effective_uploaded_file
 
 
 def render_work_page() -> None:
@@ -37,7 +37,7 @@ def render_work_page() -> None:
                     accept_multiple_files=True,
                     label_visibility="collapsed",
                 )
-                uploaded_file = get_primary_uploaded_file(uploaded_files)
+                uploaded_file = get_effective_uploaded_file(uploaded_files, st.session_state)
 
             with st.container(key="left-channel-section"):
                 render_section_label("광고 채널 선택", "2.png")

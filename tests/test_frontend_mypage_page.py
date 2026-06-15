@@ -10,6 +10,7 @@ FRONTEND_MYPAGE_CARD = ROOT_DIR / "frontend" / "mypage" / "generation_card.py"
 FRONTEND_MYPAGE_SECTIONS = ROOT_DIR / "frontend" / "mypage" / "page_sections.py"
 FRONTEND_MYPAGE_STATE = ROOT_DIR / "frontend" / "mypage" / "state.py"
 FRONTEND_MYPAGE_TOPBAR = ROOT_DIR / "frontend" / "mypage" / "topbar.py"
+FRONTEND_MYPAGE_DOWNLOAD_ACTIONS = ROOT_DIR / "frontend" / "mypage" / "download_actions.py"
 FRONTEND_MYPAGE_VIEWS = ROOT_DIR / "frontend" / "mypage" / "views.py"
 FRONTEND_MYPAGE_SIDEBAR = ROOT_DIR / "frontend" / "mypage" / "sidebar.py"
 FRONTEND_STYLES = ROOT_DIR / "frontend" / "styles.py"
@@ -218,14 +219,18 @@ def test_generation_folder_action_moved_out_of_each_card() -> None:
     assert "mypage-action-folder" in topbar_source
 
 
-def test_generation_download_uses_shared_streamlit_download_button() -> None:
+def test_generation_download_prefers_backend_download_url_link() -> None:
     card_source = FRONTEND_MYPAGE_CARD.read_text(encoding="utf-8")
     topbar_source = FRONTEND_MYPAGE_TOPBAR.read_text(encoding="utf-8")
+    download_source = FRONTEND_MYPAGE_DOWNLOAD_ACTIONS.read_text(encoding="utf-8")
 
     assert 'target="_blank">다운로드</a>' not in card_source
     assert "st.download_button(" not in card_source
-    assert "st.download_button(" in topbar_source
-    assert "request_asset_bytes" in topbar_source
+    assert "render_download_action" in topbar_source
+    assert "download_url" in download_source
+    assert "st.link_button(" in download_source
+    assert "st.download_button(" in download_source
+    assert "request_asset_bytes" in download_source
 
 
 def test_sidebar_removes_duplicate_all_folder_action() -> None:

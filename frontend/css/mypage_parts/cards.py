@@ -25,7 +25,8 @@ MYPAGE_CARD_LAYOUT_CSS = """
 
 .st-key-mypage-shell [class*="st-key-mypage-generation-card-"] {
     --mypage-generation-content-width: 267px;
-    --mypage-generation-thumb-height: 205px;
+    --mypage-generation-thumb-height: 241px;
+    border-color: transparent !important;
     height: 330px;
     overflow: hidden;
 }
@@ -46,27 +47,7 @@ MYPAGE_CARD_LAYOUT_CSS = """
 
 .st-key-mypage-shell
     [class*="st-key-mypage-generation-card-"]
-    div[data-testid="stImage"] {
-    height: var(--mypage-generation-thumb-height);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    border-radius: 8px;
-    background: #eef2ef;
-}
-
-.st-key-mypage-shell
-    [class*="st-key-mypage-generation-card-"]
-    div[data-testid="stImage"] img {
-    width: 100%;
-    height: var(--mypage-generation-thumb-height);
-    object-fit: contain;
-}
-
-.st-key-mypage-shell
-    [class*="st-key-mypage-generation-card-"]
-    div[data-testid="stImage"],
+    .mypage-image-preview,
 .st-key-mypage-shell
     [class*="st-key-mypage-generation-card-"]
     .mypage-empty-thumb,

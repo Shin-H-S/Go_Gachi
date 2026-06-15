@@ -135,6 +135,21 @@ def _render_mypage_profile_button() -> None:
 def _render_header_download_button() -> None:
     result_url = st.session_state.get("result_image_url")
     result_bytes = st.session_state.get("result_bytes")
+
+    if not isinstance(result_bytes, bytes) and isinstance(result_url, str) and result_url:
+        fetch_clicked = st.button(
+            "⇩ 다운로드",
+            key="work-header-download-fetch",
+            use_container_width=True,
+        )
+        if fetch_clicked:
+            try:
+                st.session_state["result_bytes"] = request_asset_bytes(result_url)
+                st.rerun()
+            except Exception as exc:
+                st.error(f"결과 이미지를 다운로드할 수 없습니다: {exc}")
+        return
+
     if isinstance(result_bytes, bytes):
         st.download_button(
             "⇩ 다운로드",
@@ -144,19 +159,6 @@ def _render_header_download_button() -> None:
             key="work-header-download-button",
             use_container_width=True,
         )
-        return
-
-    if isinstance(result_url, str) and result_url:
-        if st.button(
-            "⇩ 다운로드",
-            key="work-header-download-fetch",
-            use_container_width=True,
-        ):
-            try:
-                st.session_state["result_bytes"] = request_asset_bytes(result_url)
-                st.rerun()
-            except Exception as exc:
-                st.error(f"결과 이미지를 다운로드할 수 없습니다: {exc}")
         return
 
     st.button(

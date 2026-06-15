@@ -1,7 +1,9 @@
 from backend.app.core.auth import AuthUser, get_current_user
 from backend.app.main import app
 from backend.app.services import generation_service
+from backend.app.services.copywriting import AdCopy
 from backend.app.services.generation_jobs import _jobs
+from backend.app.services.openai_copy import CopyGenerationResult
 from tests.api.helpers import TINY_PNG_B64, TINY_PNG_DATA_URL, client, force_openai_mode
 
 
@@ -52,6 +54,53 @@ def test_generate_job_completes_and_status_returns_urls(monkeypatch) -> None:
     assert body["imageUrl"] == f"/outputs/{request_id}.png"
     assert body["originalImageUrl"] == f"/uploads/{request_id}.png"
     assert body["error"] is None
+
+
+def test_generate_job_status_returns_copy_metadata(monkeypatch) -> None:
+    async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
+        return TINY_PNG_B64, {}
+
+    async def _fake_copy(**kwargs: object) -> CopyGenerationResult:
+        return CopyGenerationResult(
+            copy=AdCopy(
+                headline="한잔의 달콤한 혜택",
+                subcopy="음료 할인으로 부담 없이 한잔의 여유를 즐겨보세요.",
+                cta="지금 주문하기",
+                mode="polish",
+            )
+        )
+
+    async def _override_user() -> AuthUser:
+        return _user("job-copy-user")
+
+    monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
+    monkeypatch.setattr("backend.app.services.generation_jobs.generate_ad_copy", _fake_copy)
+    force_openai_mode(monkeypatch)
+    app.dependency_overrides[get_current_user] = _override_user
+    try:
+        create_response = client.post(
+            "/api/generate/jobs",
+            json={
+                "imageDataUrl": TINY_PNG_DATA_URL,
+                "presetId": "instagram",
+                "userPrompt": "job unique prompt copy",
+                "adCopyEnabled": True,
+                "userCopy": "레몬에이드 할인",
+                "copyMode": "polish",
+            },
+        )
+        request_id = create_response.json()["requestId"]
+        status_response = client.get(f"/api/generate/jobs/{request_id}")
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert status_response.status_code == 200
+    assert status_response.json()["copy"] == {
+        "headline": "한잔의 달콤한 혜택",
+        "subcopy": "음료 할인으로 부담 없이 한잔의 여유를 즐겨보세요.",
+        "cta": "지금 주문하기",
+        "copyMode": None,
+    }
 
 
 def test_generate_job_status_is_user_scoped(monkeypatch) -> None:

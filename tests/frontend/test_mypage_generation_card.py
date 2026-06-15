@@ -89,9 +89,11 @@ def test_generation_card_renders_thumbnail_and_selection_toggle_without_inline_a
         selected=False,
     )
 
-    assert len(fake_st.images) == 1
-    assert fake_st.images[0].endswith("/outputs/result.png")
     rendered_html = "".join(fake_st.markdowns)
+    assert fake_st.images == []
+    assert "mypage-image-preview" in rendered_html
+    assert "mypage-image-modal" in rendered_html
+    assert 'src="http://127.0.0.1:8000/outputs/result.png"' in rendered_html
     assert "mypage-card-select-zone" in rendered_html
     assert fake_st.buttons[0]["label"] == "선택"
     assert fake_st.buttons[0]["key"] == "mypage-select-request-1"
@@ -329,9 +331,14 @@ def test_generation_card_css_keeps_cards_and_images_uniform() -> None:
     source = MYPAGE_CARDS_CSS
 
     assert "height: 330px" in source
-    assert "--mypage-generation-thumb-height: 205px" in source
+    assert "border-color: transparent !important" in source
+    assert "--mypage-generation-thumb-height: 241px" in source
     assert "height: var(--mypage-generation-thumb-height)" in source
     assert "object-fit: contain" in source
+    assert ".mypage-image-modal" in source
+    assert "position: fixed" in source
+    assert "max-height: calc(100vh - 96px)" in source
+    assert "cursor: zoom-in" in source
     assert "overflow: hidden" in source
     assert ".mypage-generating-thumb" in source
     assert ".mypage-generating-spinner" in source
@@ -357,7 +364,7 @@ def test_generation_card_controls_share_thumbnail_width() -> None:
     assert "--mypage-generation-content-width: 267px" in source
     assert '[class*="st-key-mypage-generation-card-"]' in source
     assert "width: min(100%, var(--mypage-generation-content-width))" in source
-    assert 'div[data-testid="stImage"]' in source
+    assert ".mypage-image-preview" in source
     assert ".mypage-card-meta" in source
     assert ".mypage-card-select-zone" in source
     assert '[class*="st-key-mypage-select-"] button' in source
@@ -378,16 +385,32 @@ def test_generation_card_selection_and_toolbar_actions_have_distinct_styles() ->
     assert '[class*="st-key-mypage-generation-card-selected-"]' in source
     assert "border-width: 3px !important" in source
     assert "border-color: #00a6a6 !important" in source
-    assert '[class*="st-key-mypage-action-original-"] a' in source
-    assert '[class*="st-key-mypage-action-download-"] button' in source
-    assert '[class*="st-key-mypage-action-folder-"] button' in source
+    assert '[class*="st-key-mypage-action-select-all"] button' in source
+    assert "width: min(100%, calc(267px * 0.6))" in source
+    assert '[class*="st-key-mypage-action-select-all-active"] button' in source
+    assert '[class*="st-key-mypage-action-work-from-image"] button' in source
+    assert '[class*="st-key-mypage-action-original"] a' in source
+    assert '[class*="st-key-mypage-action-download"] a' in source
+    assert '[class*="st-key-mypage-action-download"] button' in source
+    assert '[class*="st-key-mypage-action-folder"] button' in source
     assert 'div[data-testid="stLinkButton"] a' in source
     assert 'div[data-testid="stDownloadButton"] button' in source
-    assert "height: 42px !important" in source
-    assert "min-height: 42px !important" in source
+    assert "height: 53px !important" in source
+    assert "min-height: 53px !important" in source
+    assert "width: 100% !important" in source
+    assert "min-width: 0 !important" in source
+    assert "font-size: 16.25px !important" in source
+    assert "white-space: nowrap !important" in source
+    assert "#5a463c" in source
+    assert "#34383d" in source
+    assert "#53613b" in source
+    assert "#39467a" in source
+    assert "border: 0 !important" in source
+    assert "color: #ffffff !important" in source
+    assert "-webkit-text-fill-color: #ffffff !important" in source
     assert "box-sizing: border-box !important" in source
     assert "background: #fbfaf6 !important" in source
     assert "background: #f2f5f3 !important" in source
-    assert "-webkit-text-fill-color: #394b4a !important" in source
+    assert "-webkit-text-fill-color: #00a6a6 !important" in source
     assert "-webkit-text-fill-color: #9aa4a0 !important" in source
     assert "button:disabled" in source

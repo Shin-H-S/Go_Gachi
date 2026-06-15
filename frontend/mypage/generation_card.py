@@ -1,3 +1,4 @@
+import re
 from html import escape
 
 import streamlit as st
@@ -33,6 +34,31 @@ def _folder_name_for_generation(item: dict, folders: list[dict]) -> str:
     return folder_name_by_id(folders, folder_id)
 
 
+def _image_modal_id(request_id: str) -> str:
+    safe_id = re.sub(r"[^0-9A-Za-z_-]+", "-", request_id).strip("-")
+    return f"mypage-image-modal-{safe_id or 'image'}"
+
+
+def _render_generation_image(image_url: str, request_id: str) -> None:
+    modal_id = _image_modal_id(request_id)
+    safe_url = escape(image_url, quote=True)
+    safe_alt = escape(f"{request_id or 'generated'} image", quote=True)
+    st.markdown(
+        f"""
+        <div class="mypage-image-preview">
+            <input class="mypage-image-modal-toggle" id="{modal_id}" type="checkbox" />
+            <label class="mypage-image-thumb" for="{modal_id}" aria-label="생성 이미지 크게 보기">
+                <img src="{safe_url}" alt="{safe_alt}" />
+            </label>
+            <label class="mypage-image-modal" for="{modal_id}" aria-label="확대 이미지 닫기">
+                <img src="{safe_url}" alt="{safe_alt}" />
+            </label>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _render_generation_card(
     item: dict,
     folders: list[dict],  # noqa: ARG001
@@ -50,7 +76,7 @@ def _render_generation_card(
     folder_name = _folder_name_for_generation(item, folders)
 
     if image_url:
-        st.image(image_url, use_container_width=True)
+        _render_generation_image(image_url, request_id)
     elif stale_in_progress:
         st.markdown(
             """

@@ -106,6 +106,7 @@ div[data-testid="stElementContainer"]:has(.generate-button-marker)
 .st-key-work-preview-undo button[data-testid^="stBaseButton"],
 .st-key-work-preview-redo button[data-testid^="stBaseButton"] {
     min-height: 60px !important;
+    min-height: var(--work-generate-button-height, 60px) !important;
     border: 2px solid rgba(32, 39, 37, 0.12) !important;
     border-radius: 6px !important;
     background: linear-gradient(180deg, #ffffff 0%, #f4f4f4 100%) !important;
