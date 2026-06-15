@@ -1,9 +1,18 @@
+import time
+
 import httpx
 import streamlit as st
 
 from frontend.core.router import navigate_to
 from frontend.mypage import views
 from frontend.mypage.components import render_sidebar, render_topbar
+from frontend.mypage.generation_status import has_generation_waiting_for_image
+from frontend.mypage.page_sections import (
+    render_account_settings,
+    render_folder_view,
+    render_recent_work,
+    render_uploads,
+)
 from frontend.mypage.pagination import page_count
 from frontend.mypage.state import (
     ACCOUNT_VIEW,
@@ -20,49 +29,36 @@ from frontend.services.api_client import (
 )
 
 BACKEND_GENERATION_PAGE_SIZE = 10
+PENDING_REFRESH_SESSION_KEY = "mypage_pending_refresh_last_at"
+PENDING_REFRESH_INTERVAL_SECONDS = 3.0
 
 MYPAGE_COPY_MARKERS = (
-    "닉네임의 마이페이지",
-    "전체 작업",
-    "업로드한 메뉴 사진",
-    "계정 설정",
-    "새 폴더 만들기",
-    "새로 생성하기",
+    "닉네임의 마이페이지", "전체 작업", "업로드한 원본 이미지",
+    "계정 설정", "새 폴더 만들기", "작업 페이지로 돌아가기",
 )
 
 
-def render_recent_work(
-    generations: list[dict],
-    folders: list[dict],
-    access_token: str,
-    *,
-    total_count: int | None = None,
-    current_page: int | None = None,
-) -> None:
-    views.render_recent_work(
-        generations,
-        folders,
-        access_token,
-        total_count=total_count,
-        current_page=current_page,
-    )
+@st.fragment(run_every="3s")
+def _pending_generation_auto_refresh() -> None:
+    now = time.monotonic()
+    last_refresh = st.session_state.get(PENDING_REFRESH_SESSION_KEY)
+    if last_refresh is None:
+        st.session_state[PENDING_REFRESH_SESSION_KEY] = now
+        return
+    try:
+        elapsed = now - float(last_refresh)
+    except (TypeError, ValueError):
+        elapsed = PENDING_REFRESH_INTERVAL_SECONDS
+    if elapsed >= PENDING_REFRESH_INTERVAL_SECONDS:
+        st.session_state[PENDING_REFRESH_SESSION_KEY] = now
+        st.rerun()
 
 
-def render_folder_view(
-    view: str,
-    generations: list[dict],
-    folders: list[dict],
-    access_token: str,
-) -> None:
-    views.render_folder_view(view, generations, folders, access_token)
-
-
-def render_uploads(uploads: list[dict]) -> None:
-    views.render_uploads(uploads)
-
-
-def render_account_settings(profile: dict) -> None:
-    views.render_account_settings(profile)
+def _maybe_render_pending_generation_auto_refresh(generations: list[dict]) -> None:
+    if has_generation_waiting_for_image(generations):
+        _pending_generation_auto_refresh()
+        return
+    st.session_state.pop(PENDING_REFRESH_SESSION_KEY, None)
 
 
 def _load_generation_pages(access_token: str) -> tuple[list[dict], int]:
@@ -173,9 +169,11 @@ def render_mypage_page() -> None:
         st.error("마이페이지 정보를 불러오지 못했습니다. 다시 로그인해주세요.")
         return
 
+    _maybe_render_pending_generation_auto_refresh(generations)
+
     title = view_title(view, folders)
     with st.container(key="mypage-shell"):
-        left_col, right_col = st.columns([0.22, 0.78], gap="large")
+        left_col, right_col = st.columns([0.176, 0.824], gap="large")
 
         with left_col:
             render_sidebar(profile, folders, view, access_token)

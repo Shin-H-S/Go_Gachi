@@ -3,6 +3,52 @@ MYPAGE_LAYOUT_CSS = """
 .mypage-shell {
     display: block;
     min-height: calc(100vh - 48px);
+    background: linear-gradient(
+        to right,
+        #ffffff 0%,
+        #ffffff 17.6%,
+        transparent 17.6%,
+        transparent 100%
+    );
+}
+
+.main .block-container:has(.st-key-mypage-shell),
+[data-testid="stMainBlockContainer"]:has(.st-key-mypage-shell) {
+    max-width: none;
+    padding-top: 0;
+    padding-left: 0;
+}
+
+.st-key-mypage-shell [data-testid="column"]:not(:has(.mypage-sidebar-head)),
+.st-key-mypage-shell [data-testid="stColumn"]:not(:has(.mypage-sidebar-head)) {
+    box-sizing: border-box;
+    padding-top: 12px;
+}
+
+.st-key-mypage-shell [data-testid="column"]:has(.mypage-sidebar-head),
+.st-key-mypage-shell [data-testid="stColumn"]:has(.mypage-sidebar-head) {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    align-self: stretch !important;
+    position: relative;
+}
+
+.st-key-mypage-shell [data-testid="column"]:has(.mypage-sidebar-head) > div,
+.st-key-mypage-shell [data-testid="stColumn"]:has(.mypage-sidebar-head) > div,
+.st-key-mypage-shell
+    [data-testid="column"]:has(.mypage-sidebar-head)
+    [data-testid="stVerticalBlock"],
+.st-key-mypage-shell
+    [data-testid="stColumn"]:has(.mypage-sidebar-head)
+    [data-testid="stVerticalBlock"],
+.st-key-mypage-shell
+    [data-testid="column"]:has(.mypage-sidebar-head)
+    [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-mypage-shell
+    [data-testid="stColumn"]:has(.mypage-sidebar-head)
+    [data-testid="stVerticalBlockBorderWrapper"] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
 }
 
 .mypage-sidebar-head {

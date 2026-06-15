@@ -142,19 +142,6 @@ def test_generate_rejects_unknown_copy_mode() -> None:
     assert response.status_code == 422
 
 
-def test_generate_rejects_unknown_logo_position() -> None:
-    response = client.post(
-        "/api/generate",
-        json={
-            "imageDataUrl": TINY_PNG_DATA_URL,
-            "presetId": "instagram",
-            "logoPosition": "middle_somewhere",
-        },
-    )
-
-    assert response.status_code == 422
-
-
 def test_generate_rejects_too_long_user_copy() -> None:
     response = client.post(
         "/api/generate",
@@ -185,13 +172,14 @@ def test_auto_copy_generate_endpoint_is_backend_owned_contract() -> None:
     assert body["copyMode"] == "rewrite"
 
 
-def test_generate_rejects_too_long_logo_data_url() -> None:
+def test_generate_rejects_removed_logo_payload_fields() -> None:
     response = client.post(
         "/api/generate",
         json={
             "imageDataUrl": TINY_PNG_DATA_URL,
             "presetId": "instagram",
-            "logoDataUrl": "a" * 8_000_001,
+            "logoDataUrl": TINY_PNG_DATA_URL,
+            "logoPosition": "bottom_right",
         },
     )
 

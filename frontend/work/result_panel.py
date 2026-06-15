@@ -1,8 +1,37 @@
 import streamlit as st
 
-from frontend.work.preview import render_image_preview, render_preview_shell
+from frontend.work.preview import (
+    render_image_preview,
+    render_image_url_preview,
+    render_preview_shell,
+)
 from frontend.work.result_copy import render_result_copy
 from frontend.work.result_summary import render_result_summary
+
+
+def _render_preview_history_controls() -> None:
+    with st.container(key="preview-history-controls"):
+        st.markdown('<div class="preview-history-controls"></div>', unsafe_allow_html=True)
+        _, undo_col, redo_col, _ = st.columns([0.28, 0.22, 0.22, 0.28], gap="small")
+        with undo_col:
+            undo_clicked = st.button(
+                "↶",
+                key="work-preview-undo",
+                help="되돌리기",
+                use_container_width=True,
+            )
+        with redo_col:
+            redo_clicked = st.button(
+                "↷",
+                key="work-preview-redo",
+                help="다시 실행",
+                use_container_width=True,
+            )
+
+    if undo_clicked:
+        st.info("되돌릴 이전 결과가 아직 없습니다.")
+    if redo_clicked:
+        st.info("다시 실행할 다음 결과가 아직 없습니다.")
 
 
 def render_result_panel(
@@ -12,6 +41,9 @@ def render_result_panel(
     format_label: str,
     detail_label: str,
 ) -> None:
+    result_url = st.session_state.get("result_image_url")
+    result_bytes = st.session_state.get("result_bytes")
+
     if is_generating:
         render_preview_shell(
             format_label,
@@ -25,19 +57,19 @@ def render_result_panel(
             """,
             detail_label,
         )
-    elif uploaded_file and "result_bytes" not in st.session_state:
+    elif uploaded_file and not result_url and result_bytes is None:
         render_image_preview(uploaded_file.getvalue(), format_label, detail_label)
-    elif "result_bytes" in st.session_state:
-        render_image_preview(st.session_state["result_bytes"], format_label, detail_label)
+        _render_preview_history_controls()
+    elif result_url:
+        render_image_url_preview(str(result_url), format_label, detail_label)
+        _render_preview_history_controls()
         render_result_summary(st.session_state.get("result_context"))
         render_result_copy(st.session_state.get("result_copy"))
-        st.download_button(
-            "이미지 다운로드",
-            data=st.session_state["result_bytes"],
-            file_name="cafe_ad_maker_result.png",
-            mime="image/png",
-            use_container_width=True,
-        )
+    elif isinstance(result_bytes, bytes):
+        render_image_preview(result_bytes, format_label, detail_label)
+        _render_preview_history_controls()
+        render_result_summary(st.session_state.get("result_context"))
+        render_result_copy(st.session_state.get("result_copy"))
     else:
         render_preview_shell(
             format_label,
@@ -48,3 +80,4 @@ def render_result_panel(
             """,
             detail_label,
         )
+        _render_preview_history_controls()

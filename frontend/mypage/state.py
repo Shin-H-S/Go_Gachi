@@ -59,7 +59,7 @@ def view_title(view: str, folders: list[dict]) -> str:
     if view == RECENT_VIEW:
         return "전체 작업"
     if view == UPLOADS_VIEW:
-        return "업로드한 메뉴 사진"
+        return "업로드한 원본 이미지"
     if view == ACCOUNT_VIEW:
         return "계정 설정"
     if view == FOLDER_ALL_VIEW:

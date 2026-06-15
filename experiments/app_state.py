@@ -8,7 +8,6 @@ from app_prompting import (
     API_SIZES,
     COPY_MODE_LABELS,
     DIRECT,
-    LOGO_POSITION_LABELS,
     REPO_DEFAULT,
 )
 
@@ -22,9 +21,6 @@ def widget_state_from_cfg(cfg: dict) -> dict:
     if cfg["detail_label"] == DIRECT:
         state[f"detail_custom_{cfg['channel_label']}"] = cfg["detail_hint"]
         state["api_size"] = API_SIZE_LABELS.get(cfg["api_size"], API_SIZES[0][0])
-    state["logo_source"] = DIRECT if cfg["logo_prompt_custom"] else REPO_DEFAULT
-    state["logo_prompt_custom"] = cfg["logo_prompt_custom"]
-    state["logo_position"] = LOGO_POSITION_LABELS.get(cfg["logo_position"], "오른쪽 상단")
     state["copy_on"] = cfg["copy_on"]
     state["copy_text"] = cfg["copy_text"]
     state["copy_mode"] = COPY_MODE_LABELS.get(cfg["copy_mode"], "그대로 사용")

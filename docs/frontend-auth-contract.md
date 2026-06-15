@@ -67,9 +67,13 @@ client.auth.sign_out()
 - 최신순. 로그인한 본인 기록만 반환.
 
 ### `POST /api/generate` — 이미지 생성 (기존 + 토큰 선택)
-- 요청 본문은 **기존과 동일** (`imageDataUrl`, `presetId`, `detailType`, `feedback`, `targetWidth`, `targetHeight`).
+- 요청 본문은 현재 생성 스키마를 사용합니다
+  (`imageDataUrl`, `presetId`, `detailType`, `userPrompt`, `userCopy`, `copyMode`,
+  `adCopyEnabled`, `targetWidth`, `targetHeight`).
 - 헤더에 `Authorization: Bearer <token>`를 **넣으면** 생성 기록에 그 유저가 소유자로 저장됨(내 작업 기록에 잡힘).
 - 토큰을 안 넣어도 생성은 됨(소유자만 비어있음).
+- 응답 이미지는 `imageUrl`을 우선 사용합니다. `imageDataUrl`은 mock/fallback 응답에만
+  있을 수 있으므로 프론트는 `imageUrl` 우선, `imageDataUrl` fallback으로 처리합니다.
 
 호출 예시:
 ```python

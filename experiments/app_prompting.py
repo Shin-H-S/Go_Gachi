@@ -26,7 +26,11 @@ IMPROVE_LINE = (
     "Improve lighting, color, sharpness, appetizing texture, background cleanliness, "
     "and commercial food styling."
 )
-MOOD_LINE = "Use a realistic cafe mood with subtle props only when they support the menu item."
+MOOD_LINE = (
+    "Use a warm, inviting cafe mood with soft ambient lighting and consistent color "
+    "temperature. Maintain a bright and appetizing atmosphere. Avoid dark, cold, or "
+    "low-contrast lighting that diminishes the product's visual appeal."
+)
 NEGATIVE_SPACE_LINE = (
     "Keep the image ready for later ad copy by leaving calm negative space near the edges."
 )
@@ -46,19 +50,7 @@ COPY_ACCURACY_LINE = (
     "supplied ad copy."
 )
 COPY_NO_EXTRA_LINE = "Do not add unrelated logos, watermarks, UI, signatures, or brand marks."
-LOGO_REF_LINE = (
-    "A second reference image contains the shop logo. Use that logo once in "
-    "the final advertisement while preserving its shape, wordmark, colors, "
-    "and visual identity as much as possible."
-)
 
-LOGO_POSITIONS = [
-    ("top_left", "왼쪽 상단"),
-    ("top_right", "오른쪽 상단"),
-    ("bottom_left", "왼쪽 하단"),
-    ("bottom_right", "오른쪽 하단"),
-]
-LOGO_POSITION_LABELS = dict(LOGO_POSITIONS)
 COPY_MODE_OPTIONS = [
     ("그대로 사용", "preserve"),
     ("자연스럽게 다듬기", "polish"),
@@ -74,13 +66,6 @@ API_SIZES = [
 API_SIZE_LABELS = {api: label for label, api, _, _ in API_SIZES}
 DIRECT = "직접입력"
 REPO_DEFAULT = "레포 기본"
-
-def _logo_place_line(position: str) -> str:
-    return (
-        f"Place the logo near the {position.replace('_', ' ')} area with "
-        "clean margins. Keep it smaller than the main product and do not invent "
-        "additional logos or brand marks."
-    )
 
 
 def assemble_system_prompt(cfg: dict, ad_copy: AdCopy | None) -> str:
@@ -100,12 +85,7 @@ def assemble_system_prompt(cfg: dict, ad_copy: AdCopy | None) -> str:
         if cfg["copy_mode_custom"]:
             parts.append(cfg["copy_mode_custom"])
     else:
-        parts += [_no_copy_instruction(allow_logo=cfg["has_logo"]), NEGATIVE_SPACE_LINE]
-    if cfg["has_logo"]:
-        if cfg["logo_prompt_custom"]:
-            parts.append(cfg["logo_prompt_custom"])
-        else:
-            parts += [LOGO_REF_LINE, _logo_place_line(cfg["logo_position"])]
+        parts += [_no_copy_instruction(), NEGATIVE_SPACE_LINE]
     return "\n".join(part for part in parts if part)
 
 
@@ -181,9 +161,6 @@ def _drift_cfg(preset, detail) -> dict:
         "api_size": detail.api_size,
         "target_w": detail.width,
         "target_h": detail.height,
-        "has_logo": False,
-        "logo_prompt_custom": "",
-        "logo_position": "top_right",
         "copy_on": False,
         "copy_text": "",
         "copy_mode": "preserve",
@@ -215,22 +192,20 @@ def prompt_drift_report() -> str | None:
         base_cfg = _drift_cfg(preset, detail)
         ad = AdCopy(headline="드리프트 검사", subcopy="1,000원", cta="지금", mode="preserve")
         combos = [
-            ("기본(문구X 로고X)", base_cfg, None, None, ""),
-            ("문구O", {**base_cfg, "copy_on": True}, ad, None, ""),
-            ("로고O(top_right)", {**base_cfg, "has_logo": True}, None, "top_right", ""),
+            ("기본(문구X)", base_cfg, None, ""),
+            ("문구O", {**base_cfg, "copy_on": True}, ad, ""),
             (
-                "문구O+로고O+유저 프롬프트",
-                {**base_cfg, "copy_on": True, "has_logo": True, "user_prompt": "drift"},
+                "문구O+유저 프롬프트",
+                {**base_cfg, "copy_on": True, "user_prompt": "drift"},
                 ad,
-                "top_right",
                 "drift",
             ),
         ]
         mismatches: list[tuple[str, str]] = []
-        for name, cfg, ad_copy, logo_pos, user_prompt in combos:
+        for name, cfg, ad_copy, user_prompt in combos:
             ctx = user_prompt_with_context(user_prompt, target, detail, "cover")
             expected = backend_prompts.build_prompt(
-                preset, ctx, detail, image_copy=ad_copy, logo_position=logo_pos
+                preset, ctx, detail, image_copy=ad_copy
             )
             actual = assemble_full_prompt(cfg, ad_copy)
             if actual != expected:
@@ -259,7 +234,7 @@ def prompt_drift_report() -> str | None:
             "backend/app/core/prompts.py의 build_system_prompt 안 고정 문장 또는 조립 순서가",
             "변경되었는데, experiments/app_prompting.py에 복제된 고정 문장 상수",
             "(BASE_LINE, PRESERVE_LINE, IMPROVE_LINE, MOOD_LINE, NEGATIVE_SPACE_LINE,",
-            "COPY_INTRO/LAYOUT/ACCURACY/NO_EXTRA_LINE, LOGO_REF_LINE, _logo_place_line)와",
+            "COPY_INTRO/LAYOUT/ACCURACY/NO_EXTRA_LINE)와",
             "assemble_system_prompt의 조립 순서가 아직 옛 버전이기 때문입니다.",
             "",
             "[해결 방법]",

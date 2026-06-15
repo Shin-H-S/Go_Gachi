@@ -10,7 +10,6 @@ from app_prompting import (
     API_SIZES,
     COPY_MODE_OPTIONS,
     DIRECT,
-    LOGO_POSITIONS,
     REPO_DEFAULT,
     assemble_full_prompt,
     preview_ad_copy,
@@ -48,33 +47,22 @@ def render_new_tab() -> None:
                 st.caption(
                     f"채널 {chosen.get('channel_label')} / 유형 {chosen.get('detail_label')} / "
                     f"문구 {'O' if chosen.get('copy_on') else 'X'} / "
-                    f"로고프롬프트 {'직접' if chosen.get('logo_prompt_custom') else '기본'} / "
                     f"{chosen.get('count')}장 · {chosen.get('quality')}"
                 )
                 if st.button("이 설정 불러오기"):
                     st.session_state["_pending_load"] = widget_state_from_cfg(chosen)
                     st.session_state["_flash"] = (
                         f"'{chosen.get('name')}' 설정을 불러왔습니다. "
-                        "이미지/로고 파일은 다시 업로드해주세요."
+                        "이미지 파일은 다시 업로드해주세요."
                     )
                     st.rerun()
 
     st.subheader("① 입력 이미지")
-    col_img, col_logo = st.columns(2)
-    with col_img:
-        image_file = st.file_uploader(
-            "메뉴 사진 (1장, 필수)", type=["png", "jpg", "jpeg", "webp"], key="menu_image"
-        )
-        if image_file:
-            st.image(image_file, width=180)
-    with col_logo:
-        logo_file = st.file_uploader(
-            "로고 이미지 (1장, 선택 — 안 넣으면 로고 미적용)",
-            type=["png", "jpg", "jpeg", "webp"],
-            key="logo_image",
-        )
-        if logo_file:
-            st.image(logo_file, width=120)
+    image_file = st.file_uploader(
+        "메뉴 사진 (1장, 필수)", type=["png", "jpg", "jpeg", "webp"], key="menu_image"
+    )
+    if image_file:
+        st.image(image_file, width=180)
 
     st.subheader("② 광고 채널 · 유형")
     channel_labels = [p.label for p in presets.values()] + [DIRECT]
@@ -117,30 +105,7 @@ def render_new_tab() -> None:
         api_size, target_w, target_h = detail.api_size, detail.width, detail.height
         st.caption(f"규격: {detail.width}x{detail.height} (API {detail.api_size})")
 
-    st.subheader("③ 로고 프롬프트")
-    if logo_file:
-        logo_source = st.radio(
-            "로고 적용 방식", [REPO_DEFAULT, DIRECT], horizontal=True, key="logo_source"
-        )
-        if logo_source == DIRECT:
-            logo_prompt_custom = st.text_area(
-                "로고 프롬프트 직접입력",
-                key="logo_prompt_custom",
-                height=90,
-                placeholder="예: A second reference image contains the shop logo. Place it ...",
-            )
-            logo_position = "top_right"
-        else:
-            logo_prompt_custom = ""
-            position_label = st.selectbox(
-                "로고 위치", [label for _, label in LOGO_POSITIONS], key="logo_position"
-            )
-            logo_position = next(pos for pos, label in LOGO_POSITIONS if label == position_label)
-    else:
-        st.caption("로고 이미지를 넣으면 옵션이 나타납니다.")
-        logo_prompt_custom, logo_position = "", "top_right"
-
-    st.subheader("④ 광고 문구")
+    st.subheader("③ 광고 문구")
     copy_on = st.checkbox("문구 적용", key="copy_on")
     copy_text, copy_mode, copy_mode_custom, copy_instr_custom = "", "preserve", "", ""
     if copy_on:
@@ -148,10 +113,12 @@ def render_new_tab() -> None:
             "문구 입력",
             key="copy_text",
             height=90,
-            placeholder="예: 가을 신메뉴 고구마 라떼 4,900원",
+            placeholder="예: 가을 신메뉴 고구마 라떼 4,900원 (빈칸이면 AI가 자동 생성)",
             help=(
                 "'그대로 사용'은 입력 전체가 헤드라인 한 줄로 들어갑니다. "
-                "'다듬기/바꾸기'는 AI가 헤드라인·서브카피·CTA로 구성합니다 (서비스와 동일 동작)."
+                "'다듬기/바꾸기'는 AI가 헤드라인·서브카피·CTA로 구성합니다. "
+                "빈칸으로 두면 서비스와 동일하게 채널·유형·유저 프롬프트 맥락으로 "
+                "AI가 문구를 자동 생성합니다 ('직접입력' 모드만 예외로 기본 문구 사용)."
             ),
         )
         mode_label = st.radio(
@@ -179,7 +146,7 @@ def render_new_tab() -> None:
                 placeholder="예: Render the supplied ad copy as poster typography. ...",
             )
 
-    st.subheader("⑤ 유저 프롬프트")
+    st.subheader("④ 유저 프롬프트")
 
     def _fill_user_prompt_test() -> None:
         if st.session_state.get("user_prompt_test_chk"):
@@ -197,7 +164,7 @@ def render_new_tab() -> None:
         placeholder="예: 더 따뜻하고 아늑한 카페 분위기로",
     )
 
-    st.subheader("⑥ 실행")
+    st.subheader("⑤ 실행")
     col_a, col_b = st.columns(2)
     with col_a:
         count = st.number_input("제작(테스트) 갯수", min_value=1, max_value=10, key="count")
@@ -221,9 +188,8 @@ def render_new_tab() -> None:
         if detail_label == DIRECT and not detail_custom.strip():
             st.error("유형 프롬프트를 입력해주세요.")
             return None
-        if copy_on and not copy_text.strip():
-            st.error("문구 적용을 켰으면 문구를 입력해주세요.")
-            return None
+        # 문구 빈칸은 막지 않는다 — 서비스와 동일하게 generate_ad_copy가
+        # 채널/유형/유저 프롬프트 맥락으로 문구를 자동 생성한다.
         return {
             "name": (name or "test").strip().replace(" ", "-")[:40],
             "count": int(count),
@@ -231,10 +197,6 @@ def render_new_tab() -> None:
             "image_name": image_file.name,
             "image_bytes": image_file.getvalue(),
             "image_data_url": _to_data_url(image_file),
-            "logo_name": logo_file.name if logo_file else None,
-            "logo_bytes": logo_file.getvalue() if logo_file else None,
-            "logo_data_url": _to_data_url(logo_file) if logo_file else None,
-            "has_logo": logo_file is not None,
             "channel_id": preset.id if preset else "custom",
             "channel_label": channel_label,
             "channel_hint": preset.prompt_hint if preset else channel_custom.strip(),
@@ -245,8 +207,6 @@ def render_new_tab() -> None:
             "api_size": api_size,
             "target_w": target_w,
             "target_h": target_h,
-            "logo_prompt_custom": logo_prompt_custom.strip(),
-            "logo_position": logo_position,
             "user_prompt": user_prompt.strip(),
             "copy_on": copy_on,
             "copy_text": copy_text.strip(),

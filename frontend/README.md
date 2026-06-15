@@ -1,7 +1,7 @@
 # Frontend
 
 카페 메뉴 광고 이미지 제작용 Streamlit 프론트엔드입니다.
-이미지 업로드, 광고 채널 선택, 프롬프트 입력, 생성 중 로딩 UI, 결과 미리보기를 제공합니다.
+이미지 업로드, 광고 채널 선택, 이미지 요청사항 입력, 생성 중 로딩 UI, 결과 미리보기를 제공합니다.
 
 ## Folder Structure
 
@@ -67,10 +67,12 @@ FRONTEND_CONFIG_SOURCE=auto
 현재 백엔드 MVP에서 우선 연동할 API는 아래와 같습니다.
 
 - `GET /api/config`: 광고 프리셋 목록 조회
-- `POST /api/generate`: `imageDataUrl`, `presetId`, `detailType`, `userPrompt`, `targetWidth`, `targetHeight`를 전달해 생성 요청
+- `POST /api/generate`: `imageDataUrl`, `presetId`, `detailType`, `userPrompt`, `userCopy`, `targetWidth`, `targetHeight`를 전달해 생성 요청
 
 `detailType`은 사용자가 선택한 상세 광고 유형 ID입니다.
 `targetWidth`와 `targetHeight`는 사용자가 선택한 상세 광고 유형의 최종 다운로드 크기입니다.
-백엔드는 생성 결과를 이 크기의 PNG로 맞춰 반환합니다.
+백엔드는 생성 결과를 이 크기의 PNG로 맞춰 저장하고, 응답에서는 `imageUrl`을 우선 내려줍니다.
+`imageDataUrl`은 mock/fallback 응답에서만 사용할 수 있으므로 프론트는 `imageUrl` 우선,
+`imageDataUrl` fallback 순서로 처리합니다.
 
 백엔드 연결 실패 시에는 로컬 성공 결과로 대체하지 않고 에러 메시지를 표시합니다.

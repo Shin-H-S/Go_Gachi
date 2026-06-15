@@ -1,4 +1,7 @@
-MYPAGE_CARDS_CSS = """
+from frontend.css.mypage_parts.card_actions import MYPAGE_CARD_ACTIONS_CSS
+from frontend.css.mypage_parts.card_thumbnails import MYPAGE_CARD_THUMBNAILS_CSS
+
+MYPAGE_CARD_LAYOUT_CSS = """
 .mypage-card-grid,
 .mypage-card-grid-marker {
     margin-top: 8px;
@@ -18,16 +21,6 @@ MYPAGE_CARDS_CSS = """
     color: #606b67;
     font-size: 13px;
     font-weight: 900;
-}
-
-.mypage-empty-thumb {
-    height: 150px;
-    display: grid;
-    place-items: center;
-    border-radius: 8px;
-    background: #eef2ef;
-    color: #7b8580;
-    font-weight: 700;
 }
 
 .st-key-mypage-shell [class*="st-key-mypage-generation-card-"] {
@@ -70,6 +63,12 @@ MYPAGE_CARDS_CSS = """
 .st-key-mypage-shell
     [class*="st-key-mypage-generation-card-"]
     .mypage-empty-thumb,
+.st-key-mypage-shell
+    [class*="st-key-mypage-generation-card-"]
+    .mypage-generating-thumb,
+.st-key-mypage-shell
+    [class*="st-key-mypage-generation-card-"]
+    .mypage-stale-thumb,
 .st-key-mypage-shell
     [class*="st-key-mypage-generation-card-"]
     .mypage-card-meta,
@@ -121,59 +120,6 @@ MYPAGE_CARDS_CSS = """
     font-size: 13px;
 }
 
-.st-key-mypage-shell [class*="st-key-mypage-original-"] a,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] button,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] div[data-testid="stLinkButton"] a,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] div[data-testid="stButton"] button,
-.st-key-mypage-shell [class*="st-key-mypage-download-"] button,
-.st-key-mypage-shell [class*="st-key-mypage-download-"] div[data-testid="stDownloadButton"] button {
-    height: 34px !important;
-    min-height: 34px !important;
-    padding: 0 10px !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    border-width: 1px !important;
-    border-style: solid !important;
-    border-radius: 8px !important;
-    box-shadow: none !important;
-    font-size: 13px !important;
-    font-weight: 900 !important;
-    line-height: 1 !important;
-}
-
-.st-key-mypage-shell [class*="st-key-mypage-original-"] a,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] button {
-    background: #f5f4ee !important;
-    border-color: #d7d2c7 !important;
-    color: #46524f !important;
-    -webkit-text-fill-color: #46524f !important;
-}
-
-.st-key-mypage-shell [class*="st-key-mypage-download-"] button,
-.st-key-mypage-shell [class*="st-key-mypage-download-"] div[data-testid="stDownloadButton"] button {
-    background: #eaf4ff !important;
-    border-color: #b9d6f5 !important;
-    color: #245c8f !important;
-    -webkit-text-fill-color: #245c8f !important;
-}
-
-.st-key-mypage-shell [class*="st-key-mypage-download-"] button:disabled {
-    background: #f4f8fc !important;
-    border-color: #d7e2ea !important;
-    color: #8a98a4 !important;
-    -webkit-text-fill-color: #8a98a4 !important;
-    opacity: 0.65;
-}
-
-.st-key-mypage-shell [class*="st-key-mypage-original-"] a p,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] button p,
-.st-key-mypage-shell [class*="st-key-mypage-download-"] button p {
-    margin: 0;
-    line-height: 1 !important;
-}
-
 .mypage-empty-state {
     min-height: 360px;
     display: grid;
@@ -197,3 +143,11 @@ MYPAGE_CARDS_CSS = """
     line-height: 1.6;
 }
 """
+
+MYPAGE_CARDS_CSS = "\n".join(
+    (
+        MYPAGE_CARD_LAYOUT_CSS.strip(),
+        MYPAGE_CARD_THUMBNAILS_CSS.strip(),
+        MYPAGE_CARD_ACTIONS_CSS.strip(),
+    )
+)

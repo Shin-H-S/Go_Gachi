@@ -44,7 +44,11 @@ from backend.app.services.generation_inputs import (  # noqa: E402
     target_size_or_detail,
     user_prompt_with_context,
 )
-from backend.app.services.image_processing import normalize_for_openai  # noqa: E402
+from backend.app.services.image_processing import (  # noqa: E402
+    normalize_for_openai,
+    render_target_png,
+)
+from backend.app.services.image_types import TargetSize  # noqa: E402
 from backend.app.services.image_validation import parse_image  # noqa: E402
 from backend.app.services.openai_images import call_openai_edit  # noqa: E402
 
@@ -96,7 +100,7 @@ MIME_BY_SUFFIX = {
     ".webp": "image/webp",
 }
 
-KNOWN_KINDS = {"system", "logo", "copy", "user", "mixed"}
+KNOWN_KINDS = {"system", "copy", "user", "mixed"}
 
 
 def load_settings() -> Settings:
@@ -126,11 +130,11 @@ def load_matrix(path: Path) -> dict[str, Any]:
     if path.suffix in {".yaml", ".yml"}:
         try:
             import yaml
-        except ImportError:
+        except ImportError as exc:
             raise SystemExit(
                 "PyYAML이 없습니다. `uv add --dev pyyaml` 후 다시 실행하거나 "
                 ".json 매트릭스를 사용하세요."
-            ) from None
+            ) from exc
         return yaml.safe_load(text)
     return json.loads(text)
 
@@ -167,8 +171,6 @@ def build_case_prompt(
         if copy_def
         else None
     )
-    has_logo = bool(case.get("logo"))
-    logo_position = case.get("logo_position") if has_logo else None
     resize_mode = case.get("resize_mode", "cover")
 
     target_size = target_size_or_detail(detail=detail, target_width=None, target_height=None)
@@ -178,7 +180,7 @@ def build_case_prompt(
 
     # 시스템 프롬프트: 전체 교체(system_override) > 서비스 조립 + 추가(system_append)
     system_text = case.get("system_override") or build_system_prompt(
-        preset, detail, image_copy=ad_copy, logo_position=logo_position
+        preset, detail, image_copy=ad_copy
     )
     if case.get("system_append"):
         system_text = f"{system_text}\n{case['system_append']}"
@@ -186,8 +188,6 @@ def build_case_prompt(
     prompt = merge_image_prompt(system_text, build_user_prompt(ctx_user_prompt))
     meta = {
         "copy": copy_def,
-        "has_logo": has_logo,
-        "logo_position": logo_position,
         "user_prompt": case.get("user_prompt", ""),
         "system_override": bool(case.get("system_override")),
         "system_append": case.get("system_append") or None,
@@ -222,13 +222,6 @@ def expand_jobs(
 
         prompt, meta = build_case_prompt(case, preset, detail)
 
-        # 로고: 케이스 값(경로 또는 true) > 전역 logo
-        logo_raw = case.get("logo")
-        if logo_raw is True:
-            logo_raw = matrix.get("logo")
-            if not logo_raw:
-                raise SystemExit(f"케이스 {case_id}: logo=true인데 전역 logo가 없습니다.")
-
         for image_def in matrix["images"]:
             image_path = resolve_path(
                 image_def["path"] if isinstance(image_def, dict) else image_def
@@ -243,7 +236,6 @@ def expand_jobs(
                         "preset": preset.id,
                         "detail": detail.id,
                         "image_path": image_path,
-                        "logo_path": resolve_path(logo_raw) if logo_raw else None,
                         "rep": rep,
                         "prompt": prompt,
                         **meta,
@@ -263,12 +255,10 @@ async def run_one(
 ) -> dict[str, Any]:
     """job 하나를 실행하고 결과 레코드를 돌려준다. 실패해도 예외를 올리지 않는다."""
     image_path: Path = job["image_path"]
-    logo_path: Path | None = job["logo_path"]
     out_name = f"{job['case_id']}__{image_path.stem}__r{job['rep']}.png"
     record: dict[str, Any] = {
-        **{k: v for k, v in job.items() if k not in {"image_path", "logo_path"}},
+        **{k: v for k, v in job.items() if k != "image_path"},
         "image": image_path.name,
-        "logo": logo_path.name if logo_path else None,
         "output": None,
         "status": "dry_run" if dry_run else "pending",
         "error": None,
@@ -281,27 +271,23 @@ async def run_one(
         start = time.perf_counter()
         try:
             uploaded = parse_image(file_to_data_url(image_path), settings.max_upload_bytes)
-            logo_uploaded = (
-                parse_image(file_to_data_url(logo_path), settings.max_upload_bytes)
-                if logo_path
-                else None
-            )
             openai_uploaded = await asyncio.to_thread(normalize_for_openai, uploaded)
-            openai_logo = (
-                await asyncio.to_thread(normalize_for_openai, logo_uploaded)
-                if logo_uploaded
-                else None
-            )
             edit_result = await call_openai_edit(
                 uploaded=openai_uploaded,
-                reference_images=[openai_logo] if openai_logo else None,
                 api_size=job["api_size"],
                 prompt=job["prompt"],
                 settings=settings,
             )
-            (run_dir / "images" / out_name).write_bytes(
-                base64.b64decode(b64_from_edit_result(edit_result))
+            decoded = base64.b64decode(b64_from_edit_result(edit_result))
+            # 서비스와 동일하게 목표 규격으로 리사이즈/크롭해 저장한다.
+            width, height = (int(v) for v in job["target"].split("x"))
+            target_png = await asyncio.to_thread(
+                render_target_png,
+                decoded,
+                TargetSize(width=width, height=height),
+                job["resize_mode"],
             )
+            (run_dir / "images" / out_name).write_bytes(target_png)
             usage = usage_from_edit_result(edit_result)
             record["usage"] = usage or None
             record["cost_usd"] = calculate_image_cost(
@@ -321,14 +307,13 @@ async def run_one(
 
 
 def copy_inputs(jobs: list[dict[str, Any]], run_dir: Path) -> None:
-    """리포트가 입력 원본을 보여줄 수 있게 입력/로고 이미지를 런 폴더로 복사한다."""
+    """리포트가 입력 원본을 보여줄 수 있게 입력 이미지를 런 폴더로 복사한다."""
     inputs_dir = run_dir / "inputs"
     inputs_dir.mkdir(parents=True, exist_ok=True)
     for job in jobs:
-        for key in ("image_path", "logo_path"):
-            path = job.get(key)
-            if path and not (inputs_dir / path.name).exists():
-                shutil.copy2(path, inputs_dir / path.name)
+        path = job["image_path"]
+        if not (inputs_dir / path.name).exists():
+            shutil.copy2(path, inputs_dir / path.name)
 
 
 async def main_async(args: argparse.Namespace) -> None:
@@ -396,6 +381,7 @@ async def main_async(args: argparse.Namespace) -> None:
         "run_name": matrix.get("run_name", matrix_path.stem),
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "model": settings.openai_image_model,
+        "text_model": settings.openai_text_model,
         "quality": settings.openai_image_quality,
         "repeat": repeat,
         "dry_run": args.dry_run,

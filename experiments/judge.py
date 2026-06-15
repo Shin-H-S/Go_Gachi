@@ -7,7 +7,6 @@ runner.py가 만든 runs/<run_id>/results.json의 성공 레코드를 vision 모
   - product_preserved: 원본 메뉴(형태·구성·양)가 보존됐는가
   - composition: 채널/디테일 레이아웃 규칙(여백, 점유율, 구도)을 지켰는가
   - copy_text_accuracy: 지정한 문구·가격·숫자가 정확히 렌더됐는가 (문구 케이스만)
-  - logo_compliance: 로고가 지정 위치에 1회, 변형 없이 들어갔는가 (로고 케이스만)
   - no_unwanted_elements: 금지 요소(불필요 텍스트/워터마크/사람/추가 제품)가 없는가
 
 사용:
@@ -57,7 +56,6 @@ JUDGE_SCHEMA_HINT = """Respond with exactly this JSON shape:
   "product_preserved": 1-5,
   "composition": 1-5,
   "copy_text_accuracy": 1-5 or null (null when no ad copy was requested),
-  "logo_compliance": 1-5 or null (null when no logo was requested),
   "no_unwanted_elements": 1-5,
   "overall": 1-5,
   "verdict": "pass" | "warn" | "fail",
@@ -91,14 +89,7 @@ def _rubric(record: dict[str, Any]) -> str:
         )
     else:
         lines.append("No ad copy was requested: any rendered text/typography is a violation.")
-    if record.get("has_logo"):
-        lines.append(
-            f"A shop logo must appear exactly once near the "
-            f"{(record.get('logo_position') or 'unspecified').replace('_', ' ')} area, "
-            "with its original shape and colors."
-        )
-    else:
-        lines.append("No logo was provided: any logo or brand mark is a violation.")
+    lines.append("No logo was provided: any logo or brand mark is a violation.")
     if record.get("user_prompt"):
         lines.append(f"User request to honor: {record['user_prompt']}")
     lines += [

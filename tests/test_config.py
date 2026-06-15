@@ -62,7 +62,7 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
         presets["instagram"].find_detail("story_image").prompt_hint
     )
     assert "seasonal offer" in presets["daangn"].find_detail("discount_event").prompt_hint
-    assert PROMPT_VERSION == "2026-06-11-v3-text-layout-policy"
+    assert PROMPT_VERSION == "2026-06-12-v4-instagram-ad-enhancement"
 
 
 def test_presets_do_not_conflict_with_image_copy_prompting() -> None:
@@ -185,16 +185,15 @@ def test_prompt_with_image_copy_asks_image_model_to_render_ad_copy() -> None:
     assert "Do not add, draw, render, or imitate any text" not in prompt
 
 
-def test_prompt_with_logo_allows_only_provided_logo_reference() -> None:
+def test_prompt_without_copy_rejects_logos_and_brand_marks() -> None:
     preset = get_presets()["instagram"]
     detail = preset.find_detail("square_feed")
 
-    prompt = build_prompt(preset, "깔끔하게", detail, logo_position="bottom_right")
+    prompt = build_prompt(preset, "깔끔하게", detail)
 
-    assert "second reference image contains the shop logo" in prompt
-    assert "bottom right" in prompt
-    assert "except for the provided logo reference" in prompt
-    assert "Do not add unrelated logos" in prompt
+    assert "provided logo reference" not in prompt
+    assert "Do not add, draw, render, or imitate any text" in prompt
+    assert "brand mark" in prompt
 
 
 def test_empty_user_prompt_keeps_safe_default_instruction() -> None:

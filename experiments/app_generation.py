@@ -13,7 +13,8 @@ from app_prompting import assemble_full_prompt, resolve_ad_copy
 from runner import b64_from_edit_result, load_settings, usage_from_edit_result
 
 from backend.app.services.costs import calculate_image_cost
-from backend.app.services.image_processing import normalize_for_openai
+from backend.app.services.image_processing import normalize_for_openai, render_target_png
+from backend.app.services.image_types import TargetSize
 from backend.app.services.image_validation import parse_image
 from backend.app.services.openai_images import call_openai_edit
 
@@ -39,31 +40,22 @@ async def _batch(cfg: dict, run_dir: Path) -> None:
     prompt = assemble_full_prompt(cfg, ad_copy)
 
     uploaded = parse_image(cfg["image_data_url"], settings.max_upload_bytes)
-    logo_uploaded = (
-        parse_image(cfg["logo_data_url"], settings.max_upload_bytes) if cfg["has_logo"] else None
-    )
     openai_uploaded = await asyncio.to_thread(normalize_for_openai, uploaded)
-    openai_logo = (
-        await asyncio.to_thread(normalize_for_openai, logo_uploaded) if logo_uploaded else None
-    )
 
     copy_dict = (
         {"headline": ad_copy.headline, "subcopy": ad_copy.subcopy, "cta": ad_copy.cta}
         if ad_copy
         else None
     )
-    kind = "copy" if ad_copy else ("logo" if cfg["has_logo"] else "system")
+    kind = "copy" if ad_copy else "system"
     base_record = {
         "case_id": cfg["name"],
         "kind": kind,
         "preset": cfg["channel_id"],
         "detail": cfg["detail_id"],
         "image": cfg["image_name"],
-        "logo": cfg["logo_name"],
         "prompt": prompt,
         "copy": copy_dict,
-        "has_logo": cfg["has_logo"],
-        "logo_position": cfg["logo_position"] if cfg["has_logo"] else None,
         "user_prompt": cfg.get("user_prompt", ""),
         "system_override": False,
         "system_append": None,
@@ -76,6 +68,7 @@ async def _batch(cfg: dict, run_dir: Path) -> None:
         "run_name": cfg["name"],
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "model": settings.openai_image_model,
+        "text_model": settings.openai_text_model,
         "quality": settings.openai_image_quality,
         "repeat": cfg["count"],
         "dry_run": False,
@@ -99,15 +92,20 @@ async def _batch(cfg: dict, run_dir: Path) -> None:
             try:
                 edit_result = await call_openai_edit(
                     uploaded=openai_uploaded,
-                    reference_images=[openai_logo] if openai_logo else None,
                     api_size=cfg["api_size"],
                     prompt=prompt,
                     settings=settings,
                 )
                 out_name = f"{cfg['name']}__r{rep}.png"
-                (run_dir / "images" / out_name).write_bytes(
-                    base64.b64decode(b64_from_edit_result(edit_result))
+                decoded = base64.b64decode(b64_from_edit_result(edit_result))
+                # 서비스와 동일하게 목표 규격으로 리사이즈/크롭(cover)해 저장한다.
+                target_png = await asyncio.to_thread(
+                    render_target_png,
+                    decoded,
+                    TargetSize(width=cfg["target_w"], height=cfg["target_h"]),
+                    cfg.get("resize_mode", "cover"),
                 )
+                (run_dir / "images" / out_name).write_bytes(target_png)
                 usage = usage_from_edit_result(edit_result)
                 record.update(
                     output=f"images/{out_name}",
@@ -148,8 +146,6 @@ def start_run(cfg: dict) -> str:
     (run_dir / "images").mkdir(parents=True, exist_ok=True)
     (run_dir / "inputs").mkdir(parents=True, exist_ok=True)
     (run_dir / "inputs" / cfg["image_name"]).write_bytes(cfg["image_bytes"])
-    if cfg["has_logo"]:
-        (run_dir / "inputs" / cfg["logo_name"]).write_bytes(cfg["logo_bytes"])
     config_snapshot = {
         k: v for k, v in cfg.items() if not k.endswith("_bytes") and not k.endswith("_data_url")
     }

@@ -1,5 +1,9 @@
 RESPONSIVE_CSS = """
 @media (max-width: 900px) {
+    :root {
+        --work-preview-height: 360px;
+    }
+
     .main .block-container {
         padding: 18px 14px 32px;
     }
@@ -73,10 +77,6 @@ RESPONSIVE_CSS = """
 
     .blue-panel strong {
         font-size: 38px;
-    }
-
-    .preview-shell {
-        height: 360px;
     }
 
 }
