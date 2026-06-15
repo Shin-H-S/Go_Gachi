@@ -10,46 +10,47 @@ class FakeStreamlit:
         self.markdowns.append(body)
 
 
-def test_result_summary_renders_ad_copy_and_logo_included(monkeypatch) -> None:
+def test_result_summary_renders_ad_copy_included(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     monkeypatch.setattr("frontend.work.result_summary.st", fake_st)
 
-    render_result_summary({"adCopyEnabled": True, "logoUploadHash": "logo-hash"})
+    render_result_summary({"adCopyEnabled": True})
 
     html = "".join(fake_st.markdowns)
     assert "result-summary-panel" in html
     assert "광고 문구 포함" in html
-    assert "로고 포함" in html
+    assert "로고" not in html
 
 
-def test_result_summary_renders_ad_copy_and_logo_excluded(monkeypatch) -> None:
+def test_result_summary_renders_ad_copy_excluded(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     monkeypatch.setattr("frontend.work.result_summary.st", fake_st)
 
-    render_result_summary({"adCopyEnabled": False, "logoUploadHash": None})
+    render_result_summary({"adCopyEnabled": False})
 
     html = "".join(fake_st.markdowns)
     assert "광고 문구 미포함" in html
-    assert "로고 미포함" in html
+    assert "로고" not in html
 
 
-def test_result_summary_prefers_backend_logo_metadata(monkeypatch) -> None:
+def test_result_summary_ignores_legacy_logo_metadata(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     monkeypatch.setattr("frontend.work.result_summary.st", fake_st)
 
     render_result_summary(
         {
             "adCopyEnabled": True,
-            "logoUploadHash": "uploaded-logo",
-            "logo": {"used": False, "position": "top_right"},
+            "logoUploadHash": "legacy-logo-hash",
+            "logo": {"used": True, "position": "bottom_right"},
         }
     )
 
     html = "".join(fake_st.markdowns)
-    assert "logo.used: false" in html
-    assert "logo.position: top_right" in html
-    assert "로고 미적용" in html
-    assert "로고 포함" not in html
+    assert "광고 문구 포함" in html
+    assert "logo.used" not in html
+    assert "logo.position" not in html
+    assert "logo" not in html.lower()
+    assert "로고" not in html
 
 
 def test_result_summary_skips_empty_context(monkeypatch) -> None:

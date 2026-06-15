@@ -41,7 +41,6 @@ def _extract_b64_json(payload: object) -> str:
 async def call_openai_edit(
     *,
     uploaded: UploadedImage,
-    reference_images: list[UploadedImage] | None = None,
     api_size: str,
     prompt: str,
     settings: Settings,
@@ -51,29 +50,13 @@ async def call_openai_edit(
     usage는 토큰 기반 비용 계산용. 응답에 없으면 빈 dict.
     """
     start = time.perf_counter()
-    images = [uploaded, *(reference_images or [])]
-    files: dict[str, tuple[str, bytes, str]] | list[tuple[str, tuple[str, bytes, str]]]
-    if len(images) == 1:
-        files = {
-            "image": (
-                f"menu.{uploaded.extension}",
-                uploaded.content,
-                uploaded.mime_type,
-            )
-        }
-    else:
-        # OpenAI Images Edit API는 다중 reference 이미지를 image[] multipart 필드로 받는다.
-        files = [
-            (
-                "image[]",
-                (
-                    f"image-{index}.{image.extension}",
-                    image.content,
-                    image.mime_type,
-                ),
-            )
-            for index, image in enumerate(images, start=1)
-        ]
+    files = {
+        "image": (
+            f"menu.{uploaded.extension}",
+            uploaded.content,
+            uploaded.mime_type,
+        )
+    }
 
     try:
         async with httpx.AsyncClient(timeout=120) as client:
@@ -95,7 +78,7 @@ async def call_openai_edit(
         logger.warning(
             "OpenAI image edit timed out model=%s image_count=%s took=%.1fms error=%s",
             settings.openai_image_model,
-            len(images),
+            1,
             elapsed_ms,
             type(exc).__name__,
         )
@@ -106,7 +89,7 @@ async def call_openai_edit(
         logger.warning(
             "OpenAI image edit connection failed model=%s image_count=%s took=%.1fms error=%s",
             settings.openai_image_model,
-            len(images),
+            1,
             elapsed_ms,
             type(exc).__name__,
         )
@@ -139,7 +122,7 @@ async def call_openai_edit(
             "openai_request_id=%s message=%s",
             response.status_code,
             settings.openai_image_model,
-            len(images),
+            1,
             elapsed_ms,
             openai_request_id or "-",
             raw_message,
@@ -154,7 +137,7 @@ async def call_openai_edit(
         "openai_request_id=%s input_tokens=%s output_tokens=%s",
         response.status_code,
         settings.openai_image_model,
-        len(images),
+        1,
         elapsed_ms,
         openai_request_id or "-",
         usage.get("input_tokens", "-"),

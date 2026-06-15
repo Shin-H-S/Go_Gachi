@@ -12,9 +12,17 @@ def render_topbar(view: str, title: str, access_token: str) -> None:  # noqa: AR
         st.markdown(f'<h1 class="mypage-title">{escape(title)}</h1>', unsafe_allow_html=True)
     with action_col:
         if view.startswith(FOLDER_PREFIX):
-            if st.button("새로 생성하기", key="mypage-new-work", use_container_width=True):
+            if st.button(
+                "← 작업 페이지로 돌아가기",
+                key="mypage-new-work",
+                use_container_width=True,
+            ):
                 navigate_to("work")
                 st.rerun()
-        elif st.button("새로 생성하기", key="mypage-new-work-simple", use_container_width=True):
+        elif st.button(
+            "← 작업 페이지로 돌아가기",
+            key="mypage-new-work-simple",
+            use_container_width=True,
+        ):
             navigate_to("work")
             st.rerun()

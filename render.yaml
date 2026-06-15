@@ -1,0 +1,17 @@
+# Render Blueprint — go-gachi 백엔드
+# 컨테이너 시작 시 Dockerfile CMD가 `alembic upgrade head`를 먼저 돌리므로
+# 별도 preDeployCommand 없이도 prod DB 스키마가 자동 최신화된다.
+# 환경변수(OPENAI_API_KEY, DATABASE_URL, R2_*, SUPABASE_* 등)는
+# Render Dashboard → Environment에서 직접 등록한다(시크릿은 yaml에 X).
+services:
+  - type: web
+    name: go-gachi-backend
+    runtime: docker
+    dockerfilePath: ./infra/Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production

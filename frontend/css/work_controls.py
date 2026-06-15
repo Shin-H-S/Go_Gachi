@@ -67,9 +67,10 @@ div[data-testid="stElementContainer"]:has(.generate-button-marker)
     + div[data-testid="stElementContainer"] button,
 div[data-testid="stElementContainer"]:has(.generate-button-marker)
     + div[data-testid="stButton"] button {
-    min-height: 58px !important;
+    min-height: 60px !important;
+    min-height: var(--work-generate-button-height, 60px) !important;
     border-radius: 999px !important;
-    border: 1px solid #0f4cbd !important;
+    border: 2px solid #0f4cbd !important;
     background:
         linear-gradient(90deg, #062d70 0%, #0c4db8 58%, #76b8ff 100%)
         !important;
@@ -94,7 +95,7 @@ div[data-testid="stElementContainer"]:has(.generate-button-marker)
     + div[data-testid="stElementContainer"] button:hover,
 div[data-testid="stElementContainer"]:has(.generate-button-marker)
     + div[data-testid="stButton"] button:hover {
-    border: 1px solid #0b3e9e !important;
+    border: 2px solid #0b3e9e !important;
     background:
         linear-gradient(90deg, #05275f 0%, #0a45a5 58%, #65aaf4 100%)
         !important;
@@ -102,29 +103,22 @@ div[data-testid="stElementContainer"]:has(.generate-button-marker)
     -webkit-text-fill-color: #ffffff !important;
 }
 
-.tool-row {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.tool-row .stButton > button,
-.tool-row .stDownloadButton > button {
-    min-height: 58px;
-    border: 1px solid rgba(32, 39, 37, 0.12);
-    border-radius: 4px;
-    background: linear-gradient(180deg, #f5f4ee 0%, #e8e6de 100%) !important;
+.st-key-work-preview-undo button,
+.st-key-work-preview-redo button {
+    min-height: 60px !important;
+    border: 1px solid rgba(32, 39, 37, 0.12) !important;
+    border-radius: 6px !important;
+    background: linear-gradient(180deg, #f8f7f2 0%, #e9e7df 100%) !important;
     color: #29312f !important;
     -webkit-text-fill-color: #29312f !important;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.75), 0 8px 18px rgba(44, 47, 42, 0.08);
-    font-size: 28px;
-    font-weight: 900;
+    font-size: 30px !important;
+    font-weight: 900 !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.75), 0 8px 18px rgba(44, 47, 42, 0.08) !important;
 }
 
-.tool-row .stButton > button:hover,
-.tool-row .stDownloadButton > button:hover {
-    border: 1px solid rgba(15, 143, 127, 0.28);
+.st-key-work-preview-undo button:hover,
+.st-key-work-preview-redo button:hover {
+    border: 1px solid rgba(15, 143, 127, 0.28) !important;
     background: linear-gradient(180deg, #ffffff 0%, #d7e5e1 100%) !important;
     color: #0b6f63 !important;
     -webkit-text-fill-color: #0b6f63 !important;

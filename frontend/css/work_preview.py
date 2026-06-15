@@ -1,6 +1,11 @@
 WORK_PREVIEW_CSS = """
+:root {
+    --work-preview-height: 620px;
+    --work-generate-button-height: 60px;
+}
+
 .preview-shell {
-    height: 620px;
+    height: var(--work-preview-height, 620px);
     border: 1px solid rgba(32, 39, 37, 0.13);
     border-radius: 8px;
     background:
@@ -87,6 +92,15 @@ WORK_PREVIEW_CSS = """
     border-radius: 8px;
     border: 1px solid rgba(32, 39, 37, 0.12);
     box-sizing: border-box;
+}
+
+.st-key-preview-history-controls {
+    width: min(495px, 100%);
+    margin: 12px auto 0;
+}
+
+.preview-history-controls {
+    display: none;
 }
 
 .result-summary-panel {

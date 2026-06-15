@@ -3,6 +3,11 @@ from html import escape
 import httpx
 import streamlit as st
 
+from frontend.mypage.generation_status import (
+    has_generation_waiting_for_image,
+    is_generation_in_progress,
+    is_stale_in_progress,
+)
 from frontend.mypage.state import folder_choices, folder_name_by_id, format_date
 from frontend.services.api_client import (
     move_generation_to_folder,
@@ -12,6 +17,7 @@ from frontend.services.api_client import (
 
 GENERATION_CARD_COLUMNS = 4
 GENERATION_CARD_HEIGHT = 330
+__all__ = ["has_generation_waiting_for_image", "render_generation_grid"]
 
 
 def _assign_generation_folder(
@@ -38,9 +44,30 @@ def _card_container_key(item: dict, index: int) -> str:
     return f"mypage-generation-card-{suffix}"
 
 
+def _download_state_key(request_id: str) -> str:
+    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
+    return f"mypage-download-bytes-{suffix}"
+
+
+def _download_error_key(request_id: str) -> str:
+    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
+    return f"mypage-download-error-{suffix}"
+
+
 @st.cache_data(show_spinner=False)
 def _cached_asset_bytes(url: str) -> bytes:
     return request_asset_bytes(url)
+
+
+def _prepare_download(request_id: str, image_url: str) -> None:
+    data_key = _download_state_key(request_id)
+    error_key = _download_error_key(request_id)
+    try:
+        st.session_state[data_key] = _cached_asset_bytes(image_url)
+        st.session_state.pop(error_key, None)
+    except httpx.HTTPError:
+        st.session_state.pop(data_key, None)
+        st.session_state[error_key] = True
 
 
 def _render_generation_card(item: dict, folders: list[dict], access_token: str) -> None:
@@ -49,16 +76,40 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
     original_image_url = to_backend_asset_url(item.get("original_image_url"))
     preset_id = str(item.get("preset_id") or "channel")
     status = str(item.get("status") or "-")
-    created_at = format_date(item.get("created_at"))
+    created_at_value = item.get("created_at")
+    created_at = format_date(created_at_value)
+    stale_in_progress = is_stale_in_progress(status, created_at_value)
+    display_status = "timeout" if stale_in_progress else status
     if image_url:
         st.image(image_url, use_container_width=True)
+    elif stale_in_progress:
+        st.markdown(
+            """
+            <div class="mypage-stale-thumb" role="status">
+                <strong>생성 시간이 초과되었습니다</strong>
+                <span>다시 생성해 주세요.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    elif is_generation_in_progress(status):
+        st.markdown(
+            """
+            <div class="mypage-generating-thumb" role="status" aria-live="polite">
+                <div class="mypage-generating-spinner"></div>
+                <strong>이미지 생성중</strong>
+                <span>완료되면 이미지가 표시됩니다.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     else:
         st.markdown('<div class="mypage-empty-thumb">이미지 없음</div>', unsafe_allow_html=True)
     st.markdown(
         f"""
         <div class="mypage-card-meta">
             <span>{escape(preset_id)}</span>
-            <span>{escape(created_at)}: {escape(status)}</span>
+            <span>{escape(created_at)}: {escape(display_status)}</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -91,24 +142,31 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
                 key=f"mypage-original-{request_id}",
                 use_container_width=True,
             )
-    download_data = b""
-    download_disabled = True
-    if image_url:
-        try:
-            download_data = _cached_asset_bytes(image_url)
-            download_disabled = False
-        except httpx.HTTPError:
-            st.error("이미지를 다운로드할 수 없습니다.")
+    data_key = _download_state_key(request_id)
+    error_key = _download_error_key(request_id)
+    if st.session_state.get(error_key):
+        st.error("이미지를 다운로드할 수 없습니다.")
+
     with download_col:
-        st.download_button(
-            "다운로드",
-            data=download_data,
-            file_name=_download_file_name(item),
-            mime="image/png",
-            use_container_width=True,
-            key=f"mypage-download-{request_id}",
-            disabled=download_disabled,
-        )
+        download_data = st.session_state.get(data_key)
+        if isinstance(download_data, bytes):
+            st.download_button(
+                "다운로드",
+                data=download_data,
+                file_name=_download_file_name(item),
+                mime="image/png",
+                use_container_width=True,
+                key=f"mypage-download-{request_id}",
+            )
+        else:
+            st.button(
+                "다운로드",
+                disabled=not image_url,
+                key=f"mypage-download-{request_id}",
+                use_container_width=True,
+                on_click=_prepare_download if image_url else None,
+                args=(request_id, image_url) if image_url else None,
+            )
 
 
 def render_generation_grid(items: list[dict], folders: list[dict], access_token: str) -> None:
@@ -117,7 +175,7 @@ def render_generation_grid(items: list[dict], folders: list[dict], access_token:
             """
             <div class="mypage-empty-state">
                 <strong>아직 만든 이미지가 없습니다</strong>
-                <span>새로 생성하기에서 첫 광고 이미지를 만들어보세요.</span>
+                <span>작업 페이지로 돌아가 첫 광고 이미지를 만들어보세요.</span>
             </div>
             """,
             unsafe_allow_html=True,

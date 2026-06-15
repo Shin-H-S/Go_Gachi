@@ -56,14 +56,64 @@ def test_request_backend_sends_expected_generate_payload(monkeypatch: pytest.Mon
             "userCopy": "",
             "copyMode": "preserve",
             "adCopyEnabled": True,
-            "logoDataUrl": None,
-            "logoPosition": "bottom_right",
             "targetWidth": 1080,
             "targetHeight": 1080,
         },
         "headers": {},
         "timeout": 300,
     }
+
+
+def test_request_backend_prefers_image_url_without_decoding_image_data(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        return FakeResponse({"imageUrl": "/outputs/result.png", "imageDataUrl": None})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    result = api_client.request_backend(
+        uploaded_file,
+        "제품이 크게 보여요",
+        "인스타그램",
+        "정사각형 피드",
+    )
+
+    assert result.image_url == "https://backend.example/outputs/result.png"
+    assert result.image_bytes is None
+
+
+def test_request_backend_falls_back_to_image_data_url_when_image_url_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_post(
+        url: str,  # noqa: ARG001
+        json: dict[str, object],  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
+
+    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
+    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(api_client.httpx, "post", fake_post)
+
+    result = api_client.request_backend(
+        uploaded_file,
+        "제품이 크게 보여요",
+        "인스타그램",
+        "정사각형 피드",
+    )
+
+    assert result.image_url is None
+    assert result.image_bytes == b"result"
 
 
 def test_request_backend_attaches_authorization_header_when_token_given(
@@ -124,40 +174,7 @@ def test_request_backend_sends_copy_mode(monkeypatch: pytest.MonkeyPatch) -> Non
     assert captured_json["userCopy"] == "오늘만 할인"
 
 
-def test_request_backend_sends_logo_data_url_when_logo_uploaded(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured_json: dict[str, object] = {}
-
-    def fake_post(
-        url: str,  # noqa: ARG001
-        json: dict[str, object],
-        headers: dict[str, str],  # noqa: ARG001
-        timeout: int,  # noqa: ARG001
-    ) -> FakeResponse:
-        captured_json.update(json)
-        return FakeResponse({"imageDataUrl": "data:image/png;base64,cmVzdWx0"})
-
-    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
-    logo_file = SimpleNamespace(type="image/png", getvalue=lambda: b"logo-image")
-    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
-    monkeypatch.setattr(api_client.httpx, "post", fake_post)
-
-    api_client.request_backend(
-        uploaded_file,
-        "따뜻한 배경으로",
-        "인스타그램",
-        "정사각형 피드",
-        logo_file=logo_file,
-    )
-
-    assert captured_json["logoDataUrl"] == (
-        f"data:image/png;base64,{base64.b64encode(b'logo-image').decode('ascii')}"
-    )
-    assert captured_json["logoPosition"] == "bottom_right"
-
-
-def test_request_backend_sends_null_logo_data_url_without_logo(
+def test_request_backend_omits_logo_payload_fields(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured_json: dict[str, object] = {}
@@ -182,7 +199,8 @@ def test_request_backend_sends_null_logo_data_url_without_logo(
         "정사각형 피드",
     )
 
-    assert captured_json["logoDataUrl"] is None
+    assert "logoDataUrl" not in captured_json
+    assert "logoPosition" not in captured_json
 
 
 def test_request_backend_sends_image_prompt_and_user_copy_separately(
@@ -286,38 +304,6 @@ def test_request_backend_returns_copy_metadata(monkeypatch: pytest.MonkeyPatch) 
     assert result.image_bytes == b"result"
     assert result.copy == copy_payload
 
-
-def test_request_backend_returns_logo_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
-    uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
-    logo_payload = {"used": True, "position": "top_right"}
-
-    def fake_post(
-        url: str,  # noqa: ARG001
-        json: dict[str, object],  # noqa: ARG001
-        headers: dict[str, str],  # noqa: ARG001
-        timeout: int,  # noqa: ARG001
-    ) -> FakeResponse:
-        return FakeResponse(
-            {
-                "imageDataUrl": "data:image/png;base64,cmVzdWx0",
-                "logo": logo_payload,
-            }
-        )
-
-    monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
-    monkeypatch.setattr(api_client.httpx, "post", fake_post)
-
-    result = api_client.request_backend(
-        uploaded_file,
-        "logo metadata check",
-        "인스타그램",
-        "정사각형 피드",
-    )
-
-    assert result.image_bytes == b"result"
-    assert result.logo == logo_payload
-
-
 def test_request_auto_copy_posts_to_backend_copy_endpoint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -386,7 +372,9 @@ def test_request_backend_uses_default_local_backend_url(
     assert captured_request["url"] == "http://127.0.0.1:8000/api/generate"
 
 
-def test_request_backend_rejects_missing_image_data_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_request_backend_rejects_missing_image_url_and_image_data_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def fake_post(
         url: str,  # noqa: ARG001
         json: dict[str, str],  # noqa: ARG001
@@ -399,7 +387,7 @@ def test_request_backend_rejects_missing_image_data_url(monkeypatch: pytest.Monk
     monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
     monkeypatch.setattr(api_client.httpx, "post", fake_post)
 
-    with pytest.raises(ValueError, match="imageDataUrl"):
+    with pytest.raises(ValueError, match="imageUrl 또는 imageDataUrl"):
         api_client.request_backend(
             uploaded_file,
             "제품이 크게 보여요",

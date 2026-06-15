@@ -100,7 +100,7 @@ MIME_BY_SUFFIX = {
     ".webp": "image/webp",
 }
 
-KNOWN_KINDS = {"system", "logo", "copy", "user", "mixed"}
+KNOWN_KINDS = {"system", "copy", "user", "mixed"}
 
 
 def load_settings() -> Settings:
@@ -171,8 +171,6 @@ def build_case_prompt(
         if copy_def
         else None
     )
-    has_logo = bool(case.get("logo"))
-    logo_position = case.get("logo_position") if has_logo else None
     resize_mode = case.get("resize_mode", "cover")
 
     target_size = target_size_or_detail(detail=detail, target_width=None, target_height=None)
@@ -182,7 +180,7 @@ def build_case_prompt(
 
     # 시스템 프롬프트: 전체 교체(system_override) > 서비스 조립 + 추가(system_append)
     system_text = case.get("system_override") or build_system_prompt(
-        preset, detail, image_copy=ad_copy, logo_position=logo_position
+        preset, detail, image_copy=ad_copy
     )
     if case.get("system_append"):
         system_text = f"{system_text}\n{case['system_append']}"
@@ -190,8 +188,6 @@ def build_case_prompt(
     prompt = merge_image_prompt(system_text, build_user_prompt(ctx_user_prompt))
     meta = {
         "copy": copy_def,
-        "has_logo": has_logo,
-        "logo_position": logo_position,
         "user_prompt": case.get("user_prompt", ""),
         "system_override": bool(case.get("system_override")),
         "system_append": case.get("system_append") or None,
@@ -226,13 +222,6 @@ def expand_jobs(
 
         prompt, meta = build_case_prompt(case, preset, detail)
 
-        # 로고: 케이스 값(경로 또는 true) > 전역 logo
-        logo_raw = case.get("logo")
-        if logo_raw is True:
-            logo_raw = matrix.get("logo")
-            if not logo_raw:
-                raise SystemExit(f"케이스 {case_id}: logo=true인데 전역 logo가 없습니다.")
-
         for image_def in matrix["images"]:
             image_path = resolve_path(
                 image_def["path"] if isinstance(image_def, dict) else image_def
@@ -247,7 +236,6 @@ def expand_jobs(
                         "preset": preset.id,
                         "detail": detail.id,
                         "image_path": image_path,
-                        "logo_path": resolve_path(logo_raw) if logo_raw else None,
                         "rep": rep,
                         "prompt": prompt,
                         **meta,
@@ -267,12 +255,10 @@ async def run_one(
 ) -> dict[str, Any]:
     """job 하나를 실행하고 결과 레코드를 돌려준다. 실패해도 예외를 올리지 않는다."""
     image_path: Path = job["image_path"]
-    logo_path: Path | None = job["logo_path"]
     out_name = f"{job['case_id']}__{image_path.stem}__r{job['rep']}.png"
     record: dict[str, Any] = {
-        **{k: v for k, v in job.items() if k not in {"image_path", "logo_path"}},
+        **{k: v for k, v in job.items() if k != "image_path"},
         "image": image_path.name,
-        "logo": logo_path.name if logo_path else None,
         "output": None,
         "status": "dry_run" if dry_run else "pending",
         "error": None,
@@ -285,20 +271,9 @@ async def run_one(
         start = time.perf_counter()
         try:
             uploaded = parse_image(file_to_data_url(image_path), settings.max_upload_bytes)
-            logo_uploaded = (
-                parse_image(file_to_data_url(logo_path), settings.max_upload_bytes)
-                if logo_path
-                else None
-            )
             openai_uploaded = await asyncio.to_thread(normalize_for_openai, uploaded)
-            openai_logo = (
-                await asyncio.to_thread(normalize_for_openai, logo_uploaded)
-                if logo_uploaded
-                else None
-            )
             edit_result = await call_openai_edit(
                 uploaded=openai_uploaded,
-                reference_images=[openai_logo] if openai_logo else None,
                 api_size=job["api_size"],
                 prompt=job["prompt"],
                 settings=settings,
@@ -332,14 +307,13 @@ async def run_one(
 
 
 def copy_inputs(jobs: list[dict[str, Any]], run_dir: Path) -> None:
-    """리포트가 입력 원본을 보여줄 수 있게 입력/로고 이미지를 런 폴더로 복사한다."""
+    """리포트가 입력 원본을 보여줄 수 있게 입력 이미지를 런 폴더로 복사한다."""
     inputs_dir = run_dir / "inputs"
     inputs_dir.mkdir(parents=True, exist_ok=True)
     for job in jobs:
-        for key in ("image_path", "logo_path"):
-            path = job.get(key)
-            if path and not (inputs_dir / path.name).exists():
-                shutil.copy2(path, inputs_dir / path.name)
+        path = job["image_path"]
+        if not (inputs_dir / path.name).exists():
+            shutil.copy2(path, inputs_dir / path.name)
 
 
 async def main_async(args: argparse.Namespace) -> None:

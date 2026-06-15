@@ -1,5 +1,3 @@
-import time
-
 import httpx
 import streamlit as st
 
@@ -14,7 +12,6 @@ def handle_generation_request(
     *,
     generate,
     uploaded_file,
-    logo_file,
     prompt: str,
     ad_copy_prompt: str,
     format_label: str,
@@ -22,14 +19,12 @@ def handle_generation_request(
     current_result_context,
     ad_copy_enabled: bool,
     copy_mode: str,
-    logo_position: str = "bottom_right",
 ) -> None:
     if generate:
         if not uploaded_file:
             st.warning("메뉴 사진을 먼저 업로드해주세요.")
         else:
             try:
-                time.sleep(1.2)
                 access_token = st.session_state.get("auth_access_token", "")
                 result = request_backend(
                     uploaded_file,
@@ -40,14 +35,17 @@ def handle_generation_request(
                     ad_copy_enabled=ad_copy_enabled,
                     copy_mode=copy_mode,
                     ad_copy_prompt=ad_copy_prompt,
-                    logo_file=logo_file,
-                    logo_position=logo_position,
                 )
                 result_context = dict(current_result_context or {})
-                if result.logo is not None:
-                    result_context["logo"] = result.logo
 
-                st.session_state["result_bytes"] = result.image_bytes
+                if result.image_bytes is not None:
+                    st.session_state["result_bytes"] = result.image_bytes
+                else:
+                    st.session_state.pop("result_bytes", None)
+                if result.image_url:
+                    st.session_state["result_image_url"] = result.image_url
+                else:
+                    st.session_state.pop("result_image_url", None)
                 st.session_state["result_copy"] = result.copy
                 st.session_state["result_context"] = result_context
                 st.rerun()

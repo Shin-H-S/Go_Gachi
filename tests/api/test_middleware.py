@@ -16,6 +16,10 @@ def create_test_app() -> FastAPI:
     async def ok() -> dict[str, str]:
         return {"request_id": request_id_var.get()}
 
+    @app.get("/api/health")
+    async def health() -> dict[str, str]:
+        return {"status": "ok"}
+
     @app.get("/boom")
     async def boom() -> dict[str, str]:
         raise RuntimeError("boom")
@@ -52,6 +56,16 @@ def test_access_log_records_completed_request(caplog) -> None:
     assert response.status_code == 200
     assert "GET /ok status=200" in caplog.text
     assert "took=" in caplog.text
+
+
+def test_access_log_skips_health_check(caplog) -> None:
+    client = TestClient(create_test_app())
+
+    with caplog.at_level(logging.INFO, logger="backend.access"):
+        response = client.get("/api/health", headers={"X-Request-ID": "health-req-123"})
+
+    assert response.status_code == 200
+    assert "GET /api/health status=200" not in caplog.text
 
 
 def test_unhandled_error_response_keeps_request_id_header(caplog) -> None:

@@ -45,10 +45,9 @@ async def edit_image(
     settings: Settings,
     user_id: str | None = None,
     user_copy: str | None = None,
-    logo_data_url: str | None = None,
-    logo_position: str | None = None,
     text_copy: AdCopy | None = None,
     text_cost_usd: float = 0.0,
+    generation_id: str | None = None,
 ) -> dict[str, str | None]:
     """설정된 provider에 따라 mock 반환 또는 OpenAI 이미지 편집을 수행한다.
 
@@ -59,11 +58,6 @@ async def edit_image(
     preflight_start = time.perf_counter()
     # provider와 무관하게 먼저 입력 이미지를 검증해 프론트 오류를 빠르게 돌려준다.
     uploaded = parse_image(image_data_url, settings.max_upload_bytes)
-    logo_uploaded = (
-        parse_image(logo_data_url, settings.max_upload_bytes)
-        if logo_data_url and logo_data_url.strip()
-        else None
-    )
     selected_detail = detail or preset.default_detail()
     target_size = target_size_or_detail(
         detail=selected_detail,
@@ -79,26 +73,16 @@ async def edit_image(
     clean_user_copy: str | None = (user_copy or "").strip() or None
     stored_user_copy: str | None = rendered_copy_text(text_copy)
     text_model: str | None = settings.openai_text_model if text_copy is not None else None
-    logo_image_hash: str | None = (
-        crud.image_sha256(logo_uploaded.content) if logo_uploaded else None
-    )
-    has_logo: bool = logo_uploaded is not None
-    stored_logo_position: str | None = logo_position if has_logo else None
     cache_input = cache_instruction(
         generation_user_prompt,
         text_copy,
         user_copy=clean_user_copy,
-        has_logo=has_logo,
-        logo_position=stored_logo_position,
-        logo_image_hash=logo_image_hash,
     )
     logger.info(
-        "generation timing stage=preflight preset=%s detail=%s provider=%s "
-        "has_logo=%s took=%.1fms",
+        "generation timing stage=preflight preset=%s detail=%s provider=%s took=%.1fms",
         preset.id,
         selected_detail.id,
         settings.image_provider,
-        has_logo,
         _elapsed_ms(preflight_start),
     )
 
@@ -135,12 +119,12 @@ async def edit_image(
         generation_user_prompt,
         selected_detail,
         image_copy=text_copy,
-        logo_position=stored_logo_position,
     )
     image_hash = crud.image_sha256(uploaded.content)
     instruction_hash = crud.instruction_sha256(cache_input)
     model = settings.openai_image_model
     prompt_version = PROMPT_VERSION
+    generation_id = generation_id or new_generation_id()
 
     cache_start = time.perf_counter()
     cache_snapshot = await find_cache_snapshot(
@@ -153,14 +137,12 @@ async def edit_image(
     )
     cache_result = await cached_response(
         cache_snapshot,
+        generation_id=generation_id,
         settings=settings,
         user_id=user_id,
         user_copy=stored_user_copy,
         text_model=text_model,
         text_cost_usd=text_cost_usd,
-        has_logo=has_logo,
-        logo_position=stored_logo_position,
-        logo_image_hash=logo_image_hash,
     )
     logger.info(
         "generation timing stage=cache_lookup preset=%s detail=%s hit=%s took=%.1fms",
@@ -180,7 +162,6 @@ async def edit_image(
     # 캐시 행이 없거나 파일이 사라졌으면 캐시 미스로 떨어져 OpenAI 호출 분기로 이어진다.
 
     # 3) 캐시 미스: pending 행 먼저 만든 뒤 OpenAI 호출. 실패해도 흔적 남기기 위함.
-    generation_id = new_generation_id()
     logger.info(
         "cache miss generation_id=%s image_hash=%s preset=%s detail=%s user_id=%s",
         generation_id,
@@ -227,10 +208,6 @@ async def edit_image(
             text_model=text_model,
             user_id=user_id,
             user_copy=stored_user_copy,
-            has_logo=has_logo,
-            logo_position=stored_logo_position,
-            logo_image_hash=logo_image_hash,
-            logo_storage_key=None,
         )
     logger.info(
         "generation timing generation_id=%s stage=db_pending took=%.1fms",
@@ -259,24 +236,6 @@ async def edit_image(
                 len(openai_uploaded.content),
                 _elapsed_ms(normalize_main_start),
             )
-            normalize_logo_start = time.perf_counter()
-            openai_logo_uploaded = (
-                await asyncio.to_thread(normalize_for_openai, logo_uploaded)
-                if logo_uploaded
-                else None
-            )
-            if openai_logo_uploaded and logo_uploaded:
-                logger.info(
-                    "generation timing generation_id=%s stage=normalize_logo "
-                    "original=%sx%s normalized=%sx%s bytes=%s took=%.1fms",
-                    generation_id,
-                    logo_uploaded.info.width,
-                    logo_uploaded.info.height,
-                    openai_logo_uploaded.info.width,
-                    openai_logo_uploaded.info.height,
-                    len(openai_logo_uploaded.content),
-                    _elapsed_ms(normalize_logo_start),
-                )
         except Exception as exc:
             raise ServiceError(
                 "IMAGE_INPUT_NORMALIZE_FAILED",
@@ -300,48 +259,25 @@ async def edit_image(
             openai_uploaded.info.height,
             len(openai_uploaded.content),
         )
-        if openai_logo_uploaded:
-            logger.debug(
-                "OpenAI logo reference prepared generation_id=%s original_mime=%s "
-                "original_format=%s original_mode=%s original_size=%sx%s "
-                "normalized_mime=%s normalized_format=%s normalized_mode=%s "
-                "normalized_size=%sx%s normalized_bytes=%s logo_hash=%s",
-                generation_id,
-                logo_uploaded.mime_type,
-                logo_uploaded.info.format,
-                logo_uploaded.info.mode,
-                logo_uploaded.info.width,
-                logo_uploaded.info.height,
-                openai_logo_uploaded.mime_type,
-                openai_logo_uploaded.info.format,
-                openai_logo_uploaded.info.mode,
-                openai_logo_uploaded.info.width,
-                openai_logo_uploaded.info.height,
-                len(openai_logo_uploaded.content),
-                short_id(logo_image_hash),
-            )
         logger.debug(
-            "openai call started generation_id=%s model=%s api_size=%s reference_images=%s",
+            "openai call started generation_id=%s model=%s api_size=%s",
             generation_id,
             model,
             selected_detail.api_size,
-            1 if openai_logo_uploaded else 0,
         )
         try:
             image_api_start = time.perf_counter()
             b64_json, image_usage = await call_openai_edit(
                 uploaded=openai_uploaded,
-                reference_images=[openai_logo_uploaded] if openai_logo_uploaded else None,
                 api_size=selected_detail.api_size,
                 prompt=prompt,
                 settings=settings,
             )
             logger.info(
                 "generation timing generation_id=%s stage=openai_image_total "
-                "api_size=%s reference_images=%s took=%.1fms",
+                "api_size=%s took=%.1fms",
                 generation_id,
                 selected_detail.api_size,
-                1 if openai_logo_uploaded else 0,
                 _elapsed_ms(image_api_start),
             )
         except ServiceError:
@@ -468,19 +404,14 @@ async def edit_image(
         image_url,
     )
 
-    # 프론트가 별도 파일 저장 없이 바로 미리보기할 수 있도록 data URL로 반환한다.
-    response_encode_start = time.perf_counter()
-    image_data_url = f"data:image/png;base64,{base64.b64encode(target_png).decode('ascii')}"
     logger.info(
-        "generation timing generation_id=%s stage=response_encode bytes=%s took=%.1fms "
-        "total=%.1fms",
+        "generation timing generation_id=%s stage=response_ready image_url=%s total=%.1fms",
         generation_id,
-        len(image_data_url),
-        _elapsed_ms(response_encode_start),
+        image_url,
         _elapsed_ms(total_start),
     )
     return {
-        "image_data_url": image_data_url,
+        "image_data_url": None,
         "image_url": image_url,
         "provider": "openai",
         "note": None,

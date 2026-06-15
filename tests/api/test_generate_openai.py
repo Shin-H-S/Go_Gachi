@@ -1,6 +1,8 @@
 import asyncio
+from io import BytesIO
 
 import pytest
+from PIL import Image
 from sqlalchemy import select
 
 from backend.app.db.database import async_session_scope
@@ -13,7 +15,6 @@ from tests.api.helpers import (
     TINY_PNG_DATA_URL,
     client,
     force_openai_mode,
-    image_size_from_data_url,
 )
 
 
@@ -44,7 +45,7 @@ def test_generate_openai_result_matches_target_size(monkeypatch: pytest.MonkeyPa
         return TINY_PNG_B64, {}
 
     monkeypatch.setattr(generation_service, "call_openai_edit", _fake_call)
-    force_openai_mode(monkeypatch)
+    real_settings = force_openai_mode(monkeypatch)
 
     response = client.post(
         "/api/generate",
@@ -63,7 +64,10 @@ def test_generate_openai_result_matches_target_size(monkeypatch: pytest.MonkeyPa
     assert body["provider"] == "openai"
     assert body["imageUrl"].startswith("/outputs/")
     assert body["imageUrl"].endswith(".png")
-    assert image_size_from_data_url(body["imageDataUrl"]) == (1080, 1920)
+    assert body["imageDataUrl"] is None
+    output_path = real_settings.output_dir / body["imageUrl"].rsplit("/", 1)[-1]
+    with Image.open(BytesIO(output_path.read_bytes())) as image:
+        assert image.size == (1080, 1920)
     assert "1080x1920" in body["prompt"]
     assert captured_call["api_size"] == "1088x1920"
 
@@ -101,8 +105,6 @@ def test_generate_uses_user_prompt(
             "userCopy": "오늘 아메리카노 2500원",
             "copyMode": "polish",
             "adCopyEnabled": True,
-            "logoDataUrl": TINY_PNG_DATA_URL,
-            "logoPosition": "top_right",
             "parentRequestId": "parent-generation-id",
             "targetWidth": 1080,
             "targetHeight": 1080,
@@ -120,11 +122,10 @@ def test_generate_uses_user_prompt(
         "cta": None,
         "copyMode": "polish",
     }
-    assert body["logo"] == {"used": True, "position": "top_right"}
+    assert "logo" not in body
     assert body["revision"] is None
-    assert "A second reference image contains the shop logo" in body["prompt"]
-    assert "top right" in body["prompt"]
-    assert len(captured_call["reference_images"]) == 1
+    assert "shop logo" not in body["prompt"]
+    assert "reference_images" not in captured_call
 
     async def _saved_text_model() -> str | None:
         async with async_session_scope() as db:

@@ -1,7 +1,5 @@
-"""이미지 생성 캐시 조회와 cache hit 응답 처리를 담당한다."""
+"""이미지 생성 캐시 조회와 cache hit 응답 처리."""
 
-import asyncio
-import base64
 import logging
 from typing import TypedDict
 
@@ -10,7 +8,6 @@ from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Generation
-from backend.app.services.generation_files import new_generation_id
 from backend.app.services.storage import get_storage
 from backend.app.services.storage_url import output_url
 
@@ -27,10 +24,9 @@ class CacheSnapshot(TypedDict):
     output_path: str | None
     image_url: str | None
     prompt: str | None
-    target_bytes: bytes
 
 
-def _snapshot(row: Generation, target_bytes: bytes) -> CacheSnapshot:
+def _snapshot(row: Generation) -> CacheSnapshot:
     return {
         "image_hash": row.image_hash,
         "preset_id": row.preset_id,
@@ -41,7 +37,6 @@ def _snapshot(row: Generation, target_bytes: bytes) -> CacheSnapshot:
         "output_path": row.output_path,
         "image_url": row.image_url,
         "prompt": row.prompt,
-        "target_bytes": target_bytes,
     }
 
 
@@ -54,7 +49,7 @@ async def find_cache_snapshot(
     model: str,
     prompt_version: str,
 ) -> CacheSnapshot | None:
-    """세션 밖에서도 안전하게 쓸 수 있도록 캐시 행의 필요한 값만 dict로 복사한다."""
+    """세션 밖에서도 안전하게 쓸 수 있도록 캐시 row의 필요한 값만 복사한다."""
     async with async_session_scope() as db:
         rows = await crud.list_cached_generations(
             db,
@@ -67,42 +62,36 @@ async def find_cache_snapshot(
     for row in rows:
         if row.output_path is None:
             continue
-        target_bytes = await _load_cached_bytes(row.output_path, settings)
-        if target_bytes is not None:
-            return _snapshot(row, target_bytes)
+        if await _cached_file_exists(row.output_path, settings):
+            return _snapshot(row)
     return None
 
 
-async def _load_cached_bytes(output_path: str, settings: Settings) -> bytes | None:
-    """저장 모드에 맞춰 캐시된 결과 이미지의 바이트를 읽는다(없으면 None)."""
+async def _cached_file_exists(output_path: str, settings: Settings) -> bool:
+    """현재 storage backend에서 캐시 결과 이미지가 실제로 있는지 확인한다."""
     storage = get_storage(settings)
     try:
-        return await storage.read_bytes(output_path)
+        return await storage.exists(output_path)
     except Exception:
-        logger.exception("cache hit storage read failed path=%s", output_path)
-        return None
+        logger.exception("cache hit storage exists check failed path=%s", output_path)
+        return False
 
 
 async def cached_response(
     snapshot: CacheSnapshot | None,
     *,
+    generation_id: str,
     settings: Settings,
     user_id: str | None,
     user_copy: str | None,
     text_model: str | None,
     text_cost_usd: float,
-    has_logo: bool,
-    logo_position: str | None,
-    logo_image_hash: str | None,
 ) -> dict[str, str | None] | None:
-    """캐시 객체가 살아있으면 cached 행과 비용 0 사용량을 기록하고 응답을 만든다."""
+    """캐시가 있으면 cached row와 비용 0 사용 row를 기록하고 응답을 만든다."""
     if snapshot is None or snapshot["output_path"] is None:
         return None
 
-    encoded = await asyncio.to_thread(base64.b64encode, snapshot["target_bytes"])
-    image_data_url = f"data:image/png;base64,{encoded.decode('ascii')}"
     image_url = output_url(snapshot["output_path"])
-    generation_id = new_generation_id()
     logger.info(
         "cache hit generation_id=%s image_hash=%s preset=%s user_id=%s",
         generation_id,
@@ -126,10 +115,6 @@ async def cached_response(
             text_model=text_model,
             user_id=user_id,
             user_copy=user_copy,
-            has_logo=has_logo,
-            logo_position=logo_position,
-            logo_image_hash=logo_image_hash,
-            logo_storage_key=None,
         )
         await crud.record_usage(
             db,
@@ -141,7 +126,7 @@ async def cached_response(
             cached=True,
         )
     return {
-        "image_data_url": image_data_url,
+        "image_data_url": None,
         "image_url": image_url,
         "provider": "openai",
         "note": "캐시된 결과 재사용",

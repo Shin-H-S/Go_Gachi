@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.auth import router as auth_router
+from backend.app.api.generation_jobs import router as generation_jobs_router
 from backend.app.api.internal import router as internal_router
 from backend.app.api.middlewares import AccessLogMiddleware, RequestIDMiddleware
 from backend.app.core.auth import AuthUser, get_optional_user
@@ -26,7 +27,6 @@ from backend.app.schemas import (
     CopyResponse,
     GenerateRequest,
     GenerateResponse,
-    LogoResponse,
 )
 from backend.app.services.costs import calculate_text_cost
 from backend.app.services.generation_files import new_generation_id
@@ -93,6 +93,7 @@ app.add_middleware(RequestIDMiddleware)
 
 # 인증 라우트(/api/auth/me 등)는 환경과 무관하게 항상 등록한다.
 app.include_router(auth_router)
+app.include_router(generation_jobs_router)
 
 # production에서는 내부 모니터링 라우터를 아예 등록하지 않는다. 로컬/dev에선 그대로 열림.
 # 운영에서도 사용량을 봐야 한다면 별도 토큰 인증 라우터로 교체하면 됨.
@@ -282,8 +283,7 @@ async def generate(
                 copy_mode=request.copy_mode,
             )
             logger.info(
-                "generate timing stage=copy preset=%s detail=%s mode=%s "
-                "used_openai=%s took=%.1fms",
+                "generate timing stage=copy preset=%s detail=%s mode=%s used_openai=%s took=%.1fms",
                 preset.id,
                 detail.id,
                 request.copy_mode,
@@ -322,8 +322,6 @@ async def generate(
             # 로그인했으면 생성 기록에 소유자로 남긴다(비로그인이면 None).
             user_id=user.id if user else None,
             user_copy=request.user_copy,
-            logo_data_url=request.logo_data_url,
-            logo_position=request.logo_position,
             text_copy=ad_copy,
             text_cost_usd=text_cost_usd,
         )
@@ -361,16 +359,11 @@ async def generate(
     )
 
     return GenerateResponse(
-        imageDataUrl=result["image_data_url"],
+        imageDataUrl=result.get("image_data_url"),
         imageUrl=result.get("image_url"),
         provider=result["provider"] or settings.image_provider,
         preset=preset,
         copy=copy_info,
-        logo=(
-            LogoResponse(used=True, position=request.logo_position)
-            if request.logo_data_url and request.logo_data_url.strip()
-            else None
-        ),
         note=result["note"],
         # production에서는 내부 프롬프트 노출을 막고, local/dev에서는 디버깅용으로 유지한다.
         prompt=result["prompt"] if settings.app_env != "production" else None,

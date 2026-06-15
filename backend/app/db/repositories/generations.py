@@ -102,6 +102,22 @@ async def find_original_path(
     return None
 
 
+async def get_user_generation_by_request_id(
+    db: AsyncSession,
+    *,
+    user_id: str,
+    request_id: str,
+) -> Generation | None:
+    """사용자 본인의 생성 기록 1건을 request_id로 조회한다."""
+    stmt = (
+        select(Generation)
+        .where(Generation.user_id == user_id)
+        .where(Generation.request_id == request_id)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def create_pending_generation(
     db: AsyncSession,
     *,

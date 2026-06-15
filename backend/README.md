@@ -26,7 +26,6 @@ Railway·Cloud Run 등 컨테이너 기반 운영 환경을 지원하며, 테스
 현재 스키마는 JSON 요청만 사용합니다.
 V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy`)까지 응답합니다.
 `adCopyEnabled=true`이면 문구 처리 결과를 이미지 생성 프롬프트에 포함해 광고 이미지 안에 함께 생성합니다.
-`logoDataUrl`이 있으면 로고 이미지를 OpenAI 이미지 편집 API의 reference image로 함께 전달합니다.
 
 ```json
 {
@@ -36,8 +35,6 @@ V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy
   "userPrompt": "광고 유형: 스토리 이미지\n오늘 아메리카노 2,500원",
   "copyMode": "preserve",
   "adCopyEnabled": false,
-  "logoDataUrl": null,
-  "logoPosition": "bottom_right",
   "parentRequestId": null,
   "targetWidth": 1080,
   "targetHeight": 1920,
@@ -53,8 +50,6 @@ V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy
 - `userPrompt`: V3 사용자 요청/광고 문구입니다.
 - `copyMode`: 문구 처리 방식. `preserve`, `polish`, `rewrite` 중 하나이며 기본값은 `preserve`입니다.
 - `adCopyEnabled`: 광고 문구 사용 여부입니다. true이면 `copy` 응답을 구성하고 이미지 생성 프롬프트에 문구를 포함합니다.
-- `logoDataUrl`: 로고 반영에 사용할 JPG, PNG, WEBP data URL입니다. 값이 있으면 메뉴 이미지와 함께 OpenAI 이미지 편집 API의 reference image로 전달합니다.
-- `logoPosition`: 로고 위치. `top_left`, `top_right`, `bottom_left`, `bottom_right`, `center_bottom` 중 하나이며 기본값은 `bottom_right`입니다.
 - `parentRequestId`: 수정 이력 연결용 부모 생성 ID입니다. 현재 브랜치에서는 스키마만 열어둡니다.
 - `targetWidth`, `targetHeight`: 사용자가 선택한 상세 광고 규격의 최종 출력 픽셀 크기.
   둘 중 하나만 보낼 수 없으며, 생략하면 선택한 상세 광고 유형의 기본 크기를 사용합니다.
@@ -71,25 +66,28 @@ V3 요청 필드는 확장되어 있으며, 현재는 문구 처리 결과(`copy
 
 ```json
 {
-  "imageDataUrl": "data:image/png;base64,...",
+  "imageUrl": "/outputs/20260613_120000_ab12cd.png",
+  "imageDataUrl": null,
   "provider": "openai",
   "preset": {
     "id": "instagram",
     "label": "인스타그램"
   },
   "copy": null,
-  "logo": null,
   "revision": null,
   "note": null,
   "prompt": null
 }
 ```
 
+- `imageUrl`: 생성 결과를 받을 수 있는 URL입니다. 로컬 저장소는 `/outputs/...`,
+  R2 저장소는 공개 URL을 반환합니다. 프론트 미리보기는 이 값을 우선 사용합니다.
+- `imageDataUrl`: URL이 없는 mock/fallback 응답에서만 내려주는 base64 data URL입니다.
+  OpenAI 성공/캐시 응답은 응답 크기를 줄이기 위해 보통 `null`입니다.
 - `prompt`: `APP_ENV=production`에서는 내부 프롬프트 보호를 위해 `null`로 응답합니다.
   `local`/`dev` 환경에서는 디버깅을 위해 생성에 사용한 프롬프트가 포함될 수 있습니다.
-- 응답 `imageDataUrl`의 PNG는 `targetWidth` x `targetHeight` 크기로 후처리되어 반환됩니다.
+- 생성 결과 PNG는 저장 전에 `targetWidth` x `targetHeight` 크기로 후처리됩니다.
 - `copy`: `adCopyEnabled=true`일 때 문구 처리 결과를 내려줍니다. OpenAI 생성 경로에서는 이 문구를 이미지 생성 프롬프트에 포함합니다.
-- `logo`: 로고 이미지를 요청에 포함한 경우 사용 여부와 위치를 내려줍니다.
 - `revision`: V3 후속 브랜치에서 수정 이력 처리 결과를 채울 예정입니다.
 
 ## Copy Composition

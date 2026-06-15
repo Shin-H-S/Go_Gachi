@@ -52,7 +52,9 @@ OPENAI_IMAGE_QUALITY=medium
 - `GET /api/config`
 - `POST /api/generate`
 
-`POST /api/generate` receives a base64 image data URL, preset id, and feedback. It returns the edited image as a data URL.
+`POST /api/generate` receives a base64 input image data URL, preset id, detail type,
+image prompt, and optional ad copy. It stores the generated PNG and returns `imageUrl`
+first; `imageDataUrl` is kept only for mock/fallback responses.
 
 ## GCP Deploy
 
