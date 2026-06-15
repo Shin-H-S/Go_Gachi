@@ -5,7 +5,7 @@ from backend.app.services.copywriting import AdCopy
 
 # 프롬프트 본문/구조가 바뀌면 이 라벨도 올려 캐시 무효화한다. env가 아니라 코드 상수로
 # 두는 이유: 프롬프트 변경과 항상 같은 커밋에 들어가야 어긋남이 없어서.
-PROMPT_VERSION = "2026-06-15-v3_v5-daangn-cta-color-policy"
+PROMPT_VERSION = "2026-06-15-v4-channel-copy-rendering-policy"
 
 
 def _clean_parts(parts: list[str]) -> list[str]:
@@ -45,40 +45,113 @@ def build_system_prompt(
             ),
         ]
     )
-    if image_copy:
-        parts.extend(
-            [
-                (
-                    "Create the final image as a complete commercial advertising visual with "
-                    "integrated typography. Render the supplied ad copy directly inside the image "
-                    "as part of the design."
-                ),
-                (
-                    "Use intentional ad poster layout, strong product hero composition, clean "
-                    "visual hierarchy, premium lighting, and generous readable space for copy."
-                ),
-                _image_copy_instruction(image_copy),
-                (
-                    "Render the supplied Korean text, numbers, punctuation, and prices "
-                    "as accurately as possible. Do not change prices, menu names, dates, "
-                    "quantities, or discount numbers. Do not add extra text beyond the "
-                    "supplied ad copy."
-                ),
-                "Do not add unrelated logos, watermarks, UI, signatures, or brand marks.",
-            ]
-        )
+    if image_copy and _should_render_image_copy(preset, detail):
+        parts.extend([
+            _image_copy_layout_instruction(preset, detail),
+            _image_copy_instruction(image_copy),
+            _image_copy_style_instruction(preset, detail),
+            "Do not add unrelated logos, watermarks, UI, signatures, or brand marks.",
+        ])
+
+    elif image_copy:
+        parts.extend([
+            _baemin_ignore_image_copy_instruction(),
+            _no_copy_instruction(),
+        ])
+
     else:
-        parts.extend(
-            [
-                _no_copy_instruction(),
-                (
-                    "Keep the image ready for later ad copy by leaving calm negative space "
-                    "near the edges."
-                ),
-            ]
-        )
+        parts.extend([
+            _no_copy_instruction(),
+            (
+                "Do not render, add, draw, suggest, or imitate any text, typography, "
+                "pricing, numbers, labels, or brand information anywhere in the image. "
+                "The image must be completely text-free and ready for later ad copy placement. "
+                "Leave clean, generous negative space at the top, sides, and bottom of the image "
+                "to accommodate future text overlays without cluttering the product."
+            ),
+        ])
 
     return "\n".join(parts)
+
+
+def _should_render_image_copy(preset: Preset, detail: PresetDetail | None) -> bool:
+    """채널/상세 정책에 따라 이미지 내 광고 문구 렌더링 여부를 결정한다."""
+    if preset.id == "baemin":
+        return False
+
+    if preset.id == "instagram":
+        return True
+
+    if preset.id == "daangn":
+        return detail is not None and detail.id == "discount_event"
+
+    return False
+
+
+def _image_copy_layout_instruction(preset: Preset, detail: PresetDetail | None) -> str:
+    """광고 문구 포함 시 채널 정책에 맞는 레이아웃 지시문."""
+    base = (
+        "Create the final image as a complete commercial advertising visual with "
+        "integrated typography. Render the supplied ad copy directly inside the image "
+        "as part of the design. "
+        "Place the product as the dominant focal point while preserving full product visibility. "
+        "Use clear visual hierarchy: product > headline > subcopy > CTA. "
+        "Leave generous whitespace around text for readability. "
+    )
+
+    if preset.id == "instagram":
+        return base + (
+            "For Instagram, allow clean Korean typography naturally integrated into the "
+            "SNS-style promotional composition. Position the product and text so they form "
+            "a balanced advertising layout without cropping or reducing product clarity."
+        )
+
+    if preset.id == "daangn" and detail and detail.id == "discount_event":
+        return base + (
+            "For Danggeun discount_event, allow readable local promotional typography "
+            "only because this selected detail is an event image. Keep the mood approachable, "
+            "local, and practical rather than overly polished."
+        )
+
+    return base
+
+
+def _image_copy_style_instruction(preset: Preset, detail: PresetDetail | None) -> str:
+    """광고 문구 렌더링 스타일과 채널별 우선 정책."""
+    base = (
+        "Render headline in a bold, punchy sans-serif or display font. "
+        "Render subcopy in a clean, legible sans-serif. "
+        "Render CTA clearly and compactly. "
+        "Ensure adequate contrast for readability on the background. "
+        "Render the supplied Korean text, numbers, punctuation, and prices "
+        "as accurately as possible. "
+        "Do not change prices, menu names, dates, quantities, "
+        "or discount numbers. "
+        "Do not add extra text beyond the supplied ad copy."
+    )
+
+    if preset.id == "daangn" and detail and detail.id == "discount_event":
+        return base + (
+            "For Danggeun discount_event, the CTA color policy has priority: "
+            "apply Danggeun brand orange (#F7863B) ONLY to CTA button backgrounds. "
+            "Do not apply #F7863B to headlines, subcopy, event text, decorations, "
+            "background tint, props, lighting, or overall color grading. "
+            "Headline and subcopy colors should be selected adaptively for readability."
+        )
+
+    return base
+
+
+def _baemin_ignore_image_copy_instruction() -> str:
+    """배민 채널은 광고 문구가 있어도 이미지 내 텍스트 렌더링을 금지한다."""
+    return (
+        "Although ad copy was supplied internally, this Baemin preset "
+        "must remain text-free. "
+        "Do not render the supplied headline, subcopy, CTA, "
+        "or any other typography inside the image. "
+        "Follow the Baemin channel policy: create a clean product-only image optimized for "
+        "delivery-app thumbnail readability and ordering decisions."
+    )
 
 
 def _image_copy_instruction(image_copy: AdCopy) -> str:
@@ -94,10 +167,13 @@ def _image_copy_instruction(image_copy: AdCopy) -> str:
 
 
 def _no_copy_instruction() -> str:
-    """광고 문구를 쓰지 않을 때 금지할 요소를 만든다."""
+    """광고 문구 미포함 시 텍스트와 타이포그래피 절대 금지 규칙."""
     return (
-        "Do not add, draw, render, or imitate any text, typography, logo, price tag, "
-        "watermark, UI, poster copy, or brand mark."
+        "Do not add, draw, render, suggest, or imitate any text, typography, "
+        "price tags, logos, watermarks, UI elements, poster copy, brand marks, "
+        "or any form of written or visual communication. "
+        "The image must be completely text-free and logo-free. "
+        "Focus only on the product, lighting, composition, and styling."
     )
 
 

@@ -61,8 +61,8 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
     assert "readable ad copy or platform elements" in (
         presets["instagram"].find_detail("story_image").prompt_hint
     )
-    assert "seasonal offer" in presets["daangn"].find_detail("discount_event").prompt_hint
-    assert PROMPT_VERSION == "2026-06-15-v3_v5-daangn-cta-color-policy"
+    assert "limited offers" in presets["daangn"].find_detail("discount_event").prompt_hint
+    assert PROMPT_VERSION == "2026-06-15-v4-channel-copy-rendering-policy"
 
 
 def test_presets_do_not_conflict_with_image_copy_prompting() -> None:
@@ -191,7 +191,7 @@ def test_prompt_without_copy_rejects_logos_and_brand_marks() -> None:
     prompt = build_prompt(preset, "깔끔하게", detail)
 
     assert "provided logo reference" not in prompt
-    assert "Do not add, draw, render, or imitate any text" in prompt
+    assert "Do not add, draw, render, suggest, or imitate any text" in prompt
     assert "brand mark" in prompt
 
 
