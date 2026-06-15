@@ -51,6 +51,11 @@ def test_main_page_styles_match_linktree_inspired_hero() -> None:
     assert ".landing-login:hover" in styles
     assert ".landing-signup:hover" in styles
     assert "text-decoration: none !important;" in styles
+    landing_block = styles.split(".st-key-main-landing {", 1)[1].split("}", 1)[0]
+    assert "min-height: 100vh;" in landing_block
+    assert "calc(100vh - 64px)" not in landing_block
+    assert ".stApp:has(.st-key-main-landing)" in styles
+    assert '[data-testid="stMain"]:has(.st-key-main-landing)' in styles
     assert ".landing-login {\n    background: #eff1ec;\n    color: #0b0e14 !important;" in styles
     assert (
         ".landing-signup {\n"

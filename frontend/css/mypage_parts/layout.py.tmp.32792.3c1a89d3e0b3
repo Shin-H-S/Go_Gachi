@@ -19,13 +19,11 @@ MYPAGE_LAYOUT_CSS = """
     padding-left: 0;
 }
 
-.st-key-mypage-shell [data-testid="column"]:not(:has(.mypage-sidebar-head)),
 .st-key-mypage-shell [data-testid="stColumn"]:not(:has(.mypage-sidebar-head)) {
     box-sizing: border-box;
     padding-top: 12px;
 }
 
-.st-key-mypage-shell [data-testid="column"]:has(.mypage-sidebar-head),
 .st-key-mypage-shell [data-testid="stColumn"]:has(.mypage-sidebar-head) {
     background: #ffffff !important;
     background-color: #ffffff !important;
@@ -33,17 +31,10 @@ MYPAGE_LAYOUT_CSS = """
     position: relative;
 }
 
-.st-key-mypage-shell [data-testid="column"]:has(.mypage-sidebar-head) > div,
 .st-key-mypage-shell [data-testid="stColumn"]:has(.mypage-sidebar-head) > div,
-.st-key-mypage-shell
-    [data-testid="column"]:has(.mypage-sidebar-head)
-    [data-testid="stVerticalBlock"],
 .st-key-mypage-shell
     [data-testid="stColumn"]:has(.mypage-sidebar-head)
     [data-testid="stVerticalBlock"],
-.st-key-mypage-shell
-    [data-testid="column"]:has(.mypage-sidebar-head)
-    [data-testid="stVerticalBlockBorderWrapper"],
 .st-key-mypage-shell
     [data-testid="stColumn"]:has(.mypage-sidebar-head)
     [data-testid="stVerticalBlockBorderWrapper"] {

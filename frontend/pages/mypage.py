@@ -33,8 +33,8 @@ PENDING_REFRESH_SESSION_KEY = "mypage_pending_refresh_last_at"
 PENDING_REFRESH_INTERVAL_SECONDS = 3.0
 
 MYPAGE_COPY_MARKERS = (
-    "닉네임의 마이페이지", "전체 작업", "업로드한 메뉴 사진",
-    "계정 설정", "새 폴더 만들기", "새로 생성하기",
+    "닉네임의 마이페이지", "전체 작업", "업로드한 원본 이미지",
+    "계정 설정", "새 폴더 만들기", "작업 페이지로 돌아가기",
 )
 
 
@@ -173,7 +173,7 @@ def render_mypage_page() -> None:
 
     title = view_title(view, folders)
     with st.container(key="mypage-shell"):
-        left_col, right_col = st.columns([0.22, 0.78], gap="large")
+        left_col, right_col = st.columns([0.176, 0.824], gap="large")
 
         with left_col:
             render_sidebar(profile, folders, view, access_token)

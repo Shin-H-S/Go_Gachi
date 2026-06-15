@@ -6,7 +6,6 @@ from frontend.core.config import (
     get_detail_labels,
     get_detail_size,
 )
-from frontend.services.api_client import request_asset_bytes
 from frontend.work.components import (
     render_channel_tabs,
     render_generation_lock_css,
@@ -21,123 +20,94 @@ from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_prima
 
 def render_work_page() -> None:
     render_header()
-    left_col, right_col = st.columns([0.38, 0.62], gap="large")
+    left_col, right_col = st.columns([0.4, 0.6], gap="medium")
 
     with left_col:
-        with st.container(border=True, key="left-upload-section"):
-            st.markdown(
-                """
-                <p class="section-label">메뉴 사진 업로드</p>
-                """,
-                unsafe_allow_html=True,
-            )
+        with st.container(border=True, key="left-options-panel"):
+            st.markdown('<div class="left-options-scroll-marker"></div>', unsafe_allow_html=True)
 
-            uploaded_files = st.file_uploader(
-                "메뉴 사진 업로드",
-                type=UPLOAD_FILE_TYPES,
-                help=UPLOAD_HELP_TEXT,
-                accept_multiple_files=True,
-                label_visibility="collapsed",
-            )
-            uploaded_file = get_primary_uploaded_file(uploaded_files)
+            with st.container(key="left-upload-section"):
+                st.markdown(
+                    """
+                    <p class="section-label">메뉴 사진 업로드</p>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-        with st.container(border=True, key="left-channel-section"):
-            st.markdown('<p class="section-label">광고 채널 선택</p>', unsafe_allow_html=True)
-            format_label = get_selected_channel()
-            render_channel_tabs(format_label)
+                uploaded_files = st.file_uploader(
+                    "메뉴 사진 업로드",
+                    type=UPLOAD_FILE_TYPES,
+                    help=UPLOAD_HELP_TEXT,
+                    accept_multiple_files=True,
+                    label_visibility="collapsed",
+                )
+                uploaded_file = get_primary_uploaded_file(uploaded_files)
 
-        with st.container(border=True, key="left-type-section"):
-            detail_options = get_detail_labels(format_label)
-            st.markdown('<p class="detail-choice-label">광고 유형 선택</p>', unsafe_allow_html=True)
-            detail_label = st.radio(
-                "광고 유형 선택",
-                options=detail_options,
-                horizontal=False,
-                label_visibility="collapsed",
-                key=f"detail_{FORMAT_OPTIONS[format_label]['value']}",
-            )
-            format_label_html = format_size_label(get_detail_size(format_label, detail_label))
-            st.markdown(
-                f"""
-                <div class="format-readout">
-                    <span>
-                        <strong class="channel-name">{format_label}</strong>
-                        <small>{detail_label}</small>
-                    </span>
-                    <span class="format-size">{format_label_html}</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            with st.container(key="left-channel-section"):
+                st.markdown('<p class="section-label">광고 채널 선택</p>', unsafe_allow_html=True)
+                format_label = get_selected_channel()
+                render_channel_tabs(format_label)
 
-        with st.container(border=True, key="left-prompt-section"):
-            st.markdown('<p class="section-label">프롬프트</p>', unsafe_allow_html=True)
-            prompt = st.text_area(
-                "프롬프트",
-                placeholder=(
-                    "예:\n"
-                    "제품을 크게 중앙에 배치해줘\n"
-                    "따뜻한 색감으로 만들어줘\n"
-                    "미니멀하고 프리미엄한 배경으로"
-                ),
-                height=120,
-                key="image_prompt",
-                label_visibility="collapsed",
-            )
-            ad_copy_prompt, ad_copy_enabled, copy_mode = render_copy_controls(
-                format_label,
-                detail_label,
-                prompt,
-            )
+            with st.container(key="left-type-section"):
+                detail_options = get_detail_labels(format_label)
+                st.markdown(
+                    '<p class="detail-choice-label">광고 유형 선택</p>',
+                    unsafe_allow_html=True,
+                )
+                detail_label = st.radio(
+                    "광고 유형 선택",
+                    options=detail_options,
+                    horizontal=False,
+                    label_visibility="collapsed",
+                    key=f"detail_{FORMAT_OPTIONS[format_label]['value']}",
+                )
+                format_label_html = format_size_label(get_detail_size(format_label, detail_label))
+                st.markdown(
+                    f"""
+                    <div class="format-readout">
+                        <span>
+                            <strong class="channel-name">{format_label}</strong>
+                            <small>{detail_label}</small>
+                        </span>
+                        <span class="format-size">{format_label_html}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-            current_result_context = build_result_context(
-                uploaded_file,
-                prompt,
-                format_label,
-                detail_label,
-                ad_copy_prompt=ad_copy_prompt,
-                copy_mode=copy_mode,
-                ad_copy_enabled=ad_copy_enabled,
-            )
-            sync_result_state(current_result_context)
+            with st.container(key="left-prompt-section"):
+                st.markdown('<p class="section-label">이미지 요청사항</p>', unsafe_allow_html=True)
+                prompt = st.text_area(
+                    "이미지 요청사항",
+                    placeholder=(
+                        "예:\n"
+                        "제품을 크게 중앙에 배치해줘\n"
+                        "따뜻한 색감으로 만들어줘\n"
+                        "미니멀하고 프리미엄한 배경으로"
+                    ),
+                    height=120,
+                    key="image_prompt",
+                    label_visibility="collapsed",
+                )
+                ad_copy_prompt, ad_copy_enabled, copy_mode = render_copy_controls(
+                    format_label,
+                    detail_label,
+                    prompt,
+                )
 
-            st.markdown('<div class="generate-button-marker"></div>', unsafe_allow_html=True)
-            generate = st.button("✦ 이미지 만들기", use_container_width=True, type="primary")
+                current_result_context = build_result_context(
+                    uploaded_file,
+                    prompt,
+                    format_label,
+                    detail_label,
+                    ad_copy_prompt=ad_copy_prompt,
+                    copy_mode=copy_mode,
+                    ad_copy_enabled=ad_copy_enabled,
+                )
+                sync_result_state(current_result_context)
 
-            st.markdown('<div class="tool-row">', unsafe_allow_html=True)
-            undo_col, redo_col, save_col = st.columns(3, gap="small")
-            with undo_col:
-                undo_clicked = st.button("↶", help="되돌리기", use_container_width=True)
-            with redo_col:
-                redo_clicked = st.button("↷", help="다시 실행", use_container_width=True)
-            with save_col:
-                if "result_bytes" in st.session_state:
-                    st.download_button(
-                        "💾",
-                        data=st.session_state["result_bytes"],
-                        file_name="cafe_ad_maker_result.png",
-                        mime="image/png",
-                        help="저장",
-                        use_container_width=True,
-                    )
-                else:
-                    save_clicked = st.button("💾", help="저장", use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        if undo_clicked:
-            st.info("되돌릴 이전 결과가 아직 없습니다.")
-        if redo_clicked:
-            st.info("다시 실행할 다음 결과가 아직 없습니다.")
-        if "result_bytes" not in st.session_state and "save_clicked" in locals() and save_clicked:
-            result_url = st.session_state.get("result_image_url")
-            if isinstance(result_url, str) and result_url:
-                try:
-                    st.session_state["result_bytes"] = request_asset_bytes(result_url)
-                    st.rerun()
-                except Exception as exc:
-                    st.error(f"결과 이미지를 다운로드할 수 없습니다: {exc}")
-            else:
-                st.info("저장할 결과 이미지를 먼저 만들어주세요.")
+        st.markdown('<div class="generate-button-marker"></div>', unsafe_allow_html=True)
+        generate = st.button("✦ 이미지 만들기", use_container_width=True, type="primary")
 
     is_generating = bool(generate and uploaded_file)
 
