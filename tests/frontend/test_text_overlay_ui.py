@@ -10,6 +10,7 @@ from frontend.work import copy_controls
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 WORK_PAGE = ROOT_DIR / "frontend" / "pages" / "work.py"
+WORK_COMPONENTS = ROOT_DIR / "frontend" / "work" / "components.py"
 COPY_CONTROLS = ROOT_DIR / "frontend" / "work" / "copy_controls.py"
 RESULT_PANEL = ROOT_DIR / "frontend" / "work" / "result_panel.py"
 
@@ -47,7 +48,7 @@ class FakeCopyControlStreamlit:
 
     def radio(self, *args, **kwargs) -> str:
         self.radio_calls.append({"args": args, "kwargs": kwargs})
-        return "그대로 사용"
+        return "원본대로 유지하기"
 
     def info(self, message: str) -> None:
         self.info_messages.append(message)
@@ -183,10 +184,13 @@ def test_copy_controls_render_manual_copy_mode_selector() -> None:
 
     assert copy_mode_radio is not None
     assert "COPY_MODE_OPTIONS" in source
+    assert '"광고 문구 다듬기 옵션"' in source
+    assert '"문구 처리 방식"' not in source
 
 
 def test_work_page_keeps_image_prompt_separate_from_ad_copy() -> None:
-    tree = ast.parse(WORK_PAGE.read_text(encoding="utf-8"))
+    source = WORK_PAGE.read_text(encoding="utf-8")
+    tree = ast.parse(source)
     text_area_calls = [
         node
         for node in ast.walk(tree)
@@ -207,6 +211,8 @@ def test_work_page_keeps_image_prompt_separate_from_ad_copy() -> None:
     )
 
     assert image_prompt is not None
+    assert "이미지 요청사항" in source
+    assert "프롬프트" not in source
 
 
 def test_work_page_displays_backend_copy_metadata() -> None:
@@ -230,6 +236,30 @@ def test_work_page_displays_result_inclusion_summary() -> None:
     )
     assert 'st.session_state.get("result_context")' in result_panel_source
     assert "render_result_summary(" in result_panel_source
+
+
+def test_work_page_moves_download_and_history_controls_to_result_panel() -> None:
+    work_source = WORK_PAGE.read_text(encoding="utf-8")
+    components_source = WORK_COMPONENTS.read_text(encoding="utf-8")
+    result_panel_source = RESULT_PANEL.read_text(encoding="utf-8")
+
+    assert "tool-row" not in work_source
+    assert "request_asset_bytes" not in work_source
+    assert "undo_clicked" not in work_source
+    assert "redo_clicked" not in work_source
+    assert "_render_header_download_button(" in components_source
+    assert "request_asset_bytes" in components_source
+    assert 'key="work-header-download-button"' in components_source
+    assert 'key="work-header-download-fetch"' in components_source
+    assert 'key="work-header-download-empty"' in components_source
+    assert "disabled=True" in components_source
+    assert "_render_download_action(" not in result_panel_source
+    assert "result-download" not in result_panel_source
+    assert "request_asset_bytes" not in result_panel_source
+    assert "_render_preview_history_controls(" in result_panel_source
+    assert "if is_generating:" in result_panel_source
+    assert 'key="work-preview-undo"' in result_panel_source
+    assert 'key="work-preview-redo"' in result_panel_source
 
 
 def test_request_backend_sends_ad_copy_disabled(monkeypatch: pytest.MonkeyPatch) -> None:

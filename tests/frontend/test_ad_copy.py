@@ -16,7 +16,7 @@ def test_frontend_copy_module_does_not_generate_hardcoded_ad_copy() -> None:
 
 def test_copy_mode_options_use_backend_values_and_korean_labels() -> None:
     assert COPY_MODE_OPTIONS == (
-        ("그대로 사용", "preserve"),
+        ("원본대로 유지하기", "preserve"),
         ("자연스럽게 다듬기", "polish"),
         ("홍보 문구로 바꾸기", "rewrite"),
     )

@@ -33,7 +33,7 @@ def render_copy_controls(
     copy_mode_labels = [label for label, _mode in COPY_MODE_OPTIONS]
     copy_mode_by_label = dict(COPY_MODE_OPTIONS)
     copy_mode_label = st.radio(
-        "문구 처리 방식",
+        "광고 문구 다듬기 옵션",
         options=copy_mode_labels,
         index=0,
         horizontal=False,

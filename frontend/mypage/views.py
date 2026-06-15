@@ -107,8 +107,8 @@ def render_uploads(uploads: list[dict]) -> None:
         st.markdown(
             """
             <div class="mypage-empty-state">
-                <strong>업로드한 메뉴 사진이 없습니다</strong>
-                <span>작업 페이지에서 메뉴 사진을 올리면 여기에 모입니다.</span>
+                <strong>업로드한 원본 이미지가 없습니다</strong>
+                <span>작업 페이지에서 원본 이미지를 올리면 여기에 모입니다.</span>
             </div>
             """,
             unsafe_allow_html=True,
