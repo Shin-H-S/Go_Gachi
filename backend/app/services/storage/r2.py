@@ -12,6 +12,7 @@ from backend.app.core.config import Settings
 logger = logging.getLogger(__name__)
 
 _NOT_FOUND_CODES: Final[set[str]] = {"404", "NoSuchKey", "NotFound"}
+_IMAGE_CACHE_CONTROL: Final[str] = "public, max-age=604800"
 
 
 class R2Storage:
@@ -35,6 +36,7 @@ class R2Storage:
                 Key=path,
                 Body=body,
                 ContentType=content_type,
+                CacheControl=_IMAGE_CACHE_CONTROL,
             )
         logger.info("r2 upload object_key=%s bytes=%d", path, len(body))
 
