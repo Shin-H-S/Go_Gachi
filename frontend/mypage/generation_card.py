@@ -12,6 +12,7 @@ from frontend.mypage.state import folder_choices, folder_name_by_id, format_date
 from frontend.services.api_client import (
     move_generation_to_folder,
     request_asset_bytes,
+    request_generation_download_url,
     to_backend_asset_url,
 )
 
@@ -59,11 +60,12 @@ def _cached_asset_bytes(url: str) -> bytes:
     return request_asset_bytes(url)
 
 
-def _prepare_download(request_id: str, image_url: str) -> None:
+def _prepare_download(access_token: str, request_id: str) -> None:
     data_key = _download_state_key(request_id)
     error_key = _download_error_key(request_id)
     try:
-        st.session_state[data_key] = _cached_asset_bytes(image_url)
+        download_url = request_generation_download_url(access_token, request_id)
+        st.session_state[data_key] = _cached_asset_bytes(download_url)
         st.session_state.pop(error_key, None)
     except httpx.HTTPError:
         st.session_state.pop(data_key, None)
@@ -165,7 +167,7 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
                 key=f"mypage-download-{request_id}",
                 use_container_width=True,
                 on_click=_prepare_download if image_url else None,
-                args=(request_id, image_url) if image_url else None,
+                args=(access_token, request_id) if image_url else None,
             )
 
 

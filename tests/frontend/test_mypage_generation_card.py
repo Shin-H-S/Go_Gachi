@@ -102,6 +102,7 @@ def test_generation_card_renders_original_image_as_new_tab_link(monkeypatch) -> 
     assert fake_st.buttons[0]["use_container_width"] is True
     assert fake_st.buttons[0]["disabled"] is False
     assert fake_st.buttons[0]["on_click"] == generation_card._prepare_download
+    assert fake_st.buttons[0]["args"] == ("jwt", "request-1")
     assert "원본: source.png" not in rendered_html
 
 
@@ -210,6 +211,31 @@ def test_generation_card_uses_prepared_download_bytes(monkeypatch) -> None:
     assert fake_st.buttons == []
     assert fake_st.downloads[0]["data"] == b"image"
     assert fake_st.downloads[0]["key"] == "mypage-download-request-1"
+
+
+def test_prepare_download_requests_signed_url_before_fetching_bytes(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    requested: list[tuple[str, str]] = []
+    fetched: list[str] = []
+    monkeypatch.setattr(generation_card, "st", fake_st)
+    monkeypatch.setattr(
+        generation_card,
+        "request_generation_download_url",
+        lambda token, request_id: (
+            requested.append((token, request_id)) or "https://signed.example/result.png"
+        ),
+    )
+    monkeypatch.setattr(
+        generation_card,
+        "_cached_asset_bytes",
+        lambda url: fetched.append(url) or b"image",
+    )
+
+    generation_card._prepare_download("jwt", "request-1")
+
+    assert requested == [("jwt", "request-1")]
+    assert fetched == ["https://signed.example/result.png"]
+    assert fake_st.session_state[generation_card._download_state_key("request-1")] == b"image"
 
 
 def test_generation_waiting_helper_tracks_only_fresh_pending_without_image() -> None:
