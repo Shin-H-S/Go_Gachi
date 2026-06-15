@@ -45,7 +45,7 @@ SUPABASE_JWT_SECRET=
 frontend/app.py
 ```
 
-Streamlit Cloud는 루트 `requirements.txt`를 프론트 배포 의존성 기준으로 사용합니다. 백엔드와 테스트 환경은 `pyproject.toml`과 `uv.lock`을 기준으로 관리합니다.
+프론트 의존성도 루트 `pyproject.toml`과 `uv.lock`을 기준으로 관리합니다. Streamlit Cloud 배포 설정은 별도 `requirements.txt` 없이 uv 기준으로 맞춥니다.
 
 Streamlit Cloud 필수 환경변수:
 

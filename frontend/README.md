@@ -42,7 +42,9 @@ Streamlit Cloud 배포 엔트리포인트는 아래 파일입니다.
 frontend/app.py
 ```
 
-Streamlit Cloud는 루트 `requirements.txt`를 프론트 배포 의존성 기준으로 사용합니다. 배포 환경변수에는 최소한 `BACKEND_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`를 설정합니다.
+프론트 의존성도 루트 `pyproject.toml`과 `uv.lock`을 기준으로 관리합니다. Streamlit Cloud 배포 설정에서도 별도 `requirements.txt`를 두지 않고 uv 기준으로 설치/실행하도록 맞춥니다.
+
+배포 환경변수에는 최소한 `BACKEND_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`를 설정합니다.
 
 ## Preset Rule
 

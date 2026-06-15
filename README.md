@@ -25,6 +25,12 @@ Python interpreter:
 Python 3.11.14
 ```
 
+Dependency management:
+
+```text
+uv + pyproject.toml + uv.lock
+```
+
 Backend runtime entrypoint:
 
 ```text

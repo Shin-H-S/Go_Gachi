@@ -14,6 +14,7 @@
 ## CI Validation
 
 프로젝트 Python 인터프리터는 `3.11.14`를 기준으로 맞춥니다.
+의존성은 `requirements.txt` 없이 `pyproject.toml`과 `uv.lock`을 단일 기준으로 관리합니다.
 
 PR과 `main` push에서 GitHub Actions가 아래 검증을 실행합니다.
 
