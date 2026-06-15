@@ -2,6 +2,7 @@ from html import escape
 
 import streamlit as st
 
+from frontend.core.config import DOWNLOAD_URL_TTL_SECONDS
 from frontend.mypage.generation_status import (
     has_generation_waiting_for_image,
     is_generation_in_progress,
@@ -15,6 +16,11 @@ from frontend.services.api_client import (
 
 GENERATION_CARD_COLUMNS = 4
 GENERATION_CARD_HEIGHT = 330
+_DOWNLOAD_TTL_MINUTES = max(1, DOWNLOAD_URL_TTL_SECONDS // 60)
+_DOWNLOAD_HELP = (
+    f"다운로드 링크는 {_DOWNLOAD_TTL_MINUTES}분 후 만료됩니다. "
+    "안 되면 마이페이지를 다시 열어주세요."
+)
 __all__ = ["has_generation_waiting_for_image", "render_generation_grid"]
 
 
@@ -117,7 +123,7 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
                 download_url,
                 key=f"mypage-download-{request_id}",
                 use_container_width=True,
-                help="다운로드가 안 되면 마이페이지를 새로고침해 주세요.",
+                help=_DOWNLOAD_HELP,
             )
         else:
             st.button(
