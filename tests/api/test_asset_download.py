@@ -57,7 +57,7 @@ def test_create_download_url_returns_r2_signed_url(monkeypatch) -> None:
             assert path == "outputs/result.png"
             assert filename == "result.png"
             assert content_type == "image/png"
-            assert expires_in == 300
+            assert expires_in == 1800
             return "https://signed.example/result.png"
 
     async def _override_user() -> AuthUser:
@@ -80,7 +80,7 @@ def test_create_download_url_returns_r2_signed_url(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "downloadUrl": "https://signed.example/result.png",
-        "expiresIn": 300,
+        "expiresIn": 1800,
     }
 
 

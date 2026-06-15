@@ -117,6 +117,7 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
                 download_url,
                 key=f"mypage-download-{request_id}",
                 use_container_width=True,
+                help="다운로드가 안 되면 마이페이지를 새로고침해 주세요.",
             )
         else:
             st.button(

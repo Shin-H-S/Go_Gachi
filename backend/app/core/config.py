@@ -102,7 +102,7 @@ class Settings(BaseModel):
     r2_endpoint_url: str = ""
     r2_bucket_name: str = ""
     r2_public_url: str = ""
-    download_url_ttl_seconds: int = 300
+    download_url_ttl_seconds: int = 1800
     cors_origins: list[str] = ["*"]
 
 
@@ -152,7 +152,7 @@ def get_settings() -> Settings:
         r2_endpoint_url=os.getenv("R2_ENDPOINT_URL", ""),
         r2_bucket_name=os.getenv("R2_BUCKET_NAME", ""),
         r2_public_url=os.getenv("R2_PUBLIC_URL", ""),
-        download_url_ttl_seconds=int(os.getenv("DOWNLOAD_URL_TTL_SECONDS", "300")),
+        download_url_ttl_seconds=int(os.getenv("DOWNLOAD_URL_TTL_SECONDS", "1800")),
         cors_origins=_parse_csv(os.getenv("CORS_ORIGINS", "*"), default=["*"]),
     )
 

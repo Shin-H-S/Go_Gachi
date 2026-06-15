@@ -96,6 +96,7 @@ def test_generation_card_renders_original_image_as_new_tab_link(monkeypatch) -> 
         "args": ("다운로드", "https://signed.example/result.png"),
         "key": "mypage-download-request-1",
         "use_container_width": True,
+        "help": "다운로드가 안 되면 마이페이지를 새로고침해 주세요.",
     } in fake_st.links
     assert fake_st.downloads == []
     assert "원본: source.png" not in rendered_html
