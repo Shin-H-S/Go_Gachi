@@ -20,7 +20,11 @@ from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Folder, Generation
-from backend.app.services.storage_url import output_url_if_exists_async, upload_url_if_exists_async
+from backend.app.services.storage_url import (
+    output_download_url,
+    output_url_if_exists_async,
+    upload_url_if_exists_async,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
@@ -122,6 +126,7 @@ async def read_my_generations(
             "folder_id": row.folder_id,
             "status": row.status,
             "image_url": image_url,
+            "download_url": output_download_url(row.output_path) if image_url else None,
             "original_image_url": upload_url,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         }

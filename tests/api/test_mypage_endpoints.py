@@ -74,8 +74,12 @@ def test_my_generations_hides_image_url_when_output_file_is_missing() -> None:
     assert response.status_code == 200
     items = {item["request_id"]: item for item in response.json()["items"]}
     assert items["existing-file"]["image_url"] == "/outputs/existing-result.png"
+    assert (
+        items["existing-file"]["download_url"] == "/api/assets/download/outputs/existing-result.png"
+    )
     assert items["existing-file"]["original_image_url"] == "/uploads/existing-original.png"
     assert items["missing-file"]["image_url"] is None
+    assert items["missing-file"]["download_url"] is None
     assert items["missing-file"]["original_image_url"] is None
 
 

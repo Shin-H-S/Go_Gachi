@@ -15,7 +15,6 @@ class FakeStreamlit:
         self.downloads: list[dict[str, object]] = []
         self.links: list[dict[str, object]] = []
         self.buttons: list[dict[str, object]] = []
-        self.errors: list[str] = []
         self.session_state: dict[str, object] = {}
         self.column_counts: list[tuple[int, str]] = []
         self.container_calls: list[dict[str, object]] = []
@@ -37,9 +36,6 @@ class FakeStreamlit:
 
     def button(self, *args, **kwargs) -> None:
         self.buttons.append({"args": args, **kwargs})
-
-    def error(self, body: str) -> None:
-        self.errors.append(body)
 
     def columns(self, count: int, gap: str) -> list["FakeContext"]:
         self.column_counts.append((count, gap))
@@ -64,19 +60,15 @@ class FakeContext:
         return None
 
 
-def test_generation_card_renders_original_image_as_new_tab_link(monkeypatch) -> None:
+def test_generation_card_renders_original_and_download_links(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     monkeypatch.setattr(generation_card, "st", fake_st)
-    monkeypatch.setattr(
-        generation_card,
-        "_cached_asset_bytes",
-        lambda url: (_ for _ in ()).throw(AssertionError("download bytes fetched early")),
-    )
 
     generation_card._render_generation_card(
         {
             "request_id": "request-1",
             "image_url": "/outputs/result.png",
+            "download_url": "/api/assets/download/outputs/result.png",
             "original_image_url": "/uploads/source.png",
             "preset_id": "channel",
             "status": "completed",
@@ -95,13 +87,15 @@ def test_generation_card_renders_original_image_as_new_tab_link(monkeypatch) -> 
             "args": ("원본", "http://127.0.0.1:8000/uploads/source.png"),
             "key": "mypage-original-request-1",
             "use_container_width": True,
-        }
+        },
+        {
+            "args": ("다운로드", "http://127.0.0.1:8000/api/assets/download/outputs/result.png"),
+            "key": "mypage-download-request-1",
+            "use_container_width": True,
+        },
     ]
     assert fake_st.downloads == []
-    assert fake_st.buttons[0]["key"] == "mypage-download-request-1"
-    assert fake_st.buttons[0]["use_container_width"] is True
-    assert fake_st.buttons[0]["disabled"] is False
-    assert fake_st.buttons[0]["on_click"] == generation_card._prepare_download
+    assert fake_st.buttons == []
     assert "원본: source.png" not in rendered_html
 
 
@@ -128,8 +122,8 @@ def test_generation_card_keeps_meta_on_one_line_and_disables_missing_download(
     assert "<span>daangn</span>" in rendered_html
     assert "<span>2026.06.10: failed</span>" in rendered_html
     assert "mypage-card-date" not in rendered_html
-    assert fake_st.buttons[0]["key"] == "mypage-download-failed-request"
     assert fake_st.downloads == []
+    assert fake_st.buttons[0]["key"] == "mypage-download-failed-request"
     assert fake_st.buttons[0]["disabled"] is True
 
 
@@ -187,29 +181,6 @@ def test_generation_card_marks_old_pending_image_as_timed_out(
     assert "timeout" in rendered_html
     assert fake_st.downloads == []
     assert fake_st.buttons[0]["disabled"] is True
-
-
-def test_generation_card_uses_prepared_download_bytes(monkeypatch) -> None:
-    fake_st = FakeStreamlit()
-    fake_st.session_state[generation_card._download_state_key("request-1")] = b"image"
-    monkeypatch.setattr(generation_card, "st", fake_st)
-
-    generation_card._render_generation_card(
-        {
-            "request_id": "request-1",
-            "image_url": "/outputs/result.png",
-            "original_image_url": "/uploads/source.png",
-            "preset_id": "channel",
-            "status": "completed",
-            "created_at": "2026-06-10T12:00:00",
-        },
-        [],
-        "jwt",
-    )
-
-    assert fake_st.buttons == []
-    assert fake_st.downloads[0]["data"] == b"image"
-    assert fake_st.downloads[0]["key"] == "mypage-download-request-1"
 
 
 def test_generation_waiting_helper_tracks_only_fresh_pending_without_image() -> None:
@@ -324,9 +295,9 @@ def test_generation_card_action_buttons_have_matching_size_and_distinct_colors()
 
     assert '[class*="st-key-mypage-original-"] a' in source
     assert '[class*="st-key-mypage-original-"] button' in source
+    assert '[class*="st-key-mypage-download-"] a' in source
     assert '[class*="st-key-mypage-download-"] button' in source
     assert 'div[data-testid="stLinkButton"] a' in source
-    assert 'div[data-testid="stDownloadButton"] button' in source
     assert "height: 34px !important" in source
     assert "min-height: 34px !important" in source
     assert "box-sizing: border-box !important" in source
