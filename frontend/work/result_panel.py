@@ -1,5 +1,9 @@
+from functools import cache
+from pathlib import Path
+
 import streamlit as st
 
+from frontend.media.image_data import bytes_to_data_url
 from frontend.work.preview import (
     render_image_preview,
     render_image_url_preview,
@@ -8,21 +12,61 @@ from frontend.work.preview import (
 from frontend.work.result_copy import render_result_copy
 from frontend.work.result_summary import render_result_summary
 
+_ARROW_ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
+
+
+@cache
+def _arrow_data_url(filename: str) -> str:
+    return bytes_to_data_url((_ARROW_ASSET_DIR / filename).read_bytes())
+
+
+def _render_preview_history_css() -> None:
+    undo_src = _arrow_data_url("left-arrow.png")
+    redo_src = _arrow_data_url("right-arrow.png")
+    st.markdown(
+        f"""
+        <style>
+        .st-key-work-preview-undo button,
+        .st-key-work-preview-redo button {{
+            position: relative !important;
+        }}
+        .st-key-work-preview-undo button::after,
+        .st-key-work-preview-redo button::after {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: auto 50%;
+            pointer-events: none;
+        }}
+        .st-key-work-preview-undo button::after {{
+            background-image: url("{undo_src}");
+        }}
+        .st-key-work-preview-redo button::after {{
+            background-image: url("{redo_src}");
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 def _render_preview_history_controls() -> None:
+    _render_preview_history_css()
     with st.container(key="preview-history-controls"):
         st.markdown('<div class="preview-history-controls"></div>', unsafe_allow_html=True)
         _, undo_col, redo_col, _ = st.columns([0.28, 0.22, 0.22, 0.28], gap="small")
         with undo_col:
             undo_clicked = st.button(
-                "↶",
+                " ",
                 key="work-preview-undo",
                 help="되돌리기",
                 use_container_width=True,
             )
         with redo_col:
             redo_clicked = st.button(
-                "↷",
+                " ",
                 key="work-preview-redo",
                 help="다시 실행",
                 use_container_width=True,

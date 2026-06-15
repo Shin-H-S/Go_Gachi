@@ -1,4 +1,6 @@
+from functools import cache
 from html import escape
+from pathlib import Path
 
 import streamlit as st
 
@@ -10,6 +12,28 @@ from frontend.services.api_client import request_asset_bytes, request_me
 
 WORK_HEADER_PROFILE_KEY = "work_header_profile"
 WORK_HEADER_PROFILE_TOKEN_KEY = "work_header_profile_token"
+
+WORK_ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
+
+
+@cache
+def _label_icon_data_url(filename: str) -> str:
+    return bytes_to_data_url((WORK_ASSET_DIR / filename).read_bytes())
+
+
+def render_section_label(
+    text: str,
+    icon_filename: str,
+    css_class: str = "section-label",
+) -> None:
+    """Render a work-page section label with a leading icon sized to the text."""
+    icon_src = escape(_label_icon_data_url(icon_filename), quote=True)
+    st.markdown(
+        f'<p class="{css_class}">'
+        f'<img class="label-icon" src="{icon_src}" alt="" aria-hidden="true" /> '
+        f"{escape(text)}</p>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_channel_tabs(selected_label: str) -> None:

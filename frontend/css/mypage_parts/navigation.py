@@ -2,10 +2,22 @@ from frontend.css.mypage_parts.navigation_actions import MYPAGE_NAVIGATION_ACTIO
 
 MYPAGE_NAVIGATION_BASE_CSS = """
 .mypage-nav-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin: 22px 0 8px;
     color: #8a918e;
     font-size: 13px;
     font-weight: 700;
+    text-align: center;
+}
+
+.mypage-nav-label::before,
+.mypage-nav-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #8a918e;
 }
 
 .st-key-mypage-shell [data-testid="column"]:has(.mypage-sidebar-head) button,
@@ -36,6 +48,7 @@ MYPAGE_NAVIGATION_BASE_CSS = """
     color: #202725 !important;
     -webkit-text-fill-color: #202725 !important;
     font-size: 19.2px !important;
+    font-weight: 700 !important;
 }
 
 .st-key-mypage-shell [data-testid="stColumn"]:has(.mypage-sidebar-head) button::before,
@@ -110,10 +123,6 @@ div[data-testid="stElementContainer"]:has(.mypage-sidebar-button-marker)
 .st-key-mypage-nav-uploads button:hover,
 .st-key-mypage-nav-uploads button:focus,
 .st-key-mypage-nav-uploads button:active,
-.st-key-mypage-nav-account button,
-.st-key-mypage-nav-account button:hover,
-.st-key-mypage-nav-account button:focus,
-.st-key-mypage-nav-account button:active,
 [class*="st-key-mypage-folder-"] button,
 [class*="st-key-mypage-folder-"] button:hover,
 [class*="st-key-mypage-folder-"] button:focus,
@@ -131,6 +140,7 @@ div[data-testid="stElementContainer"]:has(.mypage-sidebar-button-marker)
     -webkit-text-fill-color: #202725 !important;
     font-weight: 700 !important;
 }
+
 """
 
 MYPAGE_NAVIGATION_CSS = "\n".join(

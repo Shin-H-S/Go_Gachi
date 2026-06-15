@@ -1,6 +1,6 @@
 MYPAGE_CARD_THUMBNAILS_CSS = """
 .mypage-empty-thumb {
-    height: 150px;
+    height: var(--mypage-generation-thumb-height);
     display: grid;
     place-items: center;
     border-radius: 8px;
@@ -10,7 +10,7 @@ MYPAGE_CARD_THUMBNAILS_CSS = """
 }
 
 .mypage-generating-thumb {
-    height: 150px;
+    height: var(--mypage-generation-thumb-height);
     display: grid;
     place-items: center;
     align-content: center;
@@ -47,7 +47,7 @@ MYPAGE_CARD_THUMBNAILS_CSS = """
 }
 
 .mypage-stale-thumb {
-    height: 150px;
+    height: var(--mypage-generation-thumb-height);
     display: grid;
     place-items: center;
     align-content: center;

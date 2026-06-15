@@ -179,7 +179,7 @@ def render_mypage_page() -> None:
             render_sidebar(profile, folders, view, access_token)
 
         with right_col:
-            render_topbar(view, title, access_token)
+            render_topbar(view, title, access_token, generations=generations, folders=folders)
             if view == RECENT_VIEW:
                 render_recent_work(
                     generations,

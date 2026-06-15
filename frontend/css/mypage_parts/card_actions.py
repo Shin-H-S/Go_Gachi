@@ -1,53 +1,73 @@
 MYPAGE_CARD_ACTIONS_CSS = """
-.st-key-mypage-shell [class*="st-key-mypage-original-"] a,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] button,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] div[data-testid="stLinkButton"] a,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] div[data-testid="stButton"] button,
-.st-key-mypage-shell [class*="st-key-mypage-download-"] button,
-.st-key-mypage-shell [class*="st-key-mypage-download-"] div[data-testid="stDownloadButton"] button {
-    height: 34px !important;
-    min-height: 34px !important;
-    padding: 0 10px !important;
+.st-key-mypage-shell [class*="st-key-mypage-action-original-"] a,
+.st-key-mypage-shell [class*="st-key-mypage-action-original-"] button,
+.st-key-mypage-shell [class*="st-key-mypage-action-original-"] div[data-testid="stLinkButton"] a,
+.st-key-mypage-shell [class*="st-key-mypage-action-original-"] div[data-testid="stButton"] button,
+.st-key-mypage-shell [class*="st-key-mypage-action-download-"] button,
+.st-key-mypage-shell [class*="st-key-mypage-action-download-"]
+    div[data-testid="stDownloadButton"] button,
+.st-key-mypage-shell [class*="st-key-mypage-action-folder-"] button,
+.st-key-mypage-shell [class*="st-key-mypage-action-folder-"] div[data-testid="stButton"] button {
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 0 14px !important;
     box-sizing: border-box !important;
     display: flex !important;
     align-items: center;
     justify-content: center;
-    border-width: 1px !important;
-    border-style: solid !important;
+    border: 1px solid #ddd9cf !important;
     border-radius: 8px !important;
-    box-shadow: none !important;
+    background: #fbfaf6 !important;
+    box-shadow: 0 1px 3px rgba(28, 33, 31, 0.08) !important;
+    color: #394b4a !important;
+    -webkit-text-fill-color: #394b4a !important;
     font-size: 13px !important;
     font-weight: 900 !important;
     line-height: 1 !important;
 }
 
-.st-key-mypage-shell [class*="st-key-mypage-original-"] a,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] button {
-    background: #f5f4ee !important;
-    border-color: #d7d2c7 !important;
-    color: #46524f !important;
-    -webkit-text-fill-color: #46524f !important;
+.st-key-mypage-shell [class*="st-key-mypage-action-download-"] button,
+.st-key-mypage-shell [class*="st-key-mypage-action-download-"]
+    div[data-testid="stDownloadButton"] button {
+    background: #fbfaf6 !important;
+    border-color: #ddd9cf !important;
+    color: #394b4a !important;
+    -webkit-text-fill-color: #394b4a !important;
 }
 
-.st-key-mypage-shell [class*="st-key-mypage-download-"] button,
-.st-key-mypage-shell [class*="st-key-mypage-download-"] div[data-testid="stDownloadButton"] button {
-    background: #eaf4ff !important;
-    border-color: #b9d6f5 !important;
-    color: #245c8f !important;
-    -webkit-text-fill-color: #245c8f !important;
+.st-key-mypage-shell [class*="st-key-mypage-action-download-"] button:disabled,
+.st-key-mypage-shell [class*="st-key-mypage-action-original-"] button:disabled,
+.st-key-mypage-shell [class*="st-key-mypage-action-folder-"] button:disabled {
+    background: #f4f1ea !important;
+    border-color: #e1ded5 !important;
+    color: #a6aba8 !important;
+    -webkit-text-fill-color: #a6aba8 !important;
+    opacity: 1;
 }
 
-.st-key-mypage-shell [class*="st-key-mypage-download-"] button:disabled {
-    background: #f4f8fc !important;
-    border-color: #d7e2ea !important;
-    color: #8a98a4 !important;
-    -webkit-text-fill-color: #8a98a4 !important;
-    opacity: 0.65;
+.st-key-mypage-shell [class*="st-key-mypage-action-folder-select"] div[data-baseweb="select"] {
+    min-height: 42px !important;
 }
 
-.st-key-mypage-shell [class*="st-key-mypage-original-"] a p,
-.st-key-mypage-shell [class*="st-key-mypage-original-"] button p,
-.st-key-mypage-shell [class*="st-key-mypage-download-"] button p {
+.st-key-mypage-shell [class*="st-key-mypage-action-folder-select"]
+    div[data-baseweb="select"] > div {
+    min-height: 42px !important;
+    border: 1px solid #e4e0d8 !important;
+    border-radius: 8px !important;
+    background: #f2f5f3 !important;
+    box-shadow: none !important;
+}
+
+.st-key-mypage-shell [class*="st-key-mypage-action-folder-select"] div[data-baseweb="select"] span,
+.st-key-mypage-shell [class*="st-key-mypage-action-folder-select"] div[data-baseweb="select"] svg {
+    color: #9aa4a0 !important;
+    -webkit-text-fill-color: #9aa4a0 !important;
+}
+
+.st-key-mypage-shell [class*="st-key-mypage-action-original-"] a p,
+.st-key-mypage-shell [class*="st-key-mypage-action-original-"] button p,
+.st-key-mypage-shell [class*="st-key-mypage-action-download-"] button p,
+.st-key-mypage-shell [class*="st-key-mypage-action-folder-"] button p {
     margin: 0;
     line-height: 1 !important;
 }

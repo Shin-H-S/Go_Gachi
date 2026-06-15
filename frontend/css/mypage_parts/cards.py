@@ -25,8 +25,15 @@ MYPAGE_CARD_LAYOUT_CSS = """
 
 .st-key-mypage-shell [class*="st-key-mypage-generation-card-"] {
     --mypage-generation-content-width: 267px;
+    --mypage-generation-thumb-height: 205px;
     height: 330px;
     overflow: hidden;
+}
+
+.st-key-mypage-shell [class*="st-key-mypage-generation-card-selected-"] {
+    border-width: 3px !important;
+    border-color: #00a6a6 !important;
+    box-shadow: 0 0 0 1px rgba(0, 166, 166, 0.16) !important;
 }
 
 .st-key-mypage-shell
@@ -40,7 +47,7 @@ MYPAGE_CARD_LAYOUT_CSS = """
 .st-key-mypage-shell
     [class*="st-key-mypage-generation-card-"]
     div[data-testid="stImage"] {
-    height: 150px;
+    height: var(--mypage-generation-thumb-height);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -53,7 +60,7 @@ MYPAGE_CARD_LAYOUT_CSS = """
     [class*="st-key-mypage-generation-card-"]
     div[data-testid="stImage"] img {
     width: 100%;
-    height: 150px;
+    height: var(--mypage-generation-thumb-height);
     object-fit: contain;
 }
 
@@ -74,15 +81,28 @@ MYPAGE_CARD_LAYOUT_CSS = """
     .mypage-card-meta,
 .st-key-mypage-shell
     [class*="st-key-mypage-generation-card-"]
-    div[data-testid="stSelectbox"],
+    .mypage-card-select-zone,
 .st-key-mypage-shell
     [class*="st-key-mypage-generation-card-"]
-    div[data-testid="stHorizontalBlock"] {
+    [class*="st-key-mypage-select-"] {
     width: min(100%, var(--mypage-generation-content-width));
     max-width: 100%;
     margin-left: auto;
     margin-right: auto;
     box-sizing: border-box;
+}
+
+.st-key-mypage-shell [class*="st-key-mypage-select-"] button {
+    height: 32px !important;
+    min-height: 32px !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(0, 166, 166, 0.32) !important;
+    background: #f7fffd !important;
+    color: #087a7a !important;
+    -webkit-text-fill-color: #087a7a !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    box-shadow: none !important;
 }
 
 .mypage-card-meta {
@@ -91,14 +111,16 @@ MYPAGE_CARD_LAYOUT_CSS = """
     max-width: 100%;
     box-sizing: border-box;
     display: grid;
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.35fr);
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
     align-items: center;
-    gap: 8px;
-    margin-top: 12px;
+    gap: 10px;
+    margin-top: 6px;
+    margin-bottom: 2px;
     overflow: hidden;
     color: #46524f;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
+    line-height: 1.15;
 }
 
 .mypage-card-meta span {
@@ -109,9 +131,19 @@ MYPAGE_CARD_LAYOUT_CSS = """
     white-space: nowrap;
 }
 
-.mypage-card-meta span:last-child {
+.mypage-card-identity {
+    justify-self: start;
+    text-align: left;
+}
+
+.mypage-card-folder {
     justify-self: end;
     text-align: right;
+}
+
+.mypage-card-select-zone {
+    height: 0;
+    margin: 0;
 }
 
 .mypage-card-date {
