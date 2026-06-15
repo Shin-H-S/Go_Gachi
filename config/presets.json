@@ -75,7 +75,7 @@
         "width": 1280,
         "height": 960,
         "api_size": "1280x960",
-        "prompt_hint": "Create an event-ready promotional image optimized for Danggeun posts. Keep the product central and easy to recognize while creating a brighter and more attention-catching composition suitable for local promotions or seasonal offer campaigns. When text is requested by the system prompt, allow clean and readable Korean promotional typography that supports local event communication while preserving product visibility and balanced composition. Preserve clean space and maintain approachable local-community visual quality."
+        "prompt_hint": "Create an event-ready promotional image optimized for Danggeun posts. Keep the product central and easy to recognize while creating a brighter and more attention-catching composition suitable for local promotions or seasonal offer campaigns. When text is requested by the system prompt, allow clean and readable Korean promotional typography that supports local event communication while preserving product visibility and balanced composition. If a CTA button is generated, use ONLY Danggeun's signature orange brand color for the CTA button background. Keep headline, body text, and other text elements visually adaptive and automatically selected to harmonize with the product, generated background, readability, and overall composition. Do not recolor all typography or apply global orange tinting. Preserve clean space and maintain approachable local-community visual quality."
       }
     ]
   }
