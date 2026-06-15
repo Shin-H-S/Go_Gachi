@@ -123,14 +123,16 @@ def _image_copy_style_instruction(preset: Preset, detail: PresetDetail | None) -
         "Render subcopy in a clean, legible sans-serif. "
         "Render CTA clearly and compactly. "
         "Ensure adequate contrast for readability on the background. "
-        "Render the supplied Korean text, numbers, punctuation, and prices as accurately as possible. "
-        "Do not change prices, menu names, dates, quantities, or discount numbers. "
+        "Render the supplied Korean text, numbers, punctuation, and prices "
+        "as accurately as possible. "
+        "Do not change prices, menu names, dates, quantities, "
+        "or discount numbers. "
         "Do not add extra text beyond the supplied ad copy."
     )
 
     if preset.id == "daangn" and detail and detail.id == "discount_event":
         return base + (
-            " For Danggeun discount_event, the CTA color policy has priority: "
+            "For Danggeun discount_event, the CTA color policy has priority: "
             "apply Danggeun brand orange (#F7863B) ONLY to CTA button backgrounds. "
             "Do not apply #F7863B to headlines, subcopy, event text, decorations, "
             "background tint, props, lighting, or overall color grading. "
@@ -143,8 +145,10 @@ def _image_copy_style_instruction(preset: Preset, detail: PresetDetail | None) -
 def _baemin_ignore_image_copy_instruction() -> str:
     """배민 채널은 광고 문구가 있어도 이미지 내 텍스트 렌더링을 금지한다."""
     return (
-        "Although ad copy was supplied internally, this Baemin preset must remain text-free. "
-        "Do not render the supplied headline, subcopy, CTA, or any other typography inside the image. "
+        "Although ad copy was supplied internally, this Baemin preset "
+        "must remain text-free. "
+        "Do not render the supplied headline, subcopy, CTA, "
+        "or any other typography inside the image. "
         "Follow the Baemin channel policy: create a clean product-only image optimized for "
         "delivery-app thumbnail readability and ordering decisions."
     )
