@@ -44,9 +44,30 @@ def _card_container_key(item: dict, index: int) -> str:
     return f"mypage-generation-card-{suffix}"
 
 
+def _download_state_key(request_id: str) -> str:
+    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
+    return f"mypage-download-bytes-{suffix}"
+
+
+def _download_error_key(request_id: str) -> str:
+    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
+    return f"mypage-download-error-{suffix}"
+
+
 @st.cache_data(show_spinner=False)
 def _cached_asset_bytes(url: str) -> bytes:
     return request_asset_bytes(url)
+
+
+def _prepare_download(request_id: str, image_url: str) -> None:
+    data_key = _download_state_key(request_id)
+    error_key = _download_error_key(request_id)
+    try:
+        st.session_state[data_key] = _cached_asset_bytes(image_url)
+        st.session_state.pop(error_key, None)
+    except httpx.HTTPError:
+        st.session_state.pop(data_key, None)
+        st.session_state[error_key] = True
 
 
 def _render_generation_card(item: dict, folders: list[dict], access_token: str) -> None:
@@ -121,24 +142,31 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
                 key=f"mypage-original-{request_id}",
                 use_container_width=True,
             )
-    download_data = b""
-    download_disabled = True
-    if image_url:
-        try:
-            download_data = _cached_asset_bytes(image_url)
-            download_disabled = False
-        except httpx.HTTPError:
-            st.error("이미지를 다운로드할 수 없습니다.")
+    data_key = _download_state_key(request_id)
+    error_key = _download_error_key(request_id)
+    if st.session_state.get(error_key):
+        st.error("이미지를 다운로드할 수 없습니다.")
+
     with download_col:
-        st.download_button(
-            "다운로드",
-            data=download_data,
-            file_name=_download_file_name(item),
-            mime="image/png",
-            use_container_width=True,
-            key=f"mypage-download-{request_id}",
-            disabled=download_disabled,
-        )
+        download_data = st.session_state.get(data_key)
+        if isinstance(download_data, bytes):
+            st.download_button(
+                "다운로드",
+                data=download_data,
+                file_name=_download_file_name(item),
+                mime="image/png",
+                use_container_width=True,
+                key=f"mypage-download-{request_id}",
+            )
+        else:
+            st.button(
+                "다운로드",
+                disabled=not image_url,
+                key=f"mypage-download-{request_id}",
+                use_container_width=True,
+                on_click=_prepare_download if image_url else None,
+                args=(request_id, image_url) if image_url else None,
+            )
 
 
 def render_generation_grid(items: list[dict], folders: list[dict], access_token: str) -> None:
