@@ -3,7 +3,9 @@ MYPAGE_CARD_ACTIONS_CSS = """
 .st-key-mypage-shell [class*="st-key-mypage-original-"] button,
 .st-key-mypage-shell [class*="st-key-mypage-original-"] div[data-testid="stLinkButton"] a,
 .st-key-mypage-shell [class*="st-key-mypage-original-"] div[data-testid="stButton"] button,
+.st-key-mypage-shell [class*="st-key-mypage-download-"] a,
 .st-key-mypage-shell [class*="st-key-mypage-download-"] button,
+.st-key-mypage-shell [class*="st-key-mypage-download-"] div[data-testid="stLinkButton"] a,
 .st-key-mypage-shell [class*="st-key-mypage-download-"] div[data-testid="stDownloadButton"] button {
     height: 34px !important;
     min-height: 34px !important;
@@ -29,12 +31,15 @@ MYPAGE_CARD_ACTIONS_CSS = """
     -webkit-text-fill-color: #46524f !important;
 }
 
+.st-key-mypage-shell [class*="st-key-mypage-download-"] a,
 .st-key-mypage-shell [class*="st-key-mypage-download-"] button,
+.st-key-mypage-shell [class*="st-key-mypage-download-"] div[data-testid="stLinkButton"] a,
 .st-key-mypage-shell [class*="st-key-mypage-download-"] div[data-testid="stDownloadButton"] button {
     background: #eaf4ff !important;
     border-color: #b9d6f5 !important;
     color: #245c8f !important;
     -webkit-text-fill-color: #245c8f !important;
+    text-decoration: none !important;
 }
 
 .st-key-mypage-shell [class*="st-key-mypage-download-"] button:disabled {
@@ -47,6 +52,7 @@ MYPAGE_CARD_ACTIONS_CSS = """
 
 .st-key-mypage-shell [class*="st-key-mypage-original-"] a p,
 .st-key-mypage-shell [class*="st-key-mypage-original-"] button p,
+.st-key-mypage-shell [class*="st-key-mypage-download-"] a p,
 .st-key-mypage-shell [class*="st-key-mypage-download-"] button p {
     margin: 0;
     line-height: 1 !important;

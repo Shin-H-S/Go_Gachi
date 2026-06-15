@@ -1,6 +1,5 @@
 from html import escape
 
-import httpx
 import streamlit as st
 
 from frontend.mypage.generation_status import (
@@ -11,8 +10,6 @@ from frontend.mypage.generation_status import (
 from frontend.mypage.state import folder_choices, folder_name_by_id, format_date
 from frontend.services.api_client import (
     move_generation_to_folder,
-    request_asset_bytes,
-    request_generation_download_url,
     to_backend_asset_url,
 )
 
@@ -33,49 +30,18 @@ def _assign_generation_folder(
     move_generation_to_folder(access_token, request_id, mapping[selected_label])
 
 
-def _download_file_name(item: dict) -> str:
-    request_id = str(item.get("request_id") or "").strip()
-    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
-    return f"go_gachi_ad_{suffix}.png"
-
-
 def _card_container_key(item: dict, index: int) -> str:
     request_id = str(item.get("request_id") or "").strip()
     suffix = request_id.replace("/", "-").replace("\\", "-") or str(index)
     return f"mypage-generation-card-{suffix}"
 
 
-def _download_state_key(request_id: str) -> str:
-    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
-    return f"mypage-download-bytes-{suffix}"
-
-
-def _download_error_key(request_id: str) -> str:
-    suffix = request_id.replace("/", "-").replace("\\", "-") or "image"
-    return f"mypage-download-error-{suffix}"
-
-
-@st.cache_data(show_spinner=False)
-def _cached_asset_bytes(url: str) -> bytes:
-    return request_asset_bytes(url)
-
-
-def _prepare_download(access_token: str, request_id: str) -> None:
-    data_key = _download_state_key(request_id)
-    error_key = _download_error_key(request_id)
-    try:
-        download_url = request_generation_download_url(access_token, request_id)
-        st.session_state[data_key] = _cached_asset_bytes(download_url)
-        st.session_state.pop(error_key, None)
-    except httpx.HTTPError:
-        st.session_state.pop(data_key, None)
-        st.session_state[error_key] = True
-
-
 def _render_generation_card(item: dict, folders: list[dict], access_token: str) -> None:
+    _ = access_token  # 폴더 변경 콜백에서만 사용하므로 인자만 유지한다.
     request_id = str(item.get("request_id") or "")
     image_url = to_backend_asset_url(item.get("image_url"))
     original_image_url = to_backend_asset_url(item.get("original_image_url"))
+    download_url = str(item.get("download_url") or "")
     preset_id = str(item.get("preset_id") or "channel")
     status = str(item.get("status") or "-")
     created_at_value = item.get("created_at")
@@ -144,30 +110,20 @@ def _render_generation_card(item: dict, folders: list[dict], access_token: str) 
                 key=f"mypage-original-{request_id}",
                 use_container_width=True,
             )
-    data_key = _download_state_key(request_id)
-    error_key = _download_error_key(request_id)
-    if st.session_state.get(error_key):
-        st.error("이미지를 다운로드할 수 없습니다.")
-
     with download_col:
-        download_data = st.session_state.get(data_key)
-        if isinstance(download_data, bytes):
-            st.download_button(
+        if download_url:
+            st.link_button(
                 "다운로드",
-                data=download_data,
-                file_name=_download_file_name(item),
-                mime="image/png",
-                use_container_width=True,
+                download_url,
                 key=f"mypage-download-{request_id}",
+                use_container_width=True,
             )
         else:
             st.button(
                 "다운로드",
-                disabled=not image_url,
+                disabled=True,
                 key=f"mypage-download-{request_id}",
                 use_container_width=True,
-                on_click=_prepare_download if image_url else None,
-                args=(access_token, request_id) if image_url else None,
             )
 
 

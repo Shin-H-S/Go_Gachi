@@ -67,17 +67,13 @@ class FakeContext:
 def test_generation_card_renders_original_image_as_new_tab_link(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     monkeypatch.setattr(generation_card, "st", fake_st)
-    monkeypatch.setattr(
-        generation_card,
-        "_cached_asset_bytes",
-        lambda url: (_ for _ in ()).throw(AssertionError("download bytes fetched early")),
-    )
 
     generation_card._render_generation_card(
         {
             "request_id": "request-1",
             "image_url": "/outputs/result.png",
             "original_image_url": "/uploads/source.png",
+            "download_url": "https://signed.example/result.png",
             "preset_id": "channel",
             "status": "completed",
             "created_at": "2026-06-10T12:00:00",
@@ -90,19 +86,18 @@ def test_generation_card_renders_original_image_as_new_tab_link(monkeypatch) -> 
     assert fake_st.images[0].endswith("/outputs/result.png")
     rendered_html = "".join(fake_st.markdowns)
     assert fake_st.column_counts == [(2, "small")]
-    assert fake_st.links == [
-        {
-            "args": ("원본", "http://127.0.0.1:8000/uploads/source.png"),
-            "key": "mypage-original-request-1",
-            "use_container_width": True,
-        }
-    ]
+    # 원본 + 다운로드가 모두 link_button으로 1클릭 동작한다.
+    assert {
+        "args": ("원본", "http://127.0.0.1:8000/uploads/source.png"),
+        "key": "mypage-original-request-1",
+        "use_container_width": True,
+    } in fake_st.links
+    assert {
+        "args": ("다운로드", "https://signed.example/result.png"),
+        "key": "mypage-download-request-1",
+        "use_container_width": True,
+    } in fake_st.links
     assert fake_st.downloads == []
-    assert fake_st.buttons[0]["key"] == "mypage-download-request-1"
-    assert fake_st.buttons[0]["use_container_width"] is True
-    assert fake_st.buttons[0]["disabled"] is False
-    assert fake_st.buttons[0]["on_click"] == generation_card._prepare_download
-    assert fake_st.buttons[0]["args"] == ("jwt", "request-1")
     assert "원본: source.png" not in rendered_html
 
 
@@ -190,16 +185,16 @@ def test_generation_card_marks_old_pending_image_as_timed_out(
     assert fake_st.buttons[0]["disabled"] is True
 
 
-def test_generation_card_uses_prepared_download_bytes(monkeypatch) -> None:
+def test_generation_card_disables_download_when_url_missing(monkeypatch) -> None:
     fake_st = FakeStreamlit()
-    fake_st.session_state[generation_card._download_state_key("request-1")] = b"image"
     monkeypatch.setattr(generation_card, "st", fake_st)
 
     generation_card._render_generation_card(
         {
-            "request_id": "request-1",
+            "request_id": "no-download",
             "image_url": "/outputs/result.png",
             "original_image_url": "/uploads/source.png",
+            "download_url": None,
             "preset_id": "channel",
             "status": "completed",
             "created_at": "2026-06-10T12:00:00",
@@ -208,34 +203,14 @@ def test_generation_card_uses_prepared_download_bytes(monkeypatch) -> None:
         "jwt",
     )
 
-    assert fake_st.buttons == []
-    assert fake_st.downloads[0]["data"] == b"image"
-    assert fake_st.downloads[0]["key"] == "mypage-download-request-1"
-
-
-def test_prepare_download_requests_signed_url_before_fetching_bytes(monkeypatch) -> None:
-    fake_st = FakeStreamlit()
-    requested: list[tuple[str, str]] = []
-    fetched: list[str] = []
-    monkeypatch.setattr(generation_card, "st", fake_st)
-    monkeypatch.setattr(
-        generation_card,
-        "request_generation_download_url",
-        lambda token, request_id: (
-            requested.append((token, request_id)) or "https://signed.example/result.png"
-        ),
-    )
-    monkeypatch.setattr(
-        generation_card,
-        "_cached_asset_bytes",
-        lambda url: fetched.append(url) or b"image",
-    )
-
-    generation_card._prepare_download("jwt", "request-1")
-
-    assert requested == [("jwt", "request-1")]
-    assert fetched == ["https://signed.example/result.png"]
-    assert fake_st.session_state[generation_card._download_state_key("request-1")] == b"image"
+    # download_url이 없으면 link_button 대신 비활성 버튼만 렌더된다.
+    download_links = [
+        link for link in fake_st.links if link.get("key", "").startswith("mypage-download-")
+    ]
+    assert download_links == []
+    assert fake_st.downloads == []
+    assert fake_st.buttons[0]["key"] == "mypage-download-no-download"
+    assert fake_st.buttons[0]["disabled"] is True
 
 
 def test_generation_waiting_helper_tracks_only_fresh_pending_without_image() -> None:

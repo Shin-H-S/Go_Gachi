@@ -32,7 +32,6 @@ __all__ = [
     "request_auto_copy",
     "request_me",
     "request_backend",
-    "request_generation_download_url",
     "request_my_folders",
     "request_my_generations",
     "request_my_uploads",
@@ -70,17 +69,6 @@ def request_my_generations(access_token: str, page: int = 1) -> dict:
     )
     response.raise_for_status()
     return response.json()
-
-
-def request_generation_download_url(access_token: str, request_id: str) -> str:
-    response = httpx.post(
-        f"{BACKEND_URL}/api/assets/generations/{request_id}/download-url",
-        headers=_auth_headers(access_token),
-        timeout=30,
-    )
-    response.raise_for_status()
-    data = response.json()
-    return to_backend_asset_url(str(data.get("downloadUrl") or "")) or ""
 
 
 def request_my_folders(access_token: str) -> dict:

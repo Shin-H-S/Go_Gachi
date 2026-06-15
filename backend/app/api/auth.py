@@ -16,10 +16,12 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 
 from backend.app.core.auth import AuthUser, get_current_user
+from backend.app.core.config import get_settings
 from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Folder, Generation
+from backend.app.services.storage import get_storage
 from backend.app.services.storage_url import output_url_if_exists_async, upload_url_if_exists_async
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -41,6 +43,26 @@ def _folder_item(folder: Folder) -> dict[str, object]:
         "name": folder.name,
         "created_at": folder.created_at.isoformat() if folder.created_at else None,
     }
+
+
+async def _download_url_for_row(storage, settings, row: Generation) -> str | None:
+    """결과 이미지가 있으면 짧은 만료 signed URL을 만들어 1클릭 다운로드를 가능하게 한다."""
+    if row.output_path is None or row.status != "success":
+        return None
+    filename = row.output_path.replace("\\", "/").rsplit("/", 1)[-1]
+    if not filename:
+        return None
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    try:
+        return await storage.download_url(
+            row.output_path,
+            filename=filename,
+            content_type=content_type,
+            expires_in=settings.download_url_ttl_seconds,
+        )
+    except Exception:
+        logger.exception("download url create failed request_id=%s", row.request_id)
+        return None
 
 
 async def _file_to_image_data_url(path: Path) -> str | None:
@@ -109,11 +131,16 @@ async def read_my_generations(
         rows = await crud.list_user_generations(db, user.id, limit=PAGE_SIZE, offset=offset)
         total = await crud.count_user_generations(db, user.id)
 
+    settings = get_settings()
+    storage = get_storage(settings)
     image_urls = await asyncio.gather(
         *(output_url_if_exists_async(row.output_path) for row in rows)
     )
     upload_urls = await asyncio.gather(
         *(upload_url_if_exists_async(row.original_path) for row in rows)
+    )
+    download_urls = await asyncio.gather(
+        *(_download_url_for_row(storage, settings, row) for row in rows)
     )
     items = [
         {
@@ -123,9 +150,12 @@ async def read_my_generations(
             "status": row.status,
             "image_url": image_url,
             "original_image_url": upload_url,
+            "download_url": download_url,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         }
-        for row, image_url, upload_url in zip(rows, image_urls, upload_urls, strict=True)
+        for row, image_url, upload_url, download_url in zip(
+            rows, image_urls, upload_urls, download_urls, strict=True
+        )
     ]
     logger.info(
         "my generations listed user_id=%s page=%d count=%d total=%d",
