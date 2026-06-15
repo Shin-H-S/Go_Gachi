@@ -147,7 +147,7 @@ def render_generation_grid(items: list[dict], folders: list[dict], access_token:
             """
             <div class="mypage-empty-state">
                 <strong>아직 만든 이미지가 없습니다</strong>
-                <span>새로 생성하기에서 첫 광고 이미지를 만들어보세요.</span>
+                <span>작업 페이지로 돌아가 첫 광고 이미지를 만들어보세요.</span>
             </div>
             """,
             unsafe_allow_html=True,
