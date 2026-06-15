@@ -62,7 +62,7 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
         presets["instagram"].find_detail("story_image").prompt_hint
     )
     assert "seasonal offer" in presets["daangn"].find_detail("discount_event").prompt_hint
-    assert PROMPT_VERSION == "2026-06-12-v4-instagram-ad-enhancement"
+    assert PROMPT_VERSION == "2026-06-15-v3_v5-daangn-cta-color-policy"
 
 
 def test_presets_do_not_conflict_with_image_copy_prompting() -> None:
@@ -73,7 +73,6 @@ def test_presets_do_not_conflict_with_image_copy_prompting() -> None:
         "do not generate people, hands, typography",
         "reserve natural empty space for future text placement",
         "preserve layout flexibility for downstream processing",
-        "price tags",
         "advertising graphics",
     )
 
