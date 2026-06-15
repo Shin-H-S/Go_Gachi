@@ -6,7 +6,7 @@ from PIL import Image
 
 
 def test_frontend_config_exposes_preset_helpers() -> None:
-    from frontend.config import (
+    from frontend.core.config import (
         CHANNEL_SLUGS,
         FORMAT_OPTIONS,
         format_size_label,
@@ -31,7 +31,7 @@ def test_frontend_config_exposes_preset_helpers() -> None:
 
 
 def test_frontend_config_can_load_presets_from_backend(monkeypatch) -> None:
-    from frontend import config
+    from frontend.core import config
 
     class FakeResponse:
         def raise_for_status(self) -> None:
@@ -72,7 +72,7 @@ def test_frontend_config_can_load_presets_from_backend(monkeypatch) -> None:
 
 
 def test_frontend_config_falls_back_to_local_presets(monkeypatch) -> None:
-    from frontend import config
+    from frontend.core import config
 
     def fake_get(*args, **kwargs):  # noqa: ANN002, ANN003
         raise config.httpx.ConnectError("backend down")
@@ -86,7 +86,7 @@ def test_frontend_config_falls_back_to_local_presets(monkeypatch) -> None:
 
 
 def test_image_utils_builds_preview_canvas_and_data_url() -> None:
-    from frontend.image_utils import bytes_to_data_url, make_preview_canvas
+    from frontend.media.image_utils import bytes_to_data_url, make_preview_canvas
 
     source = BytesIO()
     Image.new("RGB", (8, 4), "#225544").save(source, format="PNG")
@@ -100,7 +100,7 @@ def test_image_utils_builds_preview_canvas_and_data_url() -> None:
 
 
 def test_api_client_converts_uploads_and_user_prompt() -> None:
-    from frontend.api_client import build_user_prompt, data_url_to_bytes, file_to_data_url
+    from frontend.services.api_client import build_user_prompt, data_url_to_bytes, file_to_data_url
 
     uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"image-bytes")
     data_url = file_to_data_url(uploaded_file)
@@ -117,7 +117,7 @@ def _data_url(payload: bytes) -> str:
 
 
 def _instagram_square_labels() -> tuple[str, str]:
-    from frontend.config import FORMAT_OPTIONS
+    from frontend.core.config import FORMAT_OPTIONS
 
     format_label = next(
         label for label, option in FORMAT_OPTIONS.items() if option["value"] == "instagram"

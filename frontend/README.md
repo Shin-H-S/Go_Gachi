@@ -16,11 +16,6 @@ frontend/
   css/                  # CSS fragments composed by styles.py
   assets/               # Channel/sample image assets
   styles.py             # CSS composer and injector
-  api_client.py         # Compatibility alias to services/api_client.py
-  config.py             # Compatibility alias to core/config.py
-  router.py             # Compatibility alias to core/router.py
-  upload_utils.py       # Compatibility alias to work/uploads.py
-  image_utils.py        # Compatibility alias to media/image_utils.py
   .env.example          # Frontend env example
 ```
 
@@ -53,7 +48,7 @@ frontend/app.py
 
 ## Upload Policy
 
-- 프론트 업로드 허용 확장자는 `frontend/upload_utils.py`의 `UPLOAD_FILE_TYPES`에서 관리합니다.
+- 프론트 업로드 허용 확장자는 `frontend/work/uploads.py`의 `UPLOAD_FILE_TYPES`에서 관리합니다.
 - 현재 허용 형식은 JPG, PNG, WEBP입니다.
 - 백엔드는 업로드 원본을 검증한 뒤 OpenAI 호출 전 PNG/RGB로 정규화하므로, 프론트는 별도 이미지 변환을 하지 않습니다.
 
