@@ -1,8 +1,10 @@
 """Cloudflare R2 저장소 구현."""
 
+import inspect
 import logging
 from pathlib import PurePosixPath
 from typing import Final
+from urllib.parse import quote
 
 import aioboto3
 from botocore.exceptions import ClientError
@@ -51,6 +53,32 @@ class R2Storage:
                 raise
             async with response["Body"] as body:
                 return await body.read()
+
+    async def download_url(
+        self,
+        path: str,
+        *,
+        filename: str,
+        content_type: str,
+        expires_in: int,
+    ) -> str | None:
+        quoted = quote(filename)
+        disposition = f"attachment; filename={quoted}; filename*=UTF-8''{quoted}"
+        session = aioboto3.Session()
+        async with session.client("s3", **self._client_kwargs()) as s3:
+            url = s3.generate_presigned_url(
+                ClientMethod="get_object",
+                Params={
+                    "Bucket": self.settings.r2_bucket_name,
+                    "Key": path,
+                    "ResponseContentDisposition": disposition,
+                    "ResponseContentType": content_type,
+                },
+                ExpiresIn=expires_in,
+            )
+            if inspect.isawaitable(url):
+                url = await url
+            return str(url)
 
     async def exists(self, path: str) -> bool:
         session = aioboto3.Session()
