@@ -52,12 +52,12 @@ class FakeContext:
 def _patch_common_profile_requests(monkeypatch) -> None:
     monkeypatch.setattr(
         mypage_page,
-        "request_me",
+        "cached_request_me",
         lambda access_token: {"email": f"{access_token}@example.com"},
     )
     monkeypatch.setattr(
         mypage_page,
-        "request_my_folders",
+        "cached_request_my_folders",
         lambda access_token: {"items": [{"id": 7, "name": "Spring"}]},
     )
 
@@ -67,7 +67,7 @@ def test_load_mypage_data_recent_fetches_only_server_pages_needed(monkeypatch) -
     monkeypatch.setattr(views, "current_page", lambda scope: 2)
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
+        "cached_request_my_uploads",
         lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
     # 페이지당 12개로 정렬되어 프론트 페이지 N은 백엔드 페이지 N 한 번만 요청한다.
@@ -85,7 +85,7 @@ def test_load_mypage_data_recent_fetches_only_server_pages_needed(monkeypatch) -
         calls.append(page)
         return backend_pages[page]
 
-    monkeypatch.setattr(mypage_page, "request_my_generations", fake_generations)
+    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_generations)
 
     profile, folders, generations, uploads, total_count, current_page = (
         mypage_page._load_mypage_data("jwt", state.RECENT_VIEW)
@@ -107,7 +107,7 @@ def test_load_mypage_data_folder_view_uses_backend_folder_id_pagination(monkeypa
     monkeypatch.setattr(views, "current_page", lambda scope: 1)
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
+        "cached_request_my_uploads",
         lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
     calls: list[tuple[int, int | None]] = []
@@ -123,7 +123,7 @@ def test_load_mypage_data_folder_view_uses_backend_folder_id_pagination(monkeypa
         calls.append((page, folder_id))
         return backend_pages[page]
 
-    monkeypatch.setattr(mypage_page, "request_my_generations", fake_generations)
+    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_generations)
 
     _, _, generations, uploads, total_count, current_page = mypage_page._load_mypage_data(
         "jwt",
@@ -141,7 +141,7 @@ def test_load_mypage_data_folder_none_view_falls_back_to_full_load(monkeypatch) 
     _patch_common_profile_requests(monkeypatch)
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
+        "cached_request_my_uploads",
         lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
     calls: list[tuple[int, int | None]] = []
@@ -157,7 +157,7 @@ def test_load_mypage_data_folder_none_view_falls_back_to_full_load(monkeypatch) 
         calls.append((page, folder_id))
         return backend_pages[page]
 
-    monkeypatch.setattr(mypage_page, "request_my_generations", fake_generations)
+    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_generations)
 
     _, _, generations, _, total_count, _ = mypage_page._load_mypage_data(
         "jwt",
@@ -174,14 +174,14 @@ def test_load_mypage_data_uploads_and_account_views_skip_generation_fetches(monk
     _patch_common_profile_requests(monkeypatch)
     monkeypatch.setattr(
         mypage_page,
-        "request_my_generations",
-        lambda access_token, page=1: (_ for _ in ()).throw(
+        "cached_request_my_generations",
+        lambda access_token, page=1, folder_id=None: (_ for _ in ()).throw(
             AssertionError("generations not expected")
         ),
     )
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
+        "cached_request_my_uploads",
         lambda access_token: {"items": [{"id": "upload-1"}]},
     )
 
@@ -197,7 +197,7 @@ def test_load_mypage_data_uploads_and_account_views_skip_generation_fetches(monk
 
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
+        "cached_request_my_uploads",
         lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
 

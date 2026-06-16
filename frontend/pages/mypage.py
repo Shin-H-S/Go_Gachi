@@ -5,6 +5,13 @@ import streamlit as st
 
 from frontend.core.router import navigate_to
 from frontend.mypage import data_loader, views
+from frontend.mypage.cache import (
+    cached_request_me,
+    cached_request_my_folders,
+    cached_request_my_generations,
+    cached_request_my_uploads,
+    clear_generation_cache,
+)
 from frontend.mypage.components import render_sidebar, render_topbar
 from frontend.mypage.generation_status import has_generation_waiting_for_image
 from frontend.mypage.page_sections import (
@@ -20,12 +27,6 @@ from frontend.mypage.state import (
     UPLOADS_VIEW,
     selected_folder_id,
     view_title,
-)
-from frontend.services.api_client import (
-    request_me,
-    request_my_folders,
-    request_my_generations,
-    request_my_uploads,
 )
 
 BACKEND_GENERATION_PAGE_SIZE = data_loader.BACKEND_GENERATION_PAGE_SIZE
@@ -55,6 +56,7 @@ def _pending_generation_auto_refresh() -> None:
         elapsed = PENDING_REFRESH_INTERVAL_SECONDS
     if elapsed >= PENDING_REFRESH_INTERVAL_SECONDS:
         st.session_state[PENDING_REFRESH_SESSION_KEY] = now
+        clear_generation_cache()
         st.rerun()
 
 
@@ -66,7 +68,7 @@ def _maybe_render_pending_generation_auto_refresh(generations: list[dict]) -> No
 
 
 def _load_generation_pages(access_token: str) -> tuple[list[dict], int]:
-    return data_loader.load_generation_pages(request_my_generations, access_token)
+    return data_loader.load_generation_pages(cached_request_my_generations, access_token)
 
 
 def _load_recent_generation_page(
@@ -76,7 +78,7 @@ def _load_recent_generation_page(
     folder_id: int | None = None,
 ) -> tuple[list[dict], int, int]:
     return data_loader.load_recent_generation_page(
-        request_my_generations,
+        cached_request_my_generations,
         access_token,
         page,
         folder_id=folder_id,
@@ -87,8 +89,8 @@ def _load_mypage_data(
     access_token: str,
     view: str,
 ) -> tuple[dict, list[dict], list[dict], list[dict], int, int]:
-    profile = request_me(access_token)
-    folders = list(request_my_folders(access_token).get("items", []))
+    profile = cached_request_me(access_token)
+    folders = list(cached_request_my_folders(access_token).get("items", []))
     generations: list[dict] = []
     uploads: list[dict] = []
     total_count = 0
@@ -100,7 +102,7 @@ def _load_mypage_data(
             views.current_page(scope),
         )
     elif view == UPLOADS_VIEW:
-        uploads = list(request_my_uploads(access_token).get("items", []))
+        uploads = list(cached_request_my_uploads(access_token).get("items", []))
     elif view != ACCOUNT_VIEW:
         folder_id = selected_folder_id(view)
         if folder_id is not None:

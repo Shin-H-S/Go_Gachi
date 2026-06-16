@@ -70,7 +70,7 @@ def test_load_generation_pages_fetches_until_backend_total_count(monkeypatch) ->
         calls.append(page)
         return pages[page]
 
-    monkeypatch.setattr(mypage_page, "request_my_generations", fake_request_my_generations)
+    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_request_my_generations)
 
     generations, total_count = mypage_page._load_generation_pages("jwt")
 
@@ -97,7 +97,7 @@ def test_load_recent_generation_page_fetches_only_intersecting_backend_pages(mon
         calls.append(page)
         return pages[page]
 
-    monkeypatch.setattr(mypage_page, "request_my_generations", fake_request_my_generations)
+    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_request_my_generations)
 
     generations, total_count, current_page = mypage_page._load_recent_generation_page(
         "jwt",
@@ -128,7 +128,7 @@ def test_load_recent_generation_page_passes_folder_id_filter(monkeypatch) -> Non
         calls.append((page, folder_id))
         return pages[page]
 
-    monkeypatch.setattr(mypage_page, "request_my_generations", fake_request_my_generations)
+    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_request_my_generations)
 
     generations, total_count, current_page = mypage_page._load_recent_generation_page(
         "jwt",
