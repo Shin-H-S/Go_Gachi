@@ -97,7 +97,7 @@ def test_result_copy_panel_is_rendered_inside_history_controls_row(monkeypatch) 
         total=1,
     )
 
-    assert ("columns", [0.12, 0.12, 0.36, 0.40], "small", "top") in events
+    assert ("columns", [0.12, 0.12, 0.58, 0.18], "small", "top") in events
     assert ("button", "work-preview-undo") in events
     assert ("button", "work-preview-redo") in events
     assert ("markdown", '<div class="result-copy-panel">copy</div>', True) in events

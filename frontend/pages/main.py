@@ -1,5 +1,17 @@
 import streamlit as st
 
+from frontend.core.router import navigate_to
+
+
+def _handle_start_click() -> None:
+    if st.session_state.get("auth_access_token"):
+        st.session_state["auth_redirect_page"] = ""
+        navigate_to("work")
+    else:
+        st.session_state["auth_redirect_page"] = "work"
+        navigate_to("login")
+    st.rerun()
+
 
 def render_main_page() -> None:
     st.markdown(
@@ -66,13 +78,9 @@ def render_main_page() -> None:
                 unsafe_allow_html=True,
             )
 
-            st.markdown(
-                (
-                    '<a class="landing-start-link" href="?page=work" '
-                    'target="_self">무료로 시작하기</a>'
-                ),
-                unsafe_allow_html=True,
-            )
+            st.markdown('<div class="main-start-button-marker"></div>', unsafe_allow_html=True)
+            if st.button("무료로 시작하기", key="main-start-button"):
+                _handle_start_click()
 
         with hero_right:
             st.markdown(

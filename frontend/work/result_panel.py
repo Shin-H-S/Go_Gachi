@@ -4,6 +4,7 @@ from pathlib import Path
 import streamlit as st
 
 from frontend.media.image_data import bytes_to_data_url
+from frontend.work.loading_panel import loading_panel_html
 from frontend.work.preview import (
     render_image_preview,
     render_image_url_preview,
@@ -70,7 +71,7 @@ def _render_preview_history_controls(
     st.markdown('<div class="preview-controls-marker"></div>', unsafe_allow_html=True)
     with st.container(key="preview-history-controls"):
         undo_col, redo_col, copy_col, _spacer = st.columns(
-            [0.12, 0.12, 0.36, 0.40], gap="small", vertical_alignment="top"
+            [0.12, 0.12, 0.58, 0.18], gap="small", vertical_alignment="top"
         )
         with undo_col:
             undo_clicked = st.button(
@@ -107,18 +108,7 @@ def render_result_panel(
     detail_label: str,
 ) -> None:
     if is_generating:
-        render_preview_shell(
-            format_label,
-            """
-            <div class="loading-state">
-                <div class="loading-panel">
-                    <div class="loading-spinner"></div>
-                    <div>제작 중입니다. 잠시만 기다려주세요.</div>
-                </div>
-            </div>
-            """,
-            detail_label,
-        )
+        render_preview_shell(format_label, loading_panel_html(), detail_label)
         return
 
     history = get_result_history()
@@ -175,3 +165,4 @@ def render_result_panel(
             detail_label,
         )
         _render_preview_history_controls()
+

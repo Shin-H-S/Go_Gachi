@@ -1,10 +1,12 @@
 from backend.app.db.repositories.folders import (
     count_user_generations,
     create_folder,
+    delete_folder,
     get_user_folder,
     list_user_folders,
     list_user_generations,
     list_user_upload_generations,
+    rename_folder,
     set_generation_folder,
 )
 from backend.app.db.repositories.generations import (
@@ -33,6 +35,7 @@ __all__ = [
     "count_user_generations",
     "create_cached_generation",
     "create_folder",
+    "delete_folder",
     "create_pending_generation",
     "find_cached_generation",
     "find_original_path",
@@ -49,6 +52,7 @@ __all__ = [
     "mark_generation_success",
     "normalize_instruction",
     "record_usage",
+    "rename_folder",
     "set_generation_folder",
     "set_profile_role",
     "upsert_profile",

@@ -20,22 +20,11 @@ from frontend.services.generation_jobs_client import request_generate_job_result
 from frontend.services.prompting import build_user_prompt
 
 __all__ = [
-    "BACKEND_URL",
-    "DEFAULT_BACKEND_URL",
-    "GenerationResult",
-    "build_user_prompt",
-    "create_my_folder",
-    "data_url_to_bytes",
-    "file_to_data_url",
-    "move_generation_to_folder",
-    "request_asset_bytes",
-    "request_auto_copy",
-    "request_me",
-    "request_backend",
-    "request_my_folders",
-    "request_my_generations",
-    "request_my_uploads",
-    "to_backend_asset_url",
+    "BACKEND_URL", "DEFAULT_BACKEND_URL", "GenerationResult", "build_user_prompt",
+    "create_my_folder", "data_url_to_bytes", "delete_my_folder", "file_to_data_url",
+    "move_generation_to_folder", "request_asset_bytes", "request_auto_copy", "request_me",
+    "request_backend", "request_my_folders", "request_my_generations", "request_my_uploads",
+    "rename_my_folder", "to_backend_asset_url",
 ]
 
 
@@ -84,6 +73,16 @@ def request_my_uploads(access_token: str) -> dict:
 def create_my_folder(access_token: str, name: str) -> dict:
     _sync_mypage_backend_url()
     return mypage_client.create_my_folder(access_token, name)
+
+
+def rename_my_folder(access_token: str, folder_id: int, name: str) -> dict:
+    _sync_mypage_backend_url()
+    return mypage_client.rename_my_folder(access_token, folder_id, name)
+
+
+def delete_my_folder(access_token: str, folder_id: int) -> None:
+    _sync_mypage_backend_url()
+    mypage_client.delete_my_folder(access_token, folder_id)
 
 
 def move_generation_to_folder(

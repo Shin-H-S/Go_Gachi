@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models import Folder, Generation
@@ -24,12 +24,17 @@ async def count_user_generations(db: AsyncSession, user_id: str) -> int:
     return int(result.scalar_one())
 
 
-async def create_folder(db: AsyncSession, *, user_id: str, name: str) -> Folder:
+def _clean_folder_name(name: str) -> str:
     clean_name = name.strip()
     if not clean_name:
         raise ValueError("폴더 이름을 입력해주세요.")
     if len(clean_name) > 80:
         raise ValueError("폴더 이름은 80자 이하로 입력해주세요.")
+    return clean_name
+
+
+async def create_folder(db: AsyncSession, *, user_id: str, name: str) -> Folder:
+    clean_name = _clean_folder_name(name)
 
     folder = Folder(user_id=user_id, name=clean_name)
     db.add(folder)
@@ -52,6 +57,43 @@ async def get_user_folder(db: AsyncSession, user_id: str, folder_id: int) -> Fol
         select(Folder).where(Folder.id == folder_id).where(Folder.user_id == user_id)
     )
     return result.scalar_one_or_none()
+
+
+async def rename_folder(
+    db: AsyncSession,
+    *,
+    user_id: str,
+    folder_id: int,
+    name: str,
+) -> Folder | None:
+    folder = await get_user_folder(db, user_id, folder_id)
+    if folder is None:
+        return None
+
+    folder.name = _clean_folder_name(name)
+    await db.flush()
+    return folder
+
+
+async def delete_folder(
+    db: AsyncSession,
+    *,
+    user_id: str,
+    folder_id: int,
+) -> bool:
+    folder = await get_user_folder(db, user_id, folder_id)
+    if folder is None:
+        return False
+
+    await db.execute(
+        update(Generation)
+        .where(Generation.user_id == user_id)
+        .where(Generation.folder_id == folder_id)
+        .values(folder_id=None)
+    )
+    await db.delete(folder)
+    await db.flush()
+    return True
 
 
 async def set_generation_folder(

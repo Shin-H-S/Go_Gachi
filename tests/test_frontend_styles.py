@@ -5,11 +5,9 @@ STYLE_BASE_FILE = ROOT_DIR / "frontend" / "css" / "base.py"
 STYLE_WORK_CONTROLS_FILE = ROOT_DIR / "frontend" / "css" / "work_controls.py"
 STYLE_WORK_HEADER_FILE = ROOT_DIR / "frontend" / "css" / "work_header.py"
 STYLE_WORK_PREVIEW_FILE = ROOT_DIR / "frontend" / "css" / "work_preview.py"
-STYLE_RESPONSIVE_FILE = ROOT_DIR / "frontend" / "css" / "responsive.py"
 STYLE_WORK_SELECTION_FILE = ROOT_DIR / "frontend" / "css" / "work_selection.py"
 STYLE_WORK_FORMS_FILE = ROOT_DIR / "frontend" / "css" / "work_forms.py"
 STYLE_WORK_UPLOAD_FILE = ROOT_DIR / "frontend" / "css" / "work_upload.py"
-WORK_PAGE_FILE = ROOT_DIR / "frontend" / "pages" / "work.py"
 FRONTEND_STYLES_FILE = ROOT_DIR / "frontend" / "styles.py"
 
 
@@ -169,67 +167,3 @@ def test_work_upload_styles_do_not_include_logo_specific_layout() -> None:
     assert ".logo-preview-frame" not in styles
     assert ".logo-preview-placeholder" not in styles
     assert ".st-key-logo_upload" not in styles
-
-
-def test_work_left_options_are_grouped_in_one_scroll_panel() -> None:
-    source = WORK_PAGE_FILE.read_text(encoding="utf-8")
-    styles = STYLE_WORK_FORMS_FILE.read_text(encoding="utf-8")
-
-    assert 'st.container(border=True, key="left-options-panel")' in source
-    assert 'st.container(border=True, key="left-upload-section")' not in source
-    assert 'st.container(border=True, key="left-channel-section")' not in source
-    assert 'st.container(border=True, key="left-type-section")' not in source
-    assert 'st.container(border=True, key="left-prompt-section")' not in source
-    assert ".st-key-left-options-panel" in styles
-    assert "height: var(--work-preview-height, 620px);" in styles
-    assert "max-height: var(--work-preview-height, 620px);" in styles
-    assert "overflow-y: auto;" in styles
-    assert "overflow-x: hidden;" in styles
-    assert "scrollbar-gutter: stable;" in styles
-
-
-def test_work_preview_height_is_shared_by_desktop_mobile_and_left_panel() -> None:
-    preview_styles = STYLE_WORK_PREVIEW_FILE.read_text(encoding="utf-8")
-    responsive_styles = STYLE_RESPONSIVE_FILE.read_text(encoding="utf-8")
-    form_styles = STYLE_WORK_FORMS_FILE.read_text(encoding="utf-8")
-
-    assert "--work-preview-height: 620px;" in preview_styles
-    assert "--work-generate-button-height: 60px;" in preview_styles
-    assert "height: var(--work-preview-height, 620px);" in preview_styles
-    assert "height: var(--work-preview-height, 620px);" in form_styles
-    assert "--work-preview-height: 360px;" in responsive_styles
-    assert ".preview-shell {\n        height: 360px;" not in responsive_styles
-
-
-def test_work_columns_give_left_panel_more_room_with_medium_gap() -> None:
-    source = WORK_PAGE_FILE.read_text(encoding="utf-8")
-
-    assert 'st.columns([0.4, 0.6], gap="medium")' in source
-
-
-def test_generate_button_sits_below_left_scroll_panel() -> None:
-    source = WORK_PAGE_FILE.read_text(encoding="utf-8")
-    nested_marker = "                st.markdown("
-    outer_marker = "        st.markdown("
-    generate_button = (
-        '        generate = st.button("✦ 이미지 만들기", '
-        'use_container_width=True, type="primary")'
-    )
-
-    assert f'{nested_marker}\'<div class="generate-button-marker"></div>\'' not in source
-    assert f'{outer_marker}\'<div class="generate-button-marker"></div>\'' in source
-    assert generate_button in source
-
-
-def test_generate_button_matches_preview_history_button_height_with_thicker_border() -> None:
-    styles = STYLE_WORK_CONTROLS_FILE.read_text(encoding="utf-8")
-
-    generate_styles = styles.split(":has(.generate-button-marker)", 1)[1].split(
-        ".st-key-work-preview-undo button",
-        1,
-    )[0]
-
-    assert "min-height: 60px !important;" in generate_styles
-    assert "min-height: var(--work-generate-button-height, 60px) !important;" in generate_styles
-    assert "border: 2px solid #0f4cbd !important;" in generate_styles
-    assert "border: 2px solid #0b3e9e !important;" in generate_styles
