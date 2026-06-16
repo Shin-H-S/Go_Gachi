@@ -16,6 +16,20 @@ def _parse_csv(value: str, *, default: list[str]) -> list[str]:
     return items or default
 
 
+def _validated_cors_origins(app_env: str, origins: list[str]) -> list[str]:
+    normalized = [origin.rstrip("/") for origin in origins if origin.strip()]
+    if not normalized:
+        normalized = ["*"]
+
+    if app_env == "production" and "*" in normalized:
+        raise RuntimeError(
+            "CORS_ORIGINS must not include '*' in production. "
+            "Set the deployed frontend origin explicitly."
+        )
+
+    return normalized
+
+
 def _load_env_file(env_path: Path) -> None:
     """단일 .env 파일을 현재 프로세스 환경변수로 적재한다."""
     if not env_path.exists():
@@ -125,9 +139,11 @@ def get_settings() -> Settings:
     upload_dir = Path(os.getenv("UPLOAD_DIR", str(DEFAULT_UPLOAD_DIR)))
     database_url = _database_url_from_env()
 
+    app_env = os.getenv("APP_ENV", "local")
+
     return Settings(
         port=int(os.getenv("PORT", "8000")),
-        app_env=os.getenv("APP_ENV", "local"),
+        app_env=app_env,
         image_provider=provider,
         openai_api_key=api_key,
         openai_admin_key=os.getenv("OPENAI_ADMIN_KEY", ""),
@@ -153,7 +169,10 @@ def get_settings() -> Settings:
         r2_bucket_name=os.getenv("R2_BUCKET_NAME", ""),
         r2_public_url=os.getenv("R2_PUBLIC_URL", ""),
         download_url_ttl_seconds=int(os.getenv("DOWNLOAD_URL_TTL_SECONDS", "1800")),
-        cors_origins=_parse_csv(os.getenv("CORS_ORIGINS", "*"), default=["*"]),
+        cors_origins=_validated_cors_origins(
+            app_env,
+            _parse_csv(os.getenv("CORS_ORIGINS", "*"), default=["*"]),
+        ),
     )
 
 
