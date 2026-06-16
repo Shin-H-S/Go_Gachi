@@ -75,14 +75,29 @@ def test_mypage_write_requests_send_expected_payloads(
         captured_requests.append(
             {"method": "PATCH", "url": url, "json": json, "headers": headers, "timeout": timeout}
         )
+        if url.endswith("/api/auth/me/folders/7"):
+            return FakeResponse({"id": 7, "name": json["name"], "created_at": "now"})
         return FakeResponse({"request_id": "request-1", "folder_id": 7})
+
+    def fake_delete(
+        url: str,
+        headers: dict[str, str],
+        timeout: int,
+    ) -> FakeResponse:
+        captured_requests.append(
+            {"method": "DELETE", "url": url, "headers": headers, "timeout": timeout}
+        )
+        return FakeResponse({})
 
     monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
     monkeypatch.setattr(api_client.httpx, "post", fake_post)
     monkeypatch.setattr(api_client.httpx, "patch", fake_patch)
+    monkeypatch.setattr(api_client.httpx, "delete", fake_delete)
 
     assert api_client.create_my_folder("jwt-token", "봄 신메뉴")["id"] == 7
     assert api_client.move_generation_to_folder("jwt-token", "request-1", 7)["folder_id"] == 7
+    assert api_client.rename_my_folder("jwt-token", 7, "여름 신메뉴")["name"] == "여름 신메뉴"
+    api_client.delete_my_folder("jwt-token", 7)
 
     assert captured_requests == [
         {
@@ -96,6 +111,19 @@ def test_mypage_write_requests_send_expected_payloads(
             "method": "PATCH",
             "url": "https://backend.example/api/auth/me/generations/request-1/folder",
             "json": {"folder_id": 7},
+            "headers": {"Authorization": "Bearer jwt-token"},
+            "timeout": 30,
+        },
+        {
+            "method": "PATCH",
+            "url": "https://backend.example/api/auth/me/folders/7",
+            "json": {"name": "여름 신메뉴"},
+            "headers": {"Authorization": "Bearer jwt-token"},
+            "timeout": 30,
+        },
+        {
+            "method": "DELETE",
+            "url": "https://backend.example/api/auth/me/folders/7",
             "headers": {"Authorization": "Bearer jwt-token"},
             "timeout": 30,
         },

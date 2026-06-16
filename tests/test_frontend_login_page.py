@@ -162,3 +162,37 @@ def test_login_success_uses_pending_auth_redirect(monkeypatch) -> None:
     assert navigated == ["mypage"]
     assert fake_st.session_state["auth_redirect_page"] == ""
     assert fake_st.session_state["auth_access_token"] == "token-123"
+
+
+def test_login_success_resumes_work_page_after_main_cta(monkeypatch) -> None:
+    login_page = importlib.import_module("frontend.pages.login")
+    navigated: list[str] = []
+    reruns: list[str] = []
+
+    fake_st = SimpleNamespace(
+        session_state={
+            "login_email": "owner@example.com",
+            "login_password": "password123",
+            "auth_redirect_page": "work",
+        },
+        rerun=lambda: reruns.append("rerun"),
+    )
+
+    monkeypatch.setattr(login_page, "st", fake_st)
+    monkeypatch.setattr(
+        login_page,
+        "login_with_email",
+        lambda email, password: SimpleNamespace(
+            access_token="token-123",
+            user_id="user-123",
+            email=email,
+        ),
+    )
+    monkeypatch.setattr(login_page, "navigate_to", navigated.append)
+
+    assert login_page._handle_login_submit() == ""
+
+    assert navigated == ["work"]
+    assert fake_st.session_state["auth_redirect_page"] == ""
+    assert fake_st.session_state["auth_access_token"] == "token-123"
+    assert reruns == ["rerun"]

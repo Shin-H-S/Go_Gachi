@@ -46,6 +46,26 @@ def create_my_folder(access_token: str, name: str) -> dict:
     return response.json()
 
 
+def rename_my_folder(access_token: str, folder_id: int, name: str) -> dict:
+    response = httpx.patch(
+        f"{BACKEND_URL}/api/auth/me/folders/{folder_id}",
+        json={"name": name},
+        headers=_auth_headers(access_token),
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def delete_my_folder(access_token: str, folder_id: int) -> None:
+    response = httpx.delete(
+        f"{BACKEND_URL}/api/auth/me/folders/{folder_id}",
+        headers=_auth_headers(access_token),
+        timeout=30,
+    )
+    response.raise_for_status()
+
+
 def move_generation_to_folder(
     access_token: str,
     request_id: str,
