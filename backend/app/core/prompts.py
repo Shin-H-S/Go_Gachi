@@ -70,9 +70,10 @@ def build_system_prompt(
                 (
                     "Do not render, add, draw, suggest, or imitate any text, typography, "
                     "pricing, numbers, labels, or brand information anywhere in the image. "
-                    "The image must be completely text-free and ready for later ad copy placement. "
-                    "Leave clean, generous negative space at the top, sides, and bottom of the image "
-                    "to accommodate future text overlays without cluttering the product."
+                    "The image must be completely text-free and ready for later ad copy "
+                    "placement. Leave clean, generous negative space at the top, sides, "
+                    "and bottom of the image to accommodate future text overlays without "
+                    "cluttering the product."
                 ),
             ]
         )
