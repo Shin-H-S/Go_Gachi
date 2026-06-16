@@ -170,8 +170,10 @@ def test_mypage_api_and_styles_are_registered() -> None:
 def test_mypage_generations_api_accepts_page_query() -> None:
     api_source = FRONTEND_API_CLIENT.read_text(encoding="utf-8")
 
-    assert "def request_my_generations(access_token: str, page: int = 1)" in api_source
-    assert 'f"/api/auth/me/generations?page={page}"' in api_source
+    assert "def request_my_generations(" in api_source
+    assert "page: int = 1" in api_source
+    assert "folder_id: int | None = None" in api_source
+    assert "/api/auth/me/generations" in api_source
 
 
 def test_mypage_loads_generation_pages_and_uses_total_count() -> None:

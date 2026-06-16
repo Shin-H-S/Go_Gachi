@@ -10,7 +10,7 @@ from tests.api.helpers import TINY_PNG_B64, client
 from tests.api.mypage_helpers import user as make_user
 
 
-def test_my_uploads_returns_unique_original_images_as_data_urls() -> None:
+def test_my_uploads_returns_unique_original_images_without_inline_data() -> None:
     user = make_user("user-upload-check")
     settings = get_settings()
     original_file = settings.upload_dir / "original-menu.png"
@@ -60,7 +60,7 @@ def test_my_uploads_returns_unique_original_images_as_data_urls() -> None:
     assert body["items"][0]["upload_id"] == "same-menu-hash"
     assert body["items"][0]["used_count"] == 2
     assert body["items"][0]["original_image_url"] == "/uploads/original-menu.png"
-    assert body["items"][0]["image_data_url"].startswith("data:image/png;base64,")
+    assert "image_data_url" not in body["items"][0]
 
 
 def test_my_uploads_keeps_r2_url_when_local_file_is_not_available(monkeypatch) -> None:
@@ -71,9 +71,6 @@ def test_my_uploads_keeps_r2_url_when_local_file_is_not_available(monkeypatch) -
 
     async def _fake_upload_url(path: str | None) -> str | None:
         return f"https://pub.example/{path}" if path else None
-
-    async def _fake_data_url(path) -> None:  # noqa: ANN001
-        return None
 
     async def _seed() -> None:
         async with async_session_scope() as db:
@@ -95,10 +92,6 @@ def test_my_uploads_keeps_r2_url_when_local_file_is_not_available(monkeypatch) -
         "backend.app.api.mypage_upload_data.upload_url_if_exists_async",
         _fake_upload_url,
     )
-    monkeypatch.setattr(
-        "backend.app.api.mypage_upload_data._file_to_image_data_url",
-        _fake_data_url,
-    )
     app.dependency_overrides[get_current_user] = _override_user
     try:
         response = client.get("/api/auth/me/uploads")
@@ -109,4 +102,4 @@ def test_my_uploads_keeps_r2_url_when_local_file_is_not_available(monkeypatch) -
     body = response.json()
     assert body["count"] == 1
     assert body["items"][0]["original_image_url"] == "https://pub.example/uploads/r2-menu.png"
-    assert body["items"][0]["image_data_url"] is None
+    assert "image_data_url" not in body["items"][0]

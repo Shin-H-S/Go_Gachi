@@ -19,6 +19,7 @@ from frontend.mypage.state import (
     FOLDER_ALL_VIEW,
     RECENT_VIEW,
     UPLOADS_VIEW,
+    selected_folder_id,
     view_title,
 )
 from frontend.services.api_client import (
@@ -87,16 +88,21 @@ def _safe_page(value: int) -> int:
         return 1
 
 
-def _load_recent_generation_slice(access_token: str, page: int) -> tuple[list[dict], int]:
+def _load_recent_generation_slice(
+    access_token: str,
+    page: int,
+    *,
+    folder_id: int | None = None,
+) -> tuple[list[dict], int]:
     page = _safe_page(page)
     start = (page - 1) * views.GENERATION_PAGE_SIZE
     end = start + views.GENERATION_PAGE_SIZE
     first_backend_page = (start // BACKEND_GENERATION_PAGE_SIZE) + 1
-
-    first_payload = request_my_generations(access_token, page=first_backend_page)
+    first_payload = request_my_generations(
+        access_token, page=first_backend_page, folder_id=folder_id
+    )
     first_items = list(first_payload.get("items", []))
     total_count = int(first_payload.get("total_count") or (start + len(first_items)))
-
     combined_items = first_items
     effective_end = min(end, total_count)
     last_backend_page = (
@@ -105,23 +111,27 @@ def _load_recent_generation_slice(access_token: str, page: int) -> tuple[list[di
         else first_backend_page
     )
     for backend_page in range(first_backend_page + 1, last_backend_page + 1):
-        payload = request_my_generations(access_token, page=backend_page)
+        payload = request_my_generations(access_token, page=backend_page, folder_id=folder_id)
         combined_items.extend(list(payload.get("items", [])))
-
-    first_backend_start = (first_backend_page - 1) * BACKEND_GENERATION_PAGE_SIZE
-    offset = start - first_backend_start
+    offset = start - (first_backend_page - 1) * BACKEND_GENERATION_PAGE_SIZE
     return combined_items[offset : offset + views.GENERATION_PAGE_SIZE], total_count
 
 
 def _load_recent_generation_page(
     access_token: str,
     page: int,
+    *,
+    folder_id: int | None = None,
 ) -> tuple[list[dict], int, int]:
     requested_page = _safe_page(page)
-    generations, total_count = _load_recent_generation_slice(access_token, requested_page)
+    generations, total_count = _load_recent_generation_slice(
+        access_token, requested_page, folder_id=folder_id
+    )
     current_page = min(requested_page, page_count(total_count, views.GENERATION_PAGE_SIZE))
     if current_page != requested_page:
-        generations, total_count = _load_recent_generation_slice(access_token, current_page)
+        generations, total_count = _load_recent_generation_slice(
+            access_token, current_page, folder_id=folder_id
+        )
     return generations, total_count, current_page
 
 
@@ -135,15 +145,26 @@ def _load_mypage_data(
     uploads: list[dict] = []
     generation_total_count = 0
     generation_current_page = 1
-    if view == RECENT_VIEW:
+    if view in (RECENT_VIEW, FOLDER_ALL_VIEW):
+        scope = "recent" if view == RECENT_VIEW else view
         generations, generation_total_count, generation_current_page = _load_recent_generation_page(
             access_token,
-            views.current_page("recent"),
+            views.current_page(scope),
         )
     elif view == UPLOADS_VIEW:
         uploads = list(request_my_uploads(access_token).get("items", []))
     elif view != ACCOUNT_VIEW:
-        generations, generation_total_count = _load_generation_pages(access_token)
+        folder_id = selected_folder_id(view)
+        if folder_id is not None:
+            generations, generation_total_count, generation_current_page = (
+                _load_recent_generation_page(
+                    access_token,
+                    views.current_page(view),
+                    folder_id=folder_id,
+                )
+            )
+        else:
+            generations, generation_total_count = _load_generation_pages(access_token)
     return profile, folders, generations, uploads, generation_total_count, generation_current_page
 
 
@@ -196,5 +217,14 @@ def render_mypage_page() -> None:
                 render_uploads(uploads)
             elif view == ACCOUNT_VIEW:
                 render_account_settings(profile)
+            elif selected_folder_id(view) is not None:
+                render_folder_view(
+                    view,
+                    generations,
+                    folders,
+                    access_token,
+                    total_count=generation_total_count,
+                    current_page=generation_current_page,
+                )
             else:
                 render_folder_view(view, generations, folders, access_token)

@@ -20,11 +20,24 @@ from frontend.services.generation_jobs_client import request_generate_job_result
 from frontend.services.prompting import build_user_prompt
 
 __all__ = [
-    "BACKEND_URL", "DEFAULT_BACKEND_URL", "GenerationResult", "build_user_prompt",
-    "create_my_folder", "data_url_to_bytes", "delete_my_folder", "file_to_data_url",
-    "move_generation_to_folder", "request_asset_bytes", "request_auto_copy", "request_me",
-    "request_backend", "request_my_folders", "request_my_generations", "request_my_uploads",
-    "rename_my_folder", "to_backend_asset_url",
+    "BACKEND_URL",
+    "DEFAULT_BACKEND_URL",
+    "GenerationResult",
+    "build_user_prompt",
+    "create_my_folder",
+    "data_url_to_bytes",
+    "delete_my_folder",
+    "file_to_data_url",
+    "move_generation_to_folder",
+    "request_asset_bytes",
+    "request_auto_copy",
+    "request_me",
+    "request_backend",
+    "request_my_folders",
+    "request_my_generations",
+    "request_my_uploads",
+    "rename_my_folder",
+    "to_backend_asset_url",
 ]
 
 
@@ -48,11 +61,21 @@ def request_me(access_token: str) -> dict:
     return mypage_client.request_me(access_token)
 
 
-def request_my_generations(access_token: str, page: int = 1) -> dict:
+def request_my_generations(
+    access_token: str,
+    page: int = 1,
+    *,
+    folder_id: int | None = None,
+) -> dict:
     page = max(1, int(page))
-    path = "/api/auth/me/generations" if page == 1 else f"/api/auth/me/generations?page={page}"
+    params: list[str] = []
+    if page != 1:
+        params.append(f"page={page}")
+    if folder_id is not None:
+        params.append(f"folder_id={int(folder_id)}")
+    suffix = ("?" + "&".join(params)) if params else ""
     response = httpx.get(
-        f"{BACKEND_URL}{path}",
+        f"{BACKEND_URL}/api/auth/me/generations{suffix}",
         headers=_auth_headers(access_token),
         timeout=30,
     )
