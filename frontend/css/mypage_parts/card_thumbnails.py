@@ -1,6 +1,59 @@
 MYPAGE_CARD_THUMBNAILS_CSS = """
+.mypage-image-preview {
+    position: relative;
+}
+
+.mypage-image-modal-toggle {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mypage-image-thumb {
+    height: var(--mypage-generation-thumb-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #eef2ef;
+    cursor: zoom-in;
+}
+
+.mypage-image-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.mypage-image-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    background: rgba(17, 22, 21, 0.88);
+    cursor: zoom-out;
+}
+
+.mypage-image-modal img {
+    width: auto;
+    height: auto;
+    max-width: 96vw;
+    max-height: calc(100vh - 96px);
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+}
+
+.mypage-image-modal-toggle:checked ~ .mypage-image-modal {
+    display: flex;
+}
+
 .mypage-empty-thumb {
-    height: 150px;
+    height: var(--mypage-generation-thumb-height);
     display: grid;
     place-items: center;
     border-radius: 8px;
@@ -10,7 +63,7 @@ MYPAGE_CARD_THUMBNAILS_CSS = """
 }
 
 .mypage-generating-thumb {
-    height: 150px;
+    height: var(--mypage-generation-thumb-height);
     display: grid;
     place-items: center;
     align-content: center;
@@ -47,7 +100,7 @@ MYPAGE_CARD_THUMBNAILS_CSS = """
 }
 
 .mypage-stale-thumb {
-    height: 150px;
+    height: var(--mypage-generation-thumb-height);
     display: grid;
     place-items: center;
     align-content: center;

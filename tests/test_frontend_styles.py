@@ -91,13 +91,13 @@ def test_header_places_single_download_top_right_and_large_history_under_preview
     assert ".st-key-work-header-download-button button" in header_styles
     assert ".st-key-work-header-download-fetch button" in header_styles
     assert ".st-key-work-header-download-empty button" in header_styles
-    assert "background: #27b4c1 !important;" in header_styles
+    assert "background: #53613b !important;" in header_styles
     assert "border-width: 0 !important;" in header_styles
     assert "opacity: 1 !important;" in header_styles
     assert ".result-download-action" not in preview_styles
     assert ".preview-history-controls" in preview_styles
-    assert "width: min(495px, 100%);" in preview_styles
-    assert "margin: 12px auto 0;" in preview_styles
+    assert "width: 100%;" in preview_styles
+    assert "margin: 0;" in preview_styles
     assert ".st-key-work-preview-undo button" in control_styles
     assert ".st-key-work-preview-redo button" in control_styles
     assert "min-height: 60px !important;" in control_styles

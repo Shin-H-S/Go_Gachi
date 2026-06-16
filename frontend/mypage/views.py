@@ -5,6 +5,7 @@ import streamlit as st
 from frontend.auth.session import clear_auth_session
 from frontend.core.router import navigate_to
 from frontend.mypage.components import render_generation_grid
+from frontend.mypage.pager_arrows import render_pagination_arrow_css
 from frontend.mypage.pagination import page_count, page_status_text, paginate_items
 from frontend.mypage.state import filter_generations, format_date, profile_name
 from frontend.services.api_client import data_url_to_bytes, to_backend_asset_url
@@ -46,9 +47,14 @@ def render_pagination_controls(scope: str, current_page: int, total_pages: int) 
         return
     previous_col, status_col, next_col = st.columns([0.24, 0.52, 0.24], gap="small")
     key = _page_key(scope)
+    render_pagination_arrow_css(key)
     with previous_col:
         if st.button(
-            "이전", disabled=current_page <= 1, key=f"{key}-prev", use_container_width=True
+            " ",
+            disabled=current_page <= 1,
+            key=f"{key}-prev",
+            help="이전",
+            use_container_width=True,
         ):
             st.session_state[key] = max(1, current_page - 1)
             st.rerun()
@@ -59,9 +65,10 @@ def render_pagination_controls(scope: str, current_page: int, total_pages: int) 
         )
     with next_col:
         if st.button(
-            "다음",
+            " ",
             disabled=current_page >= total_pages,
             key=f"{key}-next",
+            help="다음",
             use_container_width=True,
         ):
             st.session_state[key] = min(total_pages, current_page + 1)

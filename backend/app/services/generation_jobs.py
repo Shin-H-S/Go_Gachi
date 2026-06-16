@@ -11,7 +11,7 @@ from backend.app.core.presets import default_preset, get_presets
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Generation
-from backend.app.schemas import GenerateJobStatusResponse, GenerateRequest
+from backend.app.schemas import CopyResponse, GenerateJobStatusResponse, GenerateRequest
 from backend.app.services.costs import calculate_text_cost
 from backend.app.services.image_edit import edit_image
 from backend.app.services.openai_copy import generate_ad_copy
@@ -78,6 +78,18 @@ def cleanup_jobs() -> None:
 
 def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
+
+
+def _copy_from_stored_text(value: str | None) -> CopyResponse | None:
+    lines = [line.strip() for line in (value or "").splitlines() if line.strip()]
+    if not lines:
+        return None
+
+    return CopyResponse(
+        headline=lines[0] if len(lines) >= 1 else None,
+        subcopy=lines[1] if len(lines) >= 2 else None,
+        cta=lines[2] if len(lines) >= 3 else None,
+    )
 
 
 async def run_generation_job(
@@ -178,6 +190,7 @@ async def _status_from_row(row: Generation) -> GenerateJobStatusResponse:
         status=status,
         imageUrl=image_url,
         originalImageUrl=original_image_url,
+        copy=_copy_from_stored_text(row.user_copy),
         error=error,
         createdAt=_iso(row.created_at),
         updatedAt=_iso(row.updated_at),

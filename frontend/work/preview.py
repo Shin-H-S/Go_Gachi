@@ -13,8 +13,10 @@ def render_preview_shell(
     format_label: str,
     body_html: str,
     detail_label: str | None = None,
+    summary_html: str = "",
 ) -> None:
     body = compact_html(body_html)
+    summary = compact_html(summary_html) if summary_html else ""
     caption = f"{format_label} · {detail_label}" if detail_label else format_label
     size_label = (
         format_size_label(get_detail_size(format_label, detail_label)) if detail_label else ""
@@ -26,6 +28,7 @@ def render_preview_shell(
             f"<span>{caption}</span>"
             f"<span>{size_label}</span>"
             "</div>"
+            f"{summary}"
             f"{body}"
             "</div>"
         ),
@@ -37,6 +40,7 @@ def render_image_preview(
     image_bytes: bytes,
     format_label: str,
     detail_label: str | None = None,
+    summary_html: str = "",
 ) -> None:
     preview_bytes = make_preview_canvas(image_bytes, format_label, detail_label)
     preview_src = bytes_to_data_url(preview_bytes)
@@ -48,6 +52,7 @@ def render_image_preview(
         </div>
         """,
         detail_label,
+        summary_html,
     )
 
 
@@ -55,6 +60,7 @@ def render_image_url_preview(
     image_url: str,
     format_label: str,
     detail_label: str | None = None,
+    summary_html: str = "",
 ) -> None:
     render_preview_shell(
         format_label,
@@ -64,4 +70,5 @@ def render_image_url_preview(
         </div>
         """,
         detail_label,
+        summary_html,
     )

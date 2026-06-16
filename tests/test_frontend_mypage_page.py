@@ -10,6 +10,7 @@ FRONTEND_MYPAGE_CARD = ROOT_DIR / "frontend" / "mypage" / "generation_card.py"
 FRONTEND_MYPAGE_SECTIONS = ROOT_DIR / "frontend" / "mypage" / "page_sections.py"
 FRONTEND_MYPAGE_STATE = ROOT_DIR / "frontend" / "mypage" / "state.py"
 FRONTEND_MYPAGE_TOPBAR = ROOT_DIR / "frontend" / "mypage" / "topbar.py"
+FRONTEND_MYPAGE_DOWNLOAD_ACTIONS = ROOT_DIR / "frontend" / "mypage" / "download_actions.py"
 FRONTEND_MYPAGE_VIEWS = ROOT_DIR / "frontend" / "mypage" / "views.py"
 FRONTEND_MYPAGE_SIDEBAR = ROOT_DIR / "frontend" / "mypage" / "sidebar.py"
 FRONTEND_STYLES = ROOT_DIR / "frontend" / "styles.py"
@@ -115,11 +116,15 @@ def test_mypage_api_and_styles_are_registered() -> None:
     assert "move_generation_to_folder" in api_source
     assert "MYPAGE_CSS" in styles_source
     assert "MYPAGE_LAYOUT_CSS" in mypage_composer
-    assert 'st.columns([0.176, 0.824], gap="large")' in page_source
+    assert "st.columns([0.176, 0.824], gap=\"large\")" in page_source
     assert 'st.container(key="mypage-sidebar")' not in page_source
     assert ".mypage-shell" in layout_styles
     assert ".st-key-mypage-sidebar" not in layout_styles
+    assert ".st-key-mypage-settings-control" in layout_styles
+    assert "right: -6px" in layout_styles
     assert ".st-key-mypage-sidebar" not in navigation_styles
+    assert ".st-key-mypage-new-folder-control" in navigation_styles
+    assert ".mypage-icon-button-visual img" in navigation_styles
     assert "min-height" not in sidebar_column_block
     assert ".main .block-container:has(.st-key-mypage-shell)" in layout_styles
     assert "padding-top: 12px" in layout_styles
@@ -139,13 +144,15 @@ def test_mypage_api_and_styles_are_registered() -> None:
     assert "background: transparent !important" not in sidebar_nav_button_block
     assert "box-shadow: none !important" in sidebar_nav_button_block
     assert "mypage-sidebar-button-marker" in sidebar_source
-    assert 'div[data-testid="stElementContainer"]:has(.mypage-sidebar-button-marker)' in (
+    assert "div[data-testid=\"stElementContainer\"]:has(.mypage-sidebar-button-marker)" in (
         navigation_styles
     )
     assert '+ div[data-testid="stButton"]' in navigation_styles
     assert '+ div[data-testid="stFormSubmitButton"]' in navigation_styles
     assert "button::before" in navigation_styles
     assert "button::after" in navigation_styles
+    assert "data:image" not in navigation_styles
+    assert "base64" not in navigation_styles
     assert "border: 1px solid rgba(24, 33, 31, 0.18)" not in navigation_styles
     assert "width: 60% !important" in new_work_button_block
     assert "border-radius: 999px !important" in new_work_button_block
@@ -196,26 +203,34 @@ def test_mypage_uses_requested_user_facing_copy() -> None:
     )
 
     assert "업로드한 원본 이미지" in combined_source
-    assert "← 작업 페이지로 돌아가기" in combined_source
+    assert "작업페이지로 돌아가기" in combined_source
     assert "업로드한 메뉴 사진" not in combined_source
     assert "새로 생성하기" not in combined_source
 
 
-def test_generation_folder_select_assigns_without_extra_button() -> None:
-    source = FRONTEND_MYPAGE_CARD.read_text(encoding="utf-8")
+def test_generation_folder_action_moved_out_of_each_card() -> None:
+    card_source = FRONTEND_MYPAGE_CARD.read_text(encoding="utf-8")
+    topbar_source = FRONTEND_MYPAGE_TOPBAR.read_text(encoding="utf-8")
 
-    assert "mypage-move-" not in source
-    assert "on_change=_assign_generation_folder" in source
-    assert "move_generation_to_folder" in source
+    assert "mypage-move-" not in card_source
+    assert "on_change=_assign_generation_folder" not in card_source
+    assert "mypage-folder-select-" not in card_source
+    assert "move_generation_to_folder" in topbar_source
+    assert "mypage-action-folder" in topbar_source
 
 
-def test_generation_download_uses_download_url_link() -> None:
-    source = FRONTEND_MYPAGE_CARD.read_text(encoding="utf-8")
+def test_generation_download_prefers_backend_download_url_link() -> None:
+    card_source = FRONTEND_MYPAGE_CARD.read_text(encoding="utf-8")
+    topbar_source = FRONTEND_MYPAGE_TOPBAR.read_text(encoding="utf-8")
+    download_source = FRONTEND_MYPAGE_DOWNLOAD_ACTIONS.read_text(encoding="utf-8")
 
-    assert "download_url" in source
-    assert "st.link_button(" in source
-    assert "st.download_button(" not in source
-    assert "request_asset_bytes" not in source
+    assert 'target="_blank">다운로드</a>' not in card_source
+    assert "st.download_button(" not in card_source
+    assert "render_download_action" in topbar_source
+    assert "download_url" in download_source
+    assert "st.link_button(" in download_source
+    assert "st.download_button(" in download_source
+    assert "request_asset_bytes" in download_source
 
 
 def test_sidebar_removes_duplicate_all_folder_action() -> None:
@@ -223,9 +238,11 @@ def test_sidebar_removes_duplicate_all_folder_action() -> None:
     compact_source = "".join(source.split())
     navigation_styles = _read_mypage_navigation_styles()
 
-    new_folder_index = source.index('"새 폴더 만들기"')
+    settings_control_index = source.index('key="mypage-settings-control"')
     account_index = source.index('"계정 설정"')
     uncategorized_index = source.index('key="mypage-folder-none"')
+    folder_loop_index = source.index("for folder in folders:")
+    new_folder_control_index = source.index('key="mypage-new-folder-control"')
 
     assert 'key="mypage-folder-all"' not in source
     assert "FOLDER_ALL_VIEW" not in source
@@ -233,24 +250,29 @@ def test_sidebar_removes_duplicate_all_folder_action() -> None:
     assert "mypage-current-view" not in source
     assert ".mypage-current-view" not in navigation_styles
     assert "view_title" not in source
-    assert uncategorized_index < account_index < new_folder_index
+    assert settings_control_index < account_index < uncategorized_index
+    assert folder_loop_index < new_folder_control_index
     assert "new_folder_col" not in source
     assert '="mypage_show_folder_form"' not in compact_source
     assert '=notst.session_state.get("mypage_show_folder_form",False,)' in compact_source
     assert '"+ 새 폴더 만들기"' not in source
-    assert ".st-key-mypage-new-folder button::before" in navigation_styles
+    assert 'st.button("⚙"' not in source
+    assert 'icon=":material/create_new_folder:"' not in source
+    assert '"gear.png"' in source
+    assert '"new-folder.png"' in source
+    assert 'st.button(" ", key="mypage-settings"' in source
+    assert 'st.button(" ", key="mypage-new-folder"' in source
+    assert "bytes_to_data_url" in source
+    assert ".st-key-mypage-settings-control" in navigation_styles
+    assert ".st-key-mypage-new-folder-control" in navigation_styles
+    assert ".st-key-mypage-new-folder button::before" not in navigation_styles
     assert "justify-content: center !important" in navigation_styles
     assert "justify-content: flex-start !important" not in navigation_styles
-    new_folder_label_selector = (
-        '.st-key-mypage-new-folder button div[data-testid="stMarkdownContainer"]'
-    )
-    assert new_folder_label_selector in navigation_styles
-    assert ".st-key-mypage-new-folder button p" in navigation_styles
-    assert "flex: 0 0 auto !important" in navigation_styles
-    assert "width: auto !important" in navigation_styles
-    assert "gap: 8px !important" in navigation_styles
-    assert "margin-right: 0" in navigation_styles
-    assert 'content: "+"' in navigation_styles
+    assert ".mypage-icon-button-visual img" in navigation_styles
+    assert "width: 44px !important" in navigation_styles
+    assert "height: 44px !important" in navigation_styles
+    assert "z-index: 3" in navigation_styles
+    assert 'content: "+"' not in navigation_styles
     assert (
         "render_sidebar(profile: dict, folders: list[dict], view: str, access_token: str)" in source
     )
