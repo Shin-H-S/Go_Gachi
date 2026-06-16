@@ -33,8 +33,12 @@ PENDING_REFRESH_SESSION_KEY = "mypage_pending_refresh_last_at"
 PENDING_REFRESH_INTERVAL_SECONDS = 3.0
 
 MYPAGE_COPY_MARKERS = (
-    "닉네임의 마이페이지", "전체 작업", "업로드한 원본 이미지",
-    "계정 설정", "새 폴더 만들기", "작업 페이지로 돌아가기",
+    "닉네임의 마이페이지",
+    "전체 작업",
+    "업로드한 원본 이미지",
+    "계정 설정",
+    "새 폴더 만들기",
+    "작업 페이지로 돌아가기",
 )
 
 
@@ -179,7 +183,7 @@ def render_mypage_page() -> None:
             render_sidebar(profile, folders, view, access_token)
 
         with right_col:
-            render_topbar(view, title, access_token)
+            render_topbar(view, title, access_token, generations=generations, folders=folders)
             if view == RECENT_VIEW:
                 render_recent_work(
                     generations,

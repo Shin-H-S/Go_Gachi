@@ -290,9 +290,7 @@ async def run_one(
             (run_dir / "images" / out_name).write_bytes(target_png)
             usage = usage_from_edit_result(edit_result)
             record["usage"] = usage or None
-            record["cost_usd"] = calculate_image_cost(
-                usage, quality=settings.openai_image_quality
-            )
+            record["cost_usd"] = calculate_image_cost(usage, quality=settings.openai_image_quality)
             record["output"] = f"images/{out_name}"
             record["status"] = "ok"
         except Exception as exc:  # 한 건 실패가 배치 전체를 멈추지 않게 한다.

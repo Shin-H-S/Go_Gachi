@@ -6,6 +6,7 @@ from frontend.services.api_client import (
     request_backend,
 )
 from frontend.services.backend_errors import format_backend_http_error
+from frontend.work.state import append_result_to_history
 
 
 def handle_generation_request(
@@ -38,16 +39,19 @@ def handle_generation_request(
                 )
                 result_context = dict(current_result_context or {})
 
-                if result.image_bytes is not None:
-                    st.session_state["result_bytes"] = result.image_bytes
-                else:
-                    st.session_state.pop("result_bytes", None)
-                if result.image_url:
-                    st.session_state["result_image_url"] = result.image_url
-                else:
-                    st.session_state.pop("result_image_url", None)
-                st.session_state["result_copy"] = result.copy
-                st.session_state["result_context"] = result_context
+                # 같은 원본 안에서 생성 결과를 누적해 화살표로 탐색할 수 있게 한다.
+                st.session_state["result_history_upload"] = result_context.get("uploadHash")
+                append_result_to_history(
+                    {
+                        "bytes": result.image_bytes,
+                        "url": result.image_url,
+                        "copy": result.copy,
+                        "context": result_context,
+                        "format_label": format_label,
+                        "detail_label": detail_label,
+                    },
+                    session_state=st.session_state,
+                )
                 st.rerun()
             except httpx.HTTPStatusError as exc:
                 st.error(

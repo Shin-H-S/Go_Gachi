@@ -5,6 +5,8 @@ WORK_PREVIEW_CSS = """
 }
 
 .preview-shell {
+    display: flex;
+    flex-direction: column;
     height: var(--work-preview-height, 620px);
     border: 1px solid rgba(32, 39, 37, 0.13);
     border-radius: 8px;
@@ -33,7 +35,8 @@ WORK_PREVIEW_CSS = """
 
 .empty-guide {
     display: flex;
-    height: calc(100% - 28px);
+    flex: 1 1 auto;
+    min-height: 0;
     align-items: center;
     justify-content: center;
     text-align: center;
@@ -45,7 +48,8 @@ WORK_PREVIEW_CSS = """
 
 .loading-state {
     display: flex;
-    height: calc(100% - 28px);
+    flex: 1 1 auto;
+    min-height: 0;
     align-items: flex-start;
     justify-content: center;
     padding-top: 150px;
@@ -75,7 +79,8 @@ WORK_PREVIEW_CSS = """
 }
 
 .preview-image-frame {
-    height: calc(100% - 28px);
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -95,13 +100,11 @@ WORK_PREVIEW_CSS = """
 }
 
 .st-key-preview-history-controls {
-    width: min(495px, 100%);
-    margin: 12px auto 0;
+    width: 100%;
+    margin: 0;
 }
 
-.preview-history-controls {
-    display: none;
-}
+.preview-history-controls { display: none; }
 
 .result-summary-panel {
     display: flex;
@@ -109,6 +112,8 @@ WORK_PREVIEW_CSS = """
     gap: 8px;
     margin-top: 14px;
 }
+
+.preview-shell > .result-summary-panel { margin: 0 0 12px; }
 
 .result-summary-chip {
     display: inline-flex;
@@ -138,11 +143,13 @@ WORK_PREVIEW_CSS = """
 }
 
 .result-copy-panel {
-    margin-top: 14px;
+    width: 100%;
+    margin: 0;
+    margin-top: -16px;
     border: 1px solid rgba(32, 39, 37, 0.12);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.82);
-    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 12px 14px;
     color: #202725;
     box-sizing: border-box;
     overflow-wrap: anywhere;

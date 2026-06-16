@@ -7,6 +7,13 @@ p.section-label {
     margin: 0 0 8px;
 }
 
+.section-label .label-icon,
+.detail-choice-label .label-icon {
+    height: 1em;
+    width: auto;
+    vertical-align: -0.15em;
+}
+
 .small-note {
     color: var(--muted);
     font-size: 13px;

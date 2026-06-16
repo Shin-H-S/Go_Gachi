@@ -220,9 +220,10 @@ def test_work_page_displays_backend_copy_metadata() -> None:
     result_panel_source = RESULT_PANEL.read_text(encoding="utf-8")
 
     assert "from frontend.work.result_panel import render_result_panel" in work_source
-    assert "from frontend.work.result_copy import render_result_copy" in result_panel_source
+    assert "from frontend.work.result_copy import result_copy_html" in result_panel_source
     assert 'st.session_state.get("result_copy")' in result_panel_source
-    assert "render_result_copy(" in result_panel_source
+    assert "result_copy_html(" in result_panel_source
+    assert "_render_preview_history_controls(copy_html=copy_html)" in result_panel_source
 
 
 def test_work_page_displays_result_inclusion_summary() -> None:
@@ -230,12 +231,9 @@ def test_work_page_displays_result_inclusion_summary() -> None:
     result_panel_source = RESULT_PANEL.read_text(encoding="utf-8")
 
     assert "from frontend.work.result_panel import render_result_panel" in work_source
-    assert (
-        "from frontend.work.result_summary import render_result_summary"
-        in result_panel_source
-    )
+    assert "from frontend.work.result_summary import result_summary_html" in result_panel_source
     assert 'st.session_state.get("result_context")' in result_panel_source
-    assert "render_result_summary(" in result_panel_source
+    assert "summary_html=summary_html" in result_panel_source
 
 
 def test_work_page_moves_download_and_history_controls_to_result_panel() -> None:

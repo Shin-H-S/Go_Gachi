@@ -103,12 +103,13 @@ div[data-testid="stElementContainer"]:has(.generate-button-marker)
     -webkit-text-fill-color: #ffffff !important;
 }
 
-.st-key-work-preview-undo button,
-.st-key-work-preview-redo button {
+.st-key-work-preview-undo button[data-testid^="stBaseButton"],
+.st-key-work-preview-redo button[data-testid^="stBaseButton"] {
     min-height: 60px !important;
-    border: 1px solid rgba(32, 39, 37, 0.12) !important;
+    min-height: var(--work-generate-button-height, 60px) !important;
+    border: 2px solid rgba(32, 39, 37, 0.12) !important;
     border-radius: 6px !important;
-    background: linear-gradient(180deg, #f8f7f2 0%, #e9e7df 100%) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f4f4f4 100%) !important;
     color: #29312f !important;
     -webkit-text-fill-color: #29312f !important;
     font-size: 30px !important;
@@ -116,10 +117,10 @@ div[data-testid="stElementContainer"]:has(.generate-button-marker)
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.75), 0 8px 18px rgba(44, 47, 42, 0.08) !important;
 }
 
-.st-key-work-preview-undo button:hover,
-.st-key-work-preview-redo button:hover {
-    border: 1px solid rgba(15, 143, 127, 0.28) !important;
-    background: linear-gradient(180deg, #ffffff 0%, #d7e5e1 100%) !important;
+.st-key-work-preview-undo button[data-testid^="stBaseButton"]:hover,
+.st-key-work-preview-redo button[data-testid^="stBaseButton"]:hover {
+    border: 2px solid rgba(15, 143, 127, 0.28) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #ededed 100%) !important;
     color: #0b6f63 !important;
     -webkit-text-fill-color: #0b6f63 !important;
 }

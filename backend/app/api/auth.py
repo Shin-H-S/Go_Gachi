@@ -22,7 +22,11 @@ from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Folder, Generation
 from backend.app.services.storage import get_storage
-from backend.app.services.storage_url import output_url_if_exists_async, upload_url_if_exists_async
+from backend.app.services.storage_url import (
+    output_download_url,
+    output_url_if_exists_async,
+    upload_url_if_exists_async,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
@@ -45,16 +49,27 @@ def _folder_item(folder: Folder) -> dict[str, object]:
     }
 
 
-async def _download_url_for_row(storage, settings, row: Generation) -> str | None:
-    """결과 이미지가 있으면 짧은 만료 signed URL을 만들어 1클릭 다운로드를 가능하게 한다."""
-    if row.output_path is None or row.status != "success":
+async def _download_url_for_row(
+    storage,
+    settings,
+    row: Generation,
+    *,
+    image_url: str | None,
+) -> str | None:
+    """결과 이미지가 있으면 1클릭 다운로드용 URL을 만든다.
+
+    R2 모드는 만료가 짧은 signed URL을 반환하고, local 모드는 백엔드 다운로드
+    라우트(/api/assets/download/outputs/...)를 반환한다. 이미지 자체가 없거나
+    파일이 사라진 경우엔 None을 돌려준다.
+    """
+    if row.output_path is None or row.status != "success" or image_url is None:
         return None
     filename = row.output_path.replace("\\", "/").rsplit("/", 1)[-1]
     if not filename:
         return None
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     try:
-        return await storage.download_url(
+        signed = await storage.download_url(
             row.output_path,
             filename=filename,
             content_type=content_type,
@@ -62,7 +77,8 @@ async def _download_url_for_row(storage, settings, row: Generation) -> str | Non
         )
     except Exception:
         logger.exception("download url create failed request_id=%s", row.request_id)
-        return None
+        signed = None
+    return signed or output_download_url(row.output_path)
 
 
 async def _file_to_image_data_url(path: Path) -> str | None:
@@ -140,7 +156,10 @@ async def read_my_generations(
         *(upload_url_if_exists_async(row.original_path) for row in rows)
     )
     download_urls = await asyncio.gather(
-        *(_download_url_for_row(storage, settings, row) for row in rows)
+        *(
+            _download_url_for_row(storage, settings, row, image_url=image_url)
+            for row, image_url in zip(rows, image_urls, strict=True)
+        )
     )
     items = [
         {

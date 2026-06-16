@@ -204,9 +204,7 @@ async def main_async(args: argparse.Namespace) -> None:
     model = args.model or settings.openai_text_model
 
     targets = [
-        r
-        for r in payload["records"]
-        if r["status"] == "ok" and (args.force or "judge" not in r)
+        r for r in payload["records"] if r["status"] == "ok" and (args.force or "judge" not in r)
     ]
     if not targets:
         raise SystemExit("채점할 레코드가 없습니다 (이미 채점됐으면 --force).")

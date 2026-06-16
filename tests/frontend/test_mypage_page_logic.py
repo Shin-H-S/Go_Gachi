@@ -205,7 +205,9 @@ def test_render_mypage_page_normalizes_legacy_all_view_to_recent(monkeypatch) ->
     monkeypatch.setattr(
         mypage_page,
         "render_topbar",
-        lambda view, title, access_token: calls.setdefault("topbar", (view, title, access_token)),
+        lambda view, title, access_token, **kwargs: calls.setdefault(
+            "topbar", (view, title, access_token, kwargs)
+        ),
     )
     monkeypatch.setattr(
         mypage_page,
@@ -238,6 +240,10 @@ def test_render_mypage_page_normalizes_legacy_all_view_to_recent(monkeypatch) ->
     assert calls["load"] == ("jwt", state.RECENT_VIEW)
     assert calls["sidebar"][2] == state.RECENT_VIEW
     assert calls["topbar"][0] == state.RECENT_VIEW
+    assert calls["topbar"][3] == {
+        "generations": [{"id": 1}],
+        "folders": [{"id": 1, "name": "Spring"}],
+    }
     assert calls["recent"][3] == {"total_count": 12, "current_page": 1}
     assert fake_st.container_keys == ["mypage-shell"]
 

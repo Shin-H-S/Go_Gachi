@@ -110,6 +110,7 @@ class GenerateJobStatusResponse(BaseModel):
     status: str
     image_url: str | None = Field(default=None, alias="imageUrl")
     original_image_url: str | None = Field(default=None, alias="originalImageUrl")
+    copy_info: CopyResponse | None = Field(default=None, alias="copy")
     error: str | None = None
     created_at: str | None = Field(default=None, alias="createdAt")
     updated_at: str | None = Field(default=None, alias="updatedAt")
