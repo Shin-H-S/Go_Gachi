@@ -30,6 +30,18 @@ def _validated_cors_origins(app_env: str, origins: list[str]) -> list[str]:
     return normalized
 
 
+def _validated_storage_backend(
+    app_env: str,
+    storage_backend: Literal["local", "r2"],
+) -> Literal["local", "r2"]:
+    if app_env == "production" and storage_backend != "r2":
+        raise RuntimeError(
+            "STORAGE_BACKEND must be 'r2' in production. "
+            "Local static file serving is disabled for deployed environments."
+        )
+    return storage_backend
+
+
 def _load_env_file(env_path: Path) -> None:
     """단일 .env 파일을 현재 프로세스 환경변수로 적재한다."""
     if not env_path.exists():
@@ -141,6 +153,11 @@ def get_settings() -> Settings:
 
     app_env = os.getenv("APP_ENV", "local")
 
+    storage_backend = _validated_storage_backend(
+        app_env,
+        os.getenv("STORAGE_BACKEND", "local"),
+    )
+
     return Settings(
         port=int(os.getenv("PORT", "8000")),
         app_env=app_env,
@@ -162,7 +179,7 @@ def get_settings() -> Settings:
         supabase_url=os.getenv("SUPABASE_URL", ""),
         supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
         supabase_jwt_secret=os.getenv("SUPABASE_JWT_SECRET", ""),
-        storage_backend=os.getenv("STORAGE_BACKEND", "local"),
+        storage_backend=storage_backend,
         r2_access_key_id=os.getenv("R2_ACCESS_KEY_ID", ""),
         r2_secret_access_key=os.getenv("R2_SECRET_ACCESS_KEY", ""),
         r2_endpoint_url=os.getenv("R2_ENDPOINT_URL", ""),

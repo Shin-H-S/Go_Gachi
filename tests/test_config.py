@@ -146,6 +146,15 @@ def test_cors_origins_trim_trailing_slash() -> None:
     assert origins == ["https://gogachi.streamlit.app"]
 
 
+def test_production_requires_r2_storage_backend() -> None:
+    with pytest.raises(RuntimeError, match="STORAGE_BACKEND must be 'r2' in production"):
+        runtime_config._validated_storage_backend("production", "local")
+
+
+def test_local_allows_local_storage_backend() -> None:
+    assert runtime_config._validated_storage_backend("local", "local") == "local"
+
+
 def test_prompt() -> None:
     preset = get_presets()["instagram"]
     detail = preset.find_detail("story_image")
