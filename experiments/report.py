@@ -186,8 +186,7 @@ def build_report(run_dir: Path) -> Path:
     lookup = {(r["case_id"], r["image"], r["rep"]): (i, r) for i, r in enumerate(records)}
 
     head_cells = "".join(
-        f'<th colspan="{len(reps)}"><img src="inputs/{html.escape(img)}">'
-        f"{html.escape(img)}</th>"
+        f'<th colspan="{len(reps)}"><img src="inputs/{html.escape(img)}">{html.escape(img)}</th>'
         for img in images
     )
     rep_cells = (

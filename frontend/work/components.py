@@ -112,12 +112,12 @@ def _get_work_header_profile() -> dict:
 def _render_mypage_profile_button() -> None:
     is_logged_in = bool(st.session_state.get("auth_access_token"))
     summary = _build_mypage_profile_summary(_get_work_header_profile(), is_logged_in)
-    email_html = f'<small>{escape(summary["email"])}</small>' if summary["email"] else ""
+    email_html = f"<small>{escape(summary['email'])}</small>" if summary["email"] else ""
     profile_html = (
         '<div class="work-profile-card" aria-hidden="true">'
         f'<div class="work-profile-avatar">{escape(summary["avatar"])}</div>'
         '<div class="work-profile-text">'
-        f'<strong>{escape(summary["title"])}</strong>'
+        f"<strong>{escape(summary['title'])}</strong>"
         f"{email_html}"
         "</div>"
         "</div>"
