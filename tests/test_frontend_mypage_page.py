@@ -178,10 +178,13 @@ def test_mypage_generations_api_accepts_page_query() -> None:
 
 def test_mypage_loads_generation_pages_and_uses_total_count() -> None:
     page_source = FRONTEND_MYPAGE_PAGE.read_text(encoding="utf-8")
+    loader_source = (ROOT_DIR / "frontend" / "mypage" / "data_loader.py").read_text(
+        encoding="utf-8",
+    )
 
     assert "def _load_generation_pages(access_token: str)" in page_source
-    assert "total_count" in page_source
-    assert "request_my_generations(access_token, page=page)" in page_source
+    assert "total_count" in loader_source
+    assert "request_fn(access_token, page=page)" in loader_source
 
 
 def test_mypage_views_render_collection_status_and_pagination() -> None:

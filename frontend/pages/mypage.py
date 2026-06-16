@@ -4,7 +4,7 @@ import httpx
 import streamlit as st
 
 from frontend.core.router import navigate_to
-from frontend.mypage import views
+from frontend.mypage import data_loader, views
 from frontend.mypage.components import render_sidebar, render_topbar
 from frontend.mypage.generation_status import has_generation_waiting_for_image
 from frontend.mypage.page_sections import (
@@ -13,7 +13,6 @@ from frontend.mypage.page_sections import (
     render_recent_work,
     render_uploads,
 )
-from frontend.mypage.pagination import page_count
 from frontend.mypage.state import (
     ACCOUNT_VIEW,
     FOLDER_ALL_VIEW,
@@ -29,7 +28,7 @@ from frontend.services.api_client import (
     request_my_uploads,
 )
 
-BACKEND_GENERATION_PAGE_SIZE = 12
+BACKEND_GENERATION_PAGE_SIZE = data_loader.BACKEND_GENERATION_PAGE_SIZE
 PENDING_REFRESH_SESSION_KEY = "mypage_pending_refresh_last_at"
 PENDING_REFRESH_INTERVAL_SECONDS = 3.0
 
@@ -67,54 +66,7 @@ def _maybe_render_pending_generation_auto_refresh(generations: list[dict]) -> No
 
 
 def _load_generation_pages(access_token: str) -> tuple[list[dict], int]:
-    generations: list[dict] = []
-    page = 1
-    total_count = 0
-    while True:
-        payload = request_my_generations(access_token, page=page)
-        items = list(payload.get("items", []))
-        if page == 1:
-            total_count = int(payload.get("total_count") or len(items))
-        generations.extend(items)
-        if not items or len(generations) >= total_count:
-            return generations, total_count
-        page += 1
-
-
-def _safe_page(value: int) -> int:
-    try:
-        return max(1, int(value))
-    except (TypeError, ValueError):
-        return 1
-
-
-def _load_recent_generation_slice(
-    access_token: str,
-    page: int,
-    *,
-    folder_id: int | None = None,
-) -> tuple[list[dict], int]:
-    page = _safe_page(page)
-    start = (page - 1) * views.GENERATION_PAGE_SIZE
-    end = start + views.GENERATION_PAGE_SIZE
-    first_backend_page = (start // BACKEND_GENERATION_PAGE_SIZE) + 1
-    first_payload = request_my_generations(
-        access_token, page=first_backend_page, folder_id=folder_id
-    )
-    first_items = list(first_payload.get("items", []))
-    total_count = int(first_payload.get("total_count") or (start + len(first_items)))
-    combined_items = first_items
-    effective_end = min(end, total_count)
-    last_backend_page = (
-        ((effective_end - 1) // BACKEND_GENERATION_PAGE_SIZE) + 1
-        if effective_end > start
-        else first_backend_page
-    )
-    for backend_page in range(first_backend_page + 1, last_backend_page + 1):
-        payload = request_my_generations(access_token, page=backend_page, folder_id=folder_id)
-        combined_items.extend(list(payload.get("items", [])))
-    offset = start - (first_backend_page - 1) * BACKEND_GENERATION_PAGE_SIZE
-    return combined_items[offset : offset + views.GENERATION_PAGE_SIZE], total_count
+    return data_loader.load_generation_pages(request_my_generations, access_token)
 
 
 def _load_recent_generation_page(
@@ -123,16 +75,12 @@ def _load_recent_generation_page(
     *,
     folder_id: int | None = None,
 ) -> tuple[list[dict], int, int]:
-    requested_page = _safe_page(page)
-    generations, total_count = _load_recent_generation_slice(
-        access_token, requested_page, folder_id=folder_id
+    return data_loader.load_recent_generation_page(
+        request_my_generations,
+        access_token,
+        page,
+        folder_id=folder_id,
     )
-    current_page = min(requested_page, page_count(total_count, views.GENERATION_PAGE_SIZE))
-    if current_page != requested_page:
-        generations, total_count = _load_recent_generation_slice(
-            access_token, current_page, folder_id=folder_id
-        )
-    return generations, total_count, current_page
 
 
 def _load_mypage_data(
@@ -143,11 +91,11 @@ def _load_mypage_data(
     folders = list(request_my_folders(access_token).get("items", []))
     generations: list[dict] = []
     uploads: list[dict] = []
-    generation_total_count = 0
-    generation_current_page = 1
+    total_count = 0
+    current_page = 1
     if view in (RECENT_VIEW, FOLDER_ALL_VIEW):
         scope = "recent" if view == RECENT_VIEW else view
-        generations, generation_total_count, generation_current_page = _load_recent_generation_page(
+        generations, total_count, current_page = _load_recent_generation_page(
             access_token,
             views.current_page(scope),
         )
@@ -156,16 +104,14 @@ def _load_mypage_data(
     elif view != ACCOUNT_VIEW:
         folder_id = selected_folder_id(view)
         if folder_id is not None:
-            generations, generation_total_count, generation_current_page = (
-                _load_recent_generation_page(
-                    access_token,
-                    views.current_page(view),
-                    folder_id=folder_id,
-                )
+            generations, total_count, current_page = _load_recent_generation_page(
+                access_token,
+                views.current_page(view),
+                folder_id=folder_id,
             )
         else:
-            generations, generation_total_count = _load_generation_pages(access_token)
-    return profile, folders, generations, uploads, generation_total_count, generation_current_page
+            generations, total_count = _load_generation_pages(access_token)
+    return profile, folders, generations, uploads, total_count, current_page
 
 
 def _render_login_required() -> None:
@@ -187,8 +133,9 @@ def render_mypage_page() -> None:
         view = RECENT_VIEW
         st.session_state["mypage_view"] = RECENT_VIEW
     try:
-        profile, folders, generations, uploads, generation_total_count, generation_current_page = (
-            _load_mypage_data(access_token, view)
+        profile, folders, generations, uploads, total_count, current_page = _load_mypage_data(
+            access_token,
+            view,
         )
     except httpx.HTTPError:
         st.error("마이페이지 정보를 불러오지 못했습니다. 다시 로그인해주세요.")
@@ -199,10 +146,8 @@ def render_mypage_page() -> None:
     title = view_title(view, folders)
     with st.container(key="mypage-shell"):
         left_col, right_col = st.columns([0.176, 0.824], gap="large")
-
         with left_col:
             render_sidebar(profile, folders, view, access_token)
-
         with right_col:
             render_topbar(view, title, access_token, generations=generations, folders=folders)
             if view == RECENT_VIEW:
@@ -210,8 +155,8 @@ def render_mypage_page() -> None:
                     generations,
                     folders,
                     access_token,
-                    total_count=generation_total_count,
-                    current_page=generation_current_page,
+                    total_count=total_count,
+                    current_page=current_page,
                 )
             elif view == UPLOADS_VIEW:
                 render_uploads(uploads)
@@ -223,8 +168,8 @@ def render_mypage_page() -> None:
                     generations,
                     folders,
                     access_token,
-                    total_count=generation_total_count,
-                    current_page=generation_current_page,
+                    total_count=total_count,
+                    current_page=current_page,
                 )
             else:
                 render_folder_view(view, generations, folders, access_token)
