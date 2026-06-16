@@ -20,7 +20,6 @@ from backend.app.core.config import get_settings
 from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
-from backend.app.db.models import Generation
 from backend.app.services.storage import get_storage
 from backend.app.services.storage_url import (
     output_url_if_exists_async,
@@ -30,6 +29,7 @@ from backend.app.services.storage_url import (
 router = APIRouter()
 logger = logging.getLogger(__name__)
 PAGE_SIZE = 12
+UPLOAD_PAGE_SIZE = 8
 
 
 @router.get("/me/generations")
@@ -37,13 +37,26 @@ async def read_my_generations(
     user: AuthUser = Depends(get_current_user),
     page: Annotated[int, Query(ge=1)] = 1,
     folder_id: Annotated[int | None, Query(ge=1)] = None,
+    uncategorized: bool = False,
 ) -> dict[str, object]:
+    if folder_id is not None and uncategorized:
+        raise HTTPException(status_code=400, detail="folder_id and uncategorized are exclusive")
     offset = (page - 1) * PAGE_SIZE
     async with async_session_scope() as db:
         rows = await crud.list_user_generations(
-            db, user.id, limit=PAGE_SIZE, offset=offset, folder_id=folder_id
+            db,
+            user.id,
+            limit=PAGE_SIZE,
+            offset=offset,
+            folder_id=folder_id,
+            uncategorized=uncategorized,
         )
-        total = await crud.count_user_generations(db, user.id, folder_id=folder_id)
+        total = await crud.count_user_generations(
+            db,
+            user.id,
+            folder_id=folder_id,
+            uncategorized=uncategorized,
+        )
 
     settings = get_settings()
     storage = get_storage(settings)
@@ -73,7 +86,7 @@ async def read_my_generations(
         "my generations listed user_id=%s page=%d folder_id=%s count=%d total=%d",
         short_id(user.id),
         page,
-        folder_id,
+        "none" if uncategorized else folder_id,
         len(items),
         total,
     )
@@ -158,22 +171,23 @@ async def update_generation_folder(
 
 
 @router.get("/me/uploads")
-async def read_my_uploads(user: AuthUser = Depends(get_current_user)) -> dict[str, object]:
+async def read_my_uploads(
+    user: AuthUser = Depends(get_current_user),
+    page: Annotated[int, Query(ge=1)] = 1,
+) -> dict[str, object]:
+    offset = (page - 1) * UPLOAD_PAGE_SIZE
     async with async_session_scope() as db:
-        rows = await crud.list_user_upload_generations(db, user.id)
+        rows = await crud.list_user_upload_generations(
+            db,
+            user.id,
+            limit=UPLOAD_PAGE_SIZE,
+            offset=offset,
+        )
+        total = await crud.count_user_upload_generations(db, user.id)
 
-    seen: set[str] = set()
-    unique_rows: list[Generation] = []
-    used_counts: dict[str, int] = {}
-    for row in rows:
-        used_counts[row.image_hash] = used_counts.get(row.image_hash, 0) + 1
-        if row.image_hash in seen:
-            continue
-        seen.add(row.image_hash)
-        unique_rows.append(row)
-
-    maybe_items = await asyncio.gather(
-        *(_upload_item(row, used_counts[row.image_hash]) for row in unique_rows)
-    )
+    maybe_items = await asyncio.gather(*(_upload_item(row, used_count) for row, used_count in rows))
     items = [item for item in maybe_items if item is not None]
-    return {"items": items, "count": len(items)}
+    hidden_count = len(rows) - len(items)
+    if hidden_count > 0:
+        total = max(len(items), total - hidden_count)
+    return {"items": items, "count": len(items), "total_count": total}

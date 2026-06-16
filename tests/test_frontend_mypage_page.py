@@ -184,9 +184,9 @@ def test_mypage_loads_generation_pages_and_uses_total_count() -> None:
     )
     cache_source = FRONTEND_MYPAGE_CACHE.read_text(encoding="utf-8")
 
-    assert "def _load_generation_pages(access_token: str)" in page_source
+    assert "def load_recent_generation_page(" in loader_source
     assert "total_count" in loader_source
-    assert "request_fn(access_token, page=page)" in loader_source
+    assert "uncategorized" in loader_source
     assert "@st.cache_data" in cache_source
     assert "cached_request_my_generations" in page_source
     assert "clear_generation_cache()" in page_source

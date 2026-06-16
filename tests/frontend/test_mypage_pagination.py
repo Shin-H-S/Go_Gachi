@@ -57,28 +57,6 @@ def test_page_status_text_includes_total_and_current_page() -> None:
     assert page_status_text(total_items=24, current_page=2, total_pages=3) == "총 24개 · 2 / 3"
 
 
-def test_load_generation_pages_fetches_until_backend_total_count(monkeypatch) -> None:
-    calls: list[int] = []
-    pages = {
-        1: {"items": [{"request_id": "a"}, {"request_id": "b"}], "total_count": 5},
-        2: {"items": [{"request_id": "c"}, {"request_id": "d"}], "total_count": 5},
-        3: {"items": [{"request_id": "e"}], "total_count": 5},
-    }
-
-    def fake_request_my_generations(access_token: str, page: int = 1) -> dict:
-        assert access_token == "jwt"
-        calls.append(page)
-        return pages[page]
-
-    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_request_my_generations)
-
-    generations, total_count = mypage_page._load_generation_pages("jwt")
-
-    assert calls == [1, 2, 3]
-    assert total_count == 5
-    assert [item["request_id"] for item in generations] == ["a", "b", "c", "d", "e"]
-
-
 def test_load_recent_generation_page_fetches_only_intersecting_backend_pages(monkeypatch) -> None:
     # 페이지당 12개로 동일하므로 프론트 페이지 N은 백엔드 페이지 N과 1:1 매칭된다.
     calls: list[int] = []
@@ -90,10 +68,15 @@ def test_load_recent_generation_page_fetches_only_intersecting_backend_pages(mon
     }
 
     def fake_request_my_generations(
-        access_token: str, page: int = 1, *, folder_id: int | None = None
+        access_token: str,
+        page: int = 1,
+        *,
+        folder_id: int | None = None,
+        uncategorized: bool = False,
     ) -> dict:
         assert access_token == "jwt"
         assert folder_id is None
+        assert uncategorized is False
         calls.append(page)
         return pages[page]
 
@@ -122,9 +105,14 @@ def test_load_recent_generation_page_passes_folder_id_filter(monkeypatch) -> Non
     }
 
     def fake_request_my_generations(
-        access_token: str, page: int = 1, *, folder_id: int | None = None
+        access_token: str,
+        page: int = 1,
+        *,
+        folder_id: int | None = None,
+        uncategorized: bool = False,
     ) -> dict:
         assert access_token == "jwt"
+        assert uncategorized is False
         calls.append((page, folder_id))
         return pages[page]
 
@@ -228,3 +216,24 @@ def test_render_uploads_uses_date_in_meta_without_original_photo_label(monkeypat
     assert "<span>2026.06.10</span>" in rendered_html
     assert "원본 사진" not in rendered_html
     assert "mypage-card-date" not in rendered_html
+
+
+def test_load_upload_page_reads_backend_total_count(monkeypatch) -> None:
+    calls: list[int] = []
+
+    def fake_request_my_uploads(access_token: str, page: int = 1) -> dict:
+        assert access_token == "jwt"
+        calls.append(page)
+        return {
+            "items": [{"upload_id": f"upload-{page}"}],
+            "total_count": 9,
+        }
+
+    monkeypatch.setattr(mypage_page, "cached_request_my_uploads", fake_request_my_uploads)
+
+    uploads, total_count, current_page = mypage_page._load_upload_page("jwt", 1)
+
+    assert calls == [1]
+    assert uploads == [{"upload_id": "upload-1"}]
+    assert total_count == 9
+    assert current_page == 1

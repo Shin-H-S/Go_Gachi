@@ -28,13 +28,19 @@ def cached_request_my_generations(
     access_token: str,
     page: int = 1,
     folder_id: int | None = None,
+    uncategorized: bool = False,
 ) -> dict:
-    return request_my_generations(access_token, page=page, folder_id=folder_id)
+    return request_my_generations(
+        access_token,
+        page=page,
+        folder_id=folder_id,
+        uncategorized=uncategorized,
+    )
 
 
 @st.cache_data(show_spinner=False, ttl=UPLOADS_CACHE_TTL_SECONDS)
-def cached_request_my_uploads(access_token: str) -> dict:
-    return request_my_uploads(access_token)
+def cached_request_my_uploads(access_token: str, page: int = 1) -> dict:
+    return request_my_uploads(access_token, page=page)
 
 
 def clear_generation_cache() -> None:
