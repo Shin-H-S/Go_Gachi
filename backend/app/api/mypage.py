@@ -36,11 +36,14 @@ PAGE_SIZE = 12
 async def read_my_generations(
     user: AuthUser = Depends(get_current_user),
     page: Annotated[int, Query(ge=1)] = 1,
+    folder_id: Annotated[int | None, Query(ge=1)] = None,
 ) -> dict[str, object]:
     offset = (page - 1) * PAGE_SIZE
     async with async_session_scope() as db:
-        rows = await crud.list_user_generations(db, user.id, limit=PAGE_SIZE, offset=offset)
-        total = await crud.count_user_generations(db, user.id)
+        rows = await crud.list_user_generations(
+            db, user.id, limit=PAGE_SIZE, offset=offset, folder_id=folder_id
+        )
+        total = await crud.count_user_generations(db, user.id, folder_id=folder_id)
 
     settings = get_settings()
     storage = get_storage(settings)
@@ -72,9 +75,10 @@ async def read_my_generations(
         )
     ]
     logger.info(
-        "my generations listed user_id=%s page=%d count=%d total=%d",
+        "my generations listed user_id=%s page=%d folder_id=%s count=%d total=%d",
         short_id(user.id),
         page,
+        folder_id,
         len(items),
         total,
     )

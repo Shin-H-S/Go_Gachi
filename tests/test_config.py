@@ -58,9 +58,7 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
 
     assert "thumbnail readability" in presets["baemin"].channel_prompt
     assert "nearby shop owner" in presets["daangn"].channel_prompt
-    assert "layout balance" in (
-        presets["instagram"].find_detail("story_image").prompt_hint
-    )
+    assert "layout balance" in (presets["instagram"].find_detail("story_image").prompt_hint)
     assert "limited offers" in presets["daangn"].find_detail("discount_event").prompt_hint
     assert PROMPT_VERSION == "2026-06-16-v3-v6-crop-safe-centering-policy"
 
@@ -132,6 +130,29 @@ def test_sqlite_database_url_is_allowed_for_isolated_tests(monkeypatch) -> None:
     monkeypatch.setenv("ALLOW_SQLITE_DATABASE", "true")
 
     assert runtime_config._database_url_from_env() == "sqlite:///tmp/app.db"
+
+
+def test_production_disallows_wildcard_cors() -> None:
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS must not include '\\*'"):
+        runtime_config._validated_cors_origins("production", ["*"])
+
+
+def test_cors_origins_trim_trailing_slash() -> None:
+    origins = runtime_config._validated_cors_origins(
+        "production",
+        ["https://gogachi.streamlit.app/"],
+    )
+
+    assert origins == ["https://gogachi.streamlit.app"]
+
+
+def test_production_requires_r2_storage_backend() -> None:
+    with pytest.raises(RuntimeError, match="STORAGE_BACKEND must be 'r2' in production"):
+        runtime_config._validated_storage_backend("production", "local")
+
+
+def test_local_allows_local_storage_backend() -> None:
+    assert runtime_config._validated_storage_backend("local", "local") == "local"
 
 
 def test_prompt() -> None:

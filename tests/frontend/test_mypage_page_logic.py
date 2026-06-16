@@ -70,20 +70,18 @@ def test_load_mypage_data_recent_fetches_only_server_pages_needed(monkeypatch) -
         "request_my_uploads",
         lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
+    # 페이지당 12개로 정렬되어 프론트 페이지 N은 백엔드 페이지 N 한 번만 요청한다.
     calls: list[int] = []
     backend_pages = {
         2: {
-            "items": [{"request_id": f"generation-{index}"} for index in range(10, 20)],
-            "total_count": 25,
-        },
-        3: {
-            "items": [{"request_id": f"generation-{index}"} for index in range(20, 25)],
+            "items": [{"request_id": f"generation-{index}"} for index in range(12, 24)],
             "total_count": 25,
         },
     }
 
-    def fake_generations(access_token: str, page: int = 1) -> dict:
+    def fake_generations(access_token: str, page: int = 1, *, folder_id: int | None = None) -> dict:
         assert access_token == "jwt"
+        assert folder_id is None
         calls.append(page)
         return backend_pages[page]
 
@@ -95,7 +93,7 @@ def test_load_mypage_data_recent_fetches_only_server_pages_needed(monkeypatch) -
 
     assert profile == {"email": "jwt@example.com"}
     assert folders == [{"id": 7, "name": "Spring"}]
-    assert calls == [2, 3]
+    assert calls == [2]
     assert [item["request_id"] for item in generations] == [
         f"generation-{index}" for index in range(12, 24)
     ]
@@ -104,22 +102,25 @@ def test_load_mypage_data_recent_fetches_only_server_pages_needed(monkeypatch) -
     assert current_page == 2
 
 
-def test_load_mypage_data_folder_view_keeps_full_load_for_folder_filtering(monkeypatch) -> None:
+def test_load_mypage_data_folder_view_uses_backend_folder_id_pagination(monkeypatch) -> None:
     _patch_common_profile_requests(monkeypatch)
+    monkeypatch.setattr(views, "current_page", lambda scope: 1)
     monkeypatch.setattr(
         mypage_page,
         "request_my_uploads",
         lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
-    calls: list[int] = []
+    calls: list[tuple[int, int | None]] = []
     backend_pages = {
-        1: {"items": [{"request_id": "a"}, {"request_id": "b"}], "total_count": 3},
-        2: {"items": [{"request_id": "c"}], "total_count": 3},
+        1: {
+            "items": [{"request_id": "a"}, {"request_id": "b"}, {"request_id": "c"}],
+            "total_count": 3,
+        },
     }
 
-    def fake_generations(access_token: str, page: int = 1) -> dict:
+    def fake_generations(access_token: str, page: int = 1, *, folder_id: int | None = None) -> dict:
         assert access_token == "jwt"
-        calls.append(page)
+        calls.append((page, folder_id))
         return backend_pages[page]
 
     monkeypatch.setattr(mypage_page, "request_my_generations", fake_generations)
@@ -129,11 +130,44 @@ def test_load_mypage_data_folder_view_keeps_full_load_for_folder_filtering(monke
         state.folder_view(7),
     )
 
-    assert calls == [1, 2]
+    assert calls == [(1, 7)]
     assert [item["request_id"] for item in generations] == ["a", "b", "c"]
     assert uploads == []
     assert total_count == 3
     assert current_page == 1
+
+
+def test_load_mypage_data_folder_none_view_falls_back_to_full_load(monkeypatch) -> None:
+    _patch_common_profile_requests(monkeypatch)
+    monkeypatch.setattr(
+        mypage_page,
+        "request_my_uploads",
+        lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
+    )
+    calls: list[tuple[int, int | None]] = []
+    backend_pages = {
+        1: {
+            "items": [{"request_id": "a"}, {"request_id": "b"}],
+            "total_count": 2,
+        },
+    }
+
+    def fake_generations(access_token: str, page: int = 1, *, folder_id: int | None = None) -> dict:
+        assert access_token == "jwt"
+        calls.append((page, folder_id))
+        return backend_pages[page]
+
+    monkeypatch.setattr(mypage_page, "request_my_generations", fake_generations)
+
+    _, _, generations, _, total_count, _ = mypage_page._load_mypage_data(
+        "jwt",
+        state.FOLDER_NONE_VIEW,
+    )
+
+    # FOLDER_NONE_VIEW(미분류)는 backend 필터가 아직 없어 전체 로드로 fallback한다.
+    assert calls == [(1, None)]
+    assert [item["request_id"] for item in generations] == ["a", "b"]
+    assert total_count == 2
 
 
 def test_load_mypage_data_uploads_and_account_views_skip_generation_fetches(monkeypatch) -> None:

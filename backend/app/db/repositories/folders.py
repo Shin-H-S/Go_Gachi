@@ -5,8 +5,17 @@ from backend.app.db.models import Folder, Generation
 
 
 async def list_user_generations(
-    db: AsyncSession, user_id: str, *, limit: int = 10, offset: int = 0
+    db: AsyncSession,
+    user_id: str,
+    *,
+    limit: int = 10,
+    offset: int = 0,
+    folder_id: int | None = None,
 ) -> list[Generation]:
+    """현재 사용자의 generation 행 목록을 최신순으로 반환한다.
+
+    folder_id가 주어지면 해당 폴더에 속한 행만 반환한다(폴더별 페이지네이션 지원).
+    """
     stmt = (
         select(Generation)
         .where(Generation.user_id == user_id)
@@ -14,12 +23,25 @@ async def list_user_generations(
         .limit(limit)
         .offset(offset)
     )
+    if folder_id is not None:
+        stmt = stmt.where(Generation.folder_id == folder_id)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
-async def count_user_generations(db: AsyncSession, user_id: str) -> int:
+async def count_user_generations(
+    db: AsyncSession,
+    user_id: str,
+    *,
+    folder_id: int | None = None,
+) -> int:
+    """현재 사용자의 generation 행 총 개수를 반환한다.
+
+    folder_id가 주어지면 해당 폴더에 속한 행만 센다.
+    """
     stmt = select(func.count()).select_from(Generation).where(Generation.user_id == user_id)
+    if folder_id is not None:
+        stmt = stmt.where(Generation.folder_id == folder_id)
     result = await db.execute(stmt)
     return int(result.scalar_one())
 
