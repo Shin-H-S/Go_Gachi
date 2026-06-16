@@ -62,7 +62,7 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
         presets["instagram"].find_detail("story_image").prompt_hint
     )
     assert "limited offers" in presets["daangn"].find_detail("discount_event").prompt_hint
-    assert PROMPT_VERSION == "2026-06-16-v3-v6-crop-safe-centering-policy"
+    assert PROMPT_VERSION == "2026-06-16-v3-v7-daangn-discount-visual-refinement"
 
 
 def test_presets_do_not_conflict_with_image_copy_prompting() -> None:
