@@ -116,7 +116,7 @@ def test_mypage_api_and_styles_are_registered() -> None:
     assert "move_generation_to_folder" in api_source
     assert "MYPAGE_CSS" in styles_source
     assert "MYPAGE_LAYOUT_CSS" in mypage_composer
-    assert "st.columns([0.176, 0.824], gap=\"large\")" in page_source
+    assert 'st.columns([0.176, 0.824], gap="large")' in page_source
     assert 'st.container(key="mypage-sidebar")' not in page_source
     assert ".mypage-shell" in layout_styles
     assert ".st-key-mypage-sidebar" not in layout_styles
@@ -144,7 +144,7 @@ def test_mypage_api_and_styles_are_registered() -> None:
     assert "background: transparent !important" not in sidebar_nav_button_block
     assert "box-shadow: none !important" in sidebar_nav_button_block
     assert "mypage-sidebar-button-marker" in sidebar_source
-    assert "div[data-testid=\"stElementContainer\"]:has(.mypage-sidebar-button-marker)" in (
+    assert 'div[data-testid="stElementContainer"]:has(.mypage-sidebar-button-marker)' in (
         navigation_styles
     )
     assert '+ div[data-testid="stButton"]' in navigation_styles

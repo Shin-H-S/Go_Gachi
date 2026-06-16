@@ -212,12 +212,11 @@ def test_generate_button_sits_below_left_scroll_panel() -> None:
     nested_marker = "                st.markdown("
     outer_marker = "        st.markdown("
     generate_button = (
-        '        generate = st.button("✦ 이미지 만들기", '
-        'use_container_width=True, type="primary")'
+        '        generate = st.button("✦ 이미지 만들기", use_container_width=True, type="primary")'
     )
 
-    assert f'{nested_marker}\'<div class="generate-button-marker"></div>\'' not in source
-    assert f'{outer_marker}\'<div class="generate-button-marker"></div>\'' in source
+    assert f"{nested_marker}'<div class=\"generate-button-marker\"></div>'" not in source
+    assert f"{outer_marker}'<div class=\"generate-button-marker\"></div>'" in source
     assert generate_button in source
 
 

@@ -111,9 +111,7 @@ async def _batch(cfg: dict, run_dir: Path) -> None:
                     output=f"images/{out_name}",
                     status="ok",
                     usage=usage or None,
-                    cost_usd=calculate_image_cost(
-                        usage, quality=settings.openai_image_quality
-                    ),
+                    cost_usd=calculate_image_cost(usage, quality=settings.openai_image_quality),
                 )
             except Exception as exc:
                 record.update(status="error", error=f"{type(exc).__name__}: {exc}")

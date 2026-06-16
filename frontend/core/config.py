@@ -17,6 +17,8 @@ load_dotenv(FRONTEND_DIR / ".env", override=True)
 
 BACKEND_URL = os.getenv("BACKEND_URL", DEFAULT_BACKEND_URL).rstrip("/")
 FRONTEND_CONFIG_SOURCE = os.getenv("FRONTEND_CONFIG_SOURCE", "auto").lower()
+# 백엔드 settings.download_url_ttl_seconds와 같은 값을 공유해 안내 문구가 어긋나지 않게 한다.
+DOWNLOAD_URL_TTL_SECONDS = int(os.getenv("DOWNLOAD_URL_TTL_SECONDS", "1800"))
 
 
 def _load_local_presets() -> list[dict[str, object]]:

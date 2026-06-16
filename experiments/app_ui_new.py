@@ -85,9 +85,7 @@ def render_new_tab() -> None:
     )
     detail_custom = ""
     detail = (
-        preset.find_detail(
-            next((d.id for d in preset.details if d.label == detail_label), None)
-        )
+        preset.find_detail(next((d.id for d in preset.details if d.label == detail_label), None))
         if preset
         else None
     )
@@ -220,9 +218,7 @@ def render_new_tab() -> None:
         if st.button("프롬프트 미리보기", use_container_width=True):
             cfg = collect_cfg()
             if cfg:
-                st.session_state["preview_prompt"] = assemble_full_prompt(
-                    cfg, preview_ad_copy(cfg)
-                )
+                st.session_state["preview_prompt"] = assemble_full_prompt(cfg, preview_ad_copy(cfg))
     with col_run:
         if st.button("생성하기", type="primary", use_container_width=True):
             cfg = collect_cfg()

@@ -156,7 +156,7 @@ def _copy_system_prompt(copy_mode: CopyMode) -> str:
         "Use the examples only as style references, not as fixed content: '깊은 우유 풍미의 라떼', "
         "'우유가 살아있는 라떼', '진한 우유의 깊은 맛', or '우유의 깊이를 담다'. "
         "Keep the output concise, natural, and commercial without forcing any "
-        "specific ingredient, flavor, or product theme. "        
+        "specific ingredient, flavor, or product theme. "
         f"copyMode: {copy_mode}"
     )
 

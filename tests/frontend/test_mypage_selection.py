@@ -15,9 +15,7 @@ def test_toggle_selected_generation_ids_selects_and_deselects() -> None:
 
 
 def test_toggle_generation_page_selection_selects_and_deselects_visible_items() -> None:
-    session_state: dict[str, object] = {
-        selection.SELECTED_GENERATION_IDS_KEY: ["hidden-request"]
-    }
+    session_state: dict[str, object] = {selection.SELECTED_GENERATION_IDS_KEY: ["hidden-request"]}
     page_items = [
         {"request_id": "request-1"},
         {"request_id": "request-2"},

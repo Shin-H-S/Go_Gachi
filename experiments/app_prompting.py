@@ -227,9 +227,7 @@ def prompt_drift_report() -> str | None:
         mismatches: list[tuple[str, str]] = []
         for name, cfg, ad_copy, user_prompt in combos:
             ctx = user_prompt_with_context(user_prompt, target, detail, "cover")
-            expected = backend_prompts.build_prompt(
-                preset, ctx, detail, image_copy=ad_copy
-            )
+            expected = backend_prompts.build_prompt(preset, ctx, detail, image_copy=ad_copy)
             actual = assemble_full_prompt(cfg, ad_copy)
             if actual != expected:
                 diff = "\n".join(

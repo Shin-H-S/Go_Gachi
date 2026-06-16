@@ -44,9 +44,7 @@ def render_compare_tab() -> None:
         else:
             size_col3, _ = st.columns([1, 3])
             with size_col3:
-                img_width3 = st.slider(
-                    "이미지 너비(px)", 240, 800, 500, 20, key="imgw_tab3"
-                )
+                img_width3 = st.slider("이미지 너비(px)", 240, 800, 500, 20, key="imgw_tab3")
 
             try:
                 grid_box3 = st.container(key="tab3grid")
@@ -89,9 +87,7 @@ def render_compare_tab() -> None:
             # ── 테스트별 설정값·평가 요약 (한 번에 하나) ──────────────────
             st.divider()
             st.subheader("테스트별 설정 · 평가 요약")
-            info_label = st.selectbox(
-                "정보를 볼 테스트", selected_tests, key="tab3_info_select"
-            )
+            info_label = st.selectbox("정보를 볼 테스트", selected_tests, key="tab3_info_select")
             info = compare_map[info_label]
             info_cfg_path = info["run_dir"] / "config.json"
             if info_cfg_path.exists():
@@ -118,9 +114,7 @@ def render_compare_tab() -> None:
                     for r in info_oks
                 )
                 info_times = [
-                    r["elapsed_s"]
-                    for r in info_oks
-                    if isinstance(r.get("elapsed_s"), int | float)
+                    r["elapsed_s"] for r in info_oks if isinstance(r.get("elapsed_s"), int | float)
                 ]
                 time_text = (
                     f"**{sum(info_times) / len(info_times):.1f}초** "
@@ -154,9 +148,7 @@ def render_compare_tab() -> None:
                     if not item.get("criterion") and not item.get("scores"):
                         continue
                     values = [
-                        v
-                        for v in item.get("scores", {}).values()
-                        if isinstance(v, int | float)
+                        v for v in item.get("scores", {}).values() if isinstance(v, int | float)
                     ]
                     item_avg = round(sum(values) / len(values), 1) if values else None
                     if item_avg is not None:
@@ -201,17 +193,16 @@ def render_compare_tab() -> None:
                 st.caption("두 개를 선택하면 비교 버튼이 나타납니다.")
             else:
                 entry_a, entry_b = compare_map[pair[0]], compare_map[pair[1]]
-                records_a, records_b = entry_a["results"].get("records", []), entry_b[
-                    "results"
-                ].get("records", [])
+                records_a, records_b = (
+                    entry_a["results"].get("records", []),
+                    entry_b["results"].get("records", []),
+                )
                 prompt_a = records_a[0].get("prompt", "") if records_a else ""
                 prompt_b = records_b[0].get("prompt", "") if records_b else ""
                 if not prompt_a or not prompt_b:
                     st.warning("프롬프트 기록이 없는 테스트가 있어 비교할 수 없습니다.")
                 else:
-                    cmp_key = "cmp_" + "_".join(
-                        sorted([entry_a["run_id"], entry_b["run_id"]])
-                    )
+                    cmp_key = "cmp_" + "_".join(sorted([entry_a["run_id"], entry_b["run_id"]]))
                     estimated = compare_cost_estimate(prompt_a, prompt_b, COMPARE_MODEL)
                     if st.button("프롬프트 차이 분석 (AI)"):
                         compare_settings = load_settings()

@@ -138,7 +138,9 @@ def cell_html(record: dict[str, Any] | None, index: int | None) -> str:
             f'<td class="cell"><div class="cell-dry" onclick="openCell({index})">dry-run<br>'
             "프롬프트 보기</div></td>"
         )
-    elapsed = f'<div class="elapsed">{record["elapsed_s"]}s</div>' if record.get("elapsed_s") else ""
+    elapsed = (
+        f'<div class="elapsed">{record["elapsed_s"]}s</div>' if record.get("elapsed_s") else ""
+    )
     return (
         f'<td class="cell"><img loading="lazy" src="{record["output"]}" '
         f'onclick="openCell({index})">{score_badge(record)}{elapsed}</td>'
@@ -179,15 +181,12 @@ def build_report(run_dir: Path) -> Path:
     case_ids = list(dict.fromkeys(r["case_id"] for r in records))
     kind_order = ["system", "copy", "user", "mixed"]
     case_ids.sort(
-        key=lambda cid: kind_order.index(
-            next(r["kind"] for r in records if r["case_id"] == cid)
-        )
+        key=lambda cid: kind_order.index(next(r["kind"] for r in records if r["case_id"] == cid))
     )
     lookup = {(r["case_id"], r["image"], r["rep"]): (i, r) for i, r in enumerate(records)}
 
     head_cells = "".join(
-        f'<th colspan="{len(reps)}"><img src="inputs/{html.escape(img)}">'
-        f"{html.escape(img)}</th>"
+        f'<th colspan="{len(reps)}"><img src="inputs/{html.escape(img)}">{html.escape(img)}</th>'
         for img in images
     )
     rep_cells = (
@@ -207,10 +206,13 @@ def build_report(run_dir: Path) -> Path:
         rows.append(f'<tr data-kind="{first["kind"]}">{case_header(first)}{cells}</tr>')
 
     kinds_present = list(dict.fromkeys(r["kind"] for r in records))
-    chips = '<button class="chip active" onclick="filterKind(\'all\', this)">전체</button>' + "".join(
-        f'<button class="chip" onclick="filterKind(\'{k}\', this)">'
-        f"{KIND_LABELS.get(k, k)}</button>"
-        for k in kinds_present
+    chips = (
+        '<button class="chip active" onclick="filterKind(\'all\', this)">전체</button>'
+        + "".join(
+            f'<button class="chip" onclick="filterKind(\'{k}\', this)">'
+            f"{KIND_LABELS.get(k, k)}</button>"
+            for k in kinds_present
+        )
     )
 
     ok = sum(1 for r in records if r["status"] == "ok")
@@ -224,7 +226,19 @@ def build_report(run_dir: Path) -> Path:
 
     records_json = json.dumps(
         [
-            {k: r.get(k) for k in ("case_id", "image", "rep", "output", "prompt", "judge", "target", "elapsed_s")}
+            {
+                k: r.get(k)
+                for k in (
+                    "case_id",
+                    "image",
+                    "rep",
+                    "output",
+                    "prompt",
+                    "judge",
+                    "target",
+                    "elapsed_s",
+                )
+            }
             for r in records
         ],
         ensure_ascii=False,

@@ -46,30 +46,37 @@ def build_system_prompt(
         ]
     )
     if image_copy and _should_render_image_copy(preset, detail):
-        parts.extend([
-            _image_copy_layout_instruction(preset, detail),
-            _image_copy_instruction(image_copy),
-            _image_copy_style_instruction(preset, detail),
-            "Do not add unrelated logos, watermarks, UI, signatures, or brand marks.",
-        ])
+        parts.extend(
+            [
+                _image_copy_layout_instruction(preset, detail),
+                _image_copy_instruction(image_copy),
+                _image_copy_style_instruction(preset, detail),
+                "Do not add unrelated logos, watermarks, UI, signatures, or brand marks.",
+            ]
+        )
 
     elif image_copy:
-        parts.extend([
-            _baemin_ignore_image_copy_instruction(),
-            _no_copy_instruction(),
-        ])
+        parts.extend(
+            [
+                _baemin_ignore_image_copy_instruction(),
+                _no_copy_instruction(),
+            ]
+        )
 
     else:
-        parts.extend([
-            _no_copy_instruction(),
-            (
-                "Do not render, add, draw, suggest, or imitate any text, typography, "
-                "pricing, numbers, labels, or brand information anywhere in the image. "
-                "The image must be completely text-free and ready for later ad copy placement. "
-                "Leave clean, generous negative space at the top, sides, and bottom of the image "
-                "to accommodate future text overlays without cluttering the product."
-            ),
-        ])
+        parts.extend(
+            [
+                _no_copy_instruction(),
+                (
+                    "Do not render, add, draw, suggest, or imitate any text, typography, "
+                    "pricing, numbers, labels, or brand information anywhere in the image. "
+                    "The image must be completely text-free and ready for later ad copy "
+                    "placement. Leave clean, generous negative space at the top, sides, "
+                    "and bottom of the image to accommodate future text overlays without "
+                    "cluttering the product."
+                ),
+            ]
+        )
 
     return "\n".join(parts)
 

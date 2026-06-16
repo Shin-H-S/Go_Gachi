@@ -35,11 +35,7 @@ def toggle_generation_selection(
 
 def selected_generation_items(items: list[dict], selected_ids: Sequence[str]) -> list[dict]:
     selected_lookup = {str(value) for value in selected_ids}
-    return [
-        item
-        for item in items
-        if str(item.get("request_id") or "") in selected_lookup
-    ]
+    return [item for item in items if str(item.get("request_id") or "") in selected_lookup]
 
 
 def generation_item_ids(items: Sequence[dict]) -> list[str]:

@@ -231,10 +231,7 @@ def test_work_page_displays_result_inclusion_summary() -> None:
     result_panel_source = RESULT_PANEL.read_text(encoding="utf-8")
 
     assert "from frontend.work.result_panel import render_result_panel" in work_source
-    assert (
-        "from frontend.work.result_summary import result_summary_html"
-        in result_panel_source
-    )
+    assert "from frontend.work.result_summary import result_summary_html" in result_panel_source
     assert 'st.session_state.get("result_context")' in result_panel_source
     assert "summary_html=summary_html" in result_panel_source
 
