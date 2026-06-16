@@ -64,19 +64,18 @@ def build_system_prompt(
         )
 
     else:
-        parts.extend(
-            [
-                _no_copy_instruction(),
-                (
-                    "Do not render, add, draw, suggest, or imitate any text, typography, "
-                    "pricing, numbers, labels, or brand information anywhere in the image. "
-                    "The image must be completely text-free and ready for later ad copy "
-                    "placement. Leave clean, generous negative space at the top, sides, "
-                    "and bottom of the image to accommodate future text overlays without "
-                    "cluttering the product."
-                ),
-            ]
-        )
+        parts.extend([
+            _no_copy_instruction(),
+            (
+                "Do not render, add, draw, suggest, or imitate any text, typography, "
+                "pricing, numbers, labels, or brand information anywhere in the image. "
+                "The image must be completely text-free and ready for later ad copy placement. "
+                "Preserve visually comfortable negative space only when it does not conflict "
+                "with the selected preset and detail composition policy. "
+                "Follow preset and detail positioning rules with higher priority "
+                "than future text placement."
+            ),
+        ])
 
     return "\n".join(parts)
 
