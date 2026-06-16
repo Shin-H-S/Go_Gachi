@@ -58,7 +58,7 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
 
     assert "thumbnail readability" in presets["baemin"].channel_prompt
     assert "nearby shop owner" in presets["daangn"].channel_prompt
-    assert "layout balance" in (
+    assert "readable ad copy or platform elements" in (
         presets["instagram"].find_detail("story_image").prompt_hint
     )
     assert "limited offers" in presets["daangn"].find_detail("discount_event").prompt_hint
