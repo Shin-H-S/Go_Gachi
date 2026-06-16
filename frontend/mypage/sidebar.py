@@ -1,8 +1,11 @@
+from functools import cache
 from html import escape
+from pathlib import Path
 
 import httpx
 import streamlit as st
 
+from frontend.media.image_data import bytes_to_data_url
 from frontend.mypage.state import (
     ACCOUNT_VIEW,
     FOLDER_NONE_VIEW,
@@ -14,10 +17,29 @@ from frontend.mypage.state import (
 )
 from frontend.services.api_client import create_my_folder
 
+MYPAGE_ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
+
+
+@cache
+def _sidebar_asset_data_url(filename: str) -> str:
+    return bytes_to_data_url((MYPAGE_ASSET_DIR / filename).read_bytes())
+
 
 def _sidebar_button_marker() -> None:
     st.markdown(
         '<span class="mypage-sidebar-button-marker" aria-hidden="true"></span>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_sidebar_icon_visual(filename: str, css_class: str) -> None:
+    asset_src = escape(_sidebar_asset_data_url(filename), quote=True)
+    st.markdown(
+        f"""
+        <span class="mypage-icon-button-visual {css_class}" aria-hidden="true">
+            <img src="{asset_src}" alt="" />
+        </span>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -53,9 +75,19 @@ def render_sidebar(profile: dict, folders: list[dict], view: str, access_token: 
         """,
         unsafe_allow_html=True,
     )
+    with st.container(key="mypage-settings-control"):
+        _render_sidebar_icon_visual("gear.png", "mypage-settings-icon")
+        if st.button(" ", key="mypage-settings", help="계정 설정"):
+            set_view(ACCOUNT_VIEW)
+            st.rerun()
+    st.markdown('<div class="mypage-nav-label">내 자료</div>', unsafe_allow_html=True)
     _sidebar_button_marker()
     if st.button("전체 작업", key="mypage-nav-recent", use_container_width=True):
         set_view(RECENT_VIEW)
+        st.rerun()
+    _sidebar_button_marker()
+    if st.button("업로드한 원본 이미지", key="mypage-nav-uploads", use_container_width=True):
+        set_view(UPLOADS_VIEW)
         st.rerun()
     st.markdown('<div class="mypage-nav-label">폴더</div>', unsafe_allow_html=True)
     _sidebar_button_marker()
@@ -72,20 +104,12 @@ def render_sidebar(profile: dict, folders: list[dict], view: str, access_token: 
         ):
             set_view(folder_view(folder_id))
             st.rerun()
-    st.markdown('<div class="mypage-nav-label">내 자료</div>', unsafe_allow_html=True)
-    _sidebar_button_marker()
-    if st.button("업로드한 원본 이미지", key="mypage-nav-uploads", use_container_width=True):
-        set_view(UPLOADS_VIEW)
-        st.rerun()
-    _sidebar_button_marker()
-    if st.button("계정 설정", key="mypage-nav-account", use_container_width=True):
-        set_view(ACCOUNT_VIEW)
-        st.rerun()
-    _sidebar_button_marker()
-    if st.button("새 폴더 만들기", key="mypage-new-folder", use_container_width=True):
-        st.session_state["mypage_show_folder_form"] = not st.session_state.get(
-            "mypage_show_folder_form",
-            False,
-        )
+    with st.container(key="mypage-new-folder-control"):
+        _render_sidebar_icon_visual("new-folder.png", "mypage-new-folder-icon")
+        if st.button(" ", key="mypage-new-folder", help="새 폴더 만들기"):
+            st.session_state["mypage_show_folder_form"] = not st.session_state.get(
+                "mypage_show_folder_form",
+                False,
+            )
     if st.session_state.get("mypage_show_folder_form"):
         _render_folder_form(access_token)

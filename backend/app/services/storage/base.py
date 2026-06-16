@@ -22,6 +22,17 @@ class Storage(Protocol):
         """저장된 바이트를 읽는다. 없으면 None."""
         ...
 
+    async def download_url(
+        self,
+        path: str,
+        *,
+        filename: str,
+        content_type: str,
+        expires_in: int,
+    ) -> str | None:
+        """다운로드용 signed URL을 만든다. local 저장소는 None을 반환한다."""
+        ...
+
     async def exists(self, path: str) -> bool:
         """저장 위치에 객체/파일이 있는지 확인한다."""
         ...

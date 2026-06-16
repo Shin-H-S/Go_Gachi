@@ -10,12 +10,13 @@ from frontend.work.components import (
     render_channel_tabs,
     render_generation_lock_css,
     render_header,
+    render_section_label,
 )
 from frontend.work.copy_controls import render_copy_controls
 from frontend.work.generation import handle_generation_request
 from frontend.work.result_panel import render_result_panel
 from frontend.work.state import build_result_context, get_selected_channel, sync_result_state
-from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_primary_uploaded_file
+from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_effective_uploaded_file
 
 
 def render_work_page() -> None:
@@ -27,12 +28,7 @@ def render_work_page() -> None:
             st.markdown('<div class="left-options-scroll-marker"></div>', unsafe_allow_html=True)
 
             with st.container(key="left-upload-section"):
-                st.markdown(
-                    """
-                    <p class="section-label">메뉴 사진 업로드</p>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                render_section_label("메뉴 사진 업로드", "1.png")
 
                 uploaded_files = st.file_uploader(
                     "메뉴 사진 업로드",
@@ -41,19 +37,16 @@ def render_work_page() -> None:
                     accept_multiple_files=True,
                     label_visibility="collapsed",
                 )
-                uploaded_file = get_primary_uploaded_file(uploaded_files)
+                uploaded_file = get_effective_uploaded_file(uploaded_files, st.session_state)
 
             with st.container(key="left-channel-section"):
-                st.markdown('<p class="section-label">광고 채널 선택</p>', unsafe_allow_html=True)
+                render_section_label("광고 채널 선택", "2.png")
                 format_label = get_selected_channel()
                 render_channel_tabs(format_label)
 
             with st.container(key="left-type-section"):
                 detail_options = get_detail_labels(format_label)
-                st.markdown(
-                    '<p class="detail-choice-label">광고 유형 선택</p>',
-                    unsafe_allow_html=True,
-                )
+                render_section_label("광고 유형 선택", "3.png", css_class="detail-choice-label")
                 detail_label = st.radio(
                     "광고 유형 선택",
                     options=detail_options,
@@ -76,7 +69,7 @@ def render_work_page() -> None:
                 )
 
             with st.container(key="left-prompt-section"):
-                st.markdown('<p class="section-label">이미지 요청사항</p>', unsafe_allow_html=True)
+                render_section_label("이미지 요청사항", "4.png")
                 prompt = st.text_area(
                     "이미지 요청사항",
                     placeholder=(

@@ -9,6 +9,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from backend.app.api.assets import router as assets_router
 from backend.app.api.auth import router as auth_router
 from backend.app.api.generation_jobs import router as generation_jobs_router
 from backend.app.api.internal import router as internal_router
@@ -93,6 +94,7 @@ app.add_middleware(RequestIDMiddleware)
 
 # 인증 라우트(/api/auth/me 등)는 환경과 무관하게 항상 등록한다.
 app.include_router(auth_router)
+app.include_router(assets_router)
 app.include_router(generation_jobs_router)
 
 # production에서는 내부 모니터링 라우터를 아예 등록하지 않는다. 로컬/dev에선 그대로 열림.

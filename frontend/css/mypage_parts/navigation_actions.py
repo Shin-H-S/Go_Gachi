@@ -42,42 +42,92 @@ MYPAGE_NAVIGATION_ACTIONS_CSS = """
     -webkit-text-fill-color: #ffffff !important;
 }
 
-.st-key-mypage-new-folder button {
+.st-key-mypage-settings-control,
+.st-key-mypage-new-folder-control {
+    width: 44px !important;
+    height: 44px !important;
+}
+
+.st-key-mypage-new-folder-control {
+    position: relative;
+    margin: 14px auto 0 !important;
+}
+
+.st-key-mypage-settings-control
+    div[data-testid="stElementContainer"]:has(.mypage-icon-button-visual),
+.st-key-mypage-new-folder-control
+    div[data-testid="stElementContainer"]:has(.mypage-icon-button-visual) {
+    display: block !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+    z-index: 3;
+}
+
+.mypage-icon-button-visual,
+.mypage-icon-button-visual img {
+    display: block;
+    width: 44px !important;
+    height: 44px !important;
+}
+
+.mypage-icon-button-visual {
+    pointer-events: none;
+}
+
+.mypage-icon-button-visual img {
+    object-fit: contain;
+}
+
+.st-key-mypage-settings-control div[data-testid="stButton"],
+.st-key-mypage-new-folder-control div[data-testid="stButton"] {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    z-index: 2;
+}
+
+.st-key-mypage-settings-control button,
+.st-key-mypage-settings-control button:hover,
+.st-key-mypage-settings-control button:focus,
+.st-key-mypage-settings-control button:active,
+.st-key-mypage-new-folder-control button,
+.st-key-mypage-new-folder-control button:hover,
+.st-key-mypage-new-folder-control button:focus,
+.st-key-mypage-new-folder-control button:active {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 8px !important;
     border: 0 !important;
+    border-width: 0 !important;
+    border-color: transparent !important;
     border-radius: 8px !important;
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-    color: #18211f !important;
-    font-weight: 800 !important;
-}
-
-.st-key-mypage-new-folder button div[data-testid="stMarkdownContainer"],
-.st-key-mypage-new-folder button p {
-    flex: 0 0 auto !important;
-    width: auto !important;
-    max-width: max-content !important;
-    margin: 0 !important;
-    text-align: left !important;
-}
-
-.st-key-mypage-new-folder button::before {
-    content: "+";
-    width: 18px;
-    height: 18px;
-    display: inline-grid;
-    place-items: center;
-    margin-right: 0;
-    flex: 0 0 auto;
-    border-radius: 999px;
-    border: 0 !important;
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-    color: #18211f;
+    outline: 0 !important;
     box-shadow: none !important;
-    font: 900 14px/1 sans-serif;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
 }
+
+.st-key-mypage-settings-control button *,
+.st-key-mypage-new-folder-control button * {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+}
+
 """

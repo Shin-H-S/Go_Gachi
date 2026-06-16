@@ -1,4 +1,4 @@
-from frontend import api_client
+from frontend.services import api_client
 
 
 def test_to_backend_asset_url_keeps_absolute_and_data_urls(

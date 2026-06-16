@@ -146,6 +146,7 @@ async def run_ai_eval(
     cost_state = {"usd": 0.0}
 
     async with httpx.AsyncClient(timeout=120) as client:
+
         async def one(number: str, record: dict) -> None:
             try:
                 scores, usage = await _eval_one_image(
@@ -169,9 +170,7 @@ async def run_ai_eval(
             except Exception as exc:
                 errors.append(f"이미지 {number}: {type(exc).__name__}: {exc}")
 
-        await asyncio.gather(
-            *(one(str(i + 1), rec) for i, rec in enumerate(ok_records))
-        )
+        await asyncio.gather(*(one(str(i + 1), rec) for i, rec in enumerate(ok_records)))
     return results, len(ok_records), errors, round(cost_state["usd"], 6)
 
 
@@ -186,9 +185,7 @@ COMPARE_SYSTEM = (
 def compare_cost_estimate(prompt_a: str, prompt_b: str, model: str) -> float:
     """비교 1회의 대략적 비용. 입력은 글자수/4 토큰으로 근사, 출력은 700토큰 가정."""
     input_tokens = (len(prompt_a) + len(prompt_b)) // 4 + 200
-    return calculate_text_cost(
-        {"input_tokens": input_tokens, "output_tokens": 700}, model=model
-    )
+    return calculate_text_cost({"input_tokens": input_tokens, "output_tokens": 700}, model=model)
 
 
 async def compare_prompts(

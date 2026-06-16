@@ -50,7 +50,7 @@ def _load_env_file(env_path: Path) -> None:
 def load_env() -> None:
     """공통 .env를 환경변수로 적재한다.
 
-    운영에서는 호스팅 플랫폼의 환경변수(Railway Variables 등)를 사용한다.
+    운영에서는 Render/Streamlit Cloud 같은 호스팅 플랫폼의 환경변수를 사용한다.
     로컬 검증에서는 레포 최상단 `.env`만 프론트/백엔드 공통 기준으로 읽는다.
     """
     _load_env_file(ROOT_DIR / ".env")
@@ -102,6 +102,7 @@ class Settings(BaseModel):
     r2_endpoint_url: str = ""
     r2_bucket_name: str = ""
     r2_public_url: str = ""
+    download_url_ttl_seconds: int = 1800
     cors_origins: list[str] = ["*"]
 
 
@@ -151,6 +152,7 @@ def get_settings() -> Settings:
         r2_endpoint_url=os.getenv("R2_ENDPOINT_URL", ""),
         r2_bucket_name=os.getenv("R2_BUCKET_NAME", ""),
         r2_public_url=os.getenv("R2_PUBLIC_URL", ""),
+        download_url_ttl_seconds=int(os.getenv("DOWNLOAD_URL_TTL_SECONDS", "1800")),
         cors_origins=_parse_csv(os.getenv("CORS_ORIGINS", "*"), default=["*"]),
     )
 

@@ -115,7 +115,7 @@ def load_settings() -> Settings:
         return Settings(
             image_provider="openai" if api_key else "mock",
             openai_api_key=api_key,
-            openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5"),
+            openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5.4-mini"),
             openai_image_model=os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2"),
             openai_image_quality=os.getenv("OPENAI_IMAGE_QUALITY", "medium"),
             openai_image_edit_estimated_cost_usd=float(
@@ -290,9 +290,7 @@ async def run_one(
             (run_dir / "images" / out_name).write_bytes(target_png)
             usage = usage_from_edit_result(edit_result)
             record["usage"] = usage or None
-            record["cost_usd"] = calculate_image_cost(
-                usage, quality=settings.openai_image_quality
-            )
+            record["cost_usd"] = calculate_image_cost(usage, quality=settings.openai_image_quality)
             record["output"] = f"images/{out_name}"
             record["status"] = "ok"
         except Exception as exc:  # 한 건 실패가 배치 전체를 멈추지 않게 한다.

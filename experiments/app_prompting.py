@@ -2,10 +2,11 @@
 
 from app_common import ROOT_DIR  # noqa: F401  Ensures backend imports resolve.
 
-from backend.app.core.presets import Preset, PresetDetail
+from backend.app.core.presets import Preset, PresetDetail, get_presets
 from backend.app.core.prompts import (
     _image_copy_instruction,
     _no_copy_instruction,
+    build_prompt,
     build_user_prompt,
     merge_image_prompt,
 )
@@ -89,16 +90,38 @@ def assemble_system_prompt(cfg: dict, ad_copy: AdCopy | None) -> str:
     return "\n".join(part for part in parts if part)
 
 
+def _repo_preset_detail(cfg: dict) -> tuple[Preset, PresetDetail] | None:
+    preset = get_presets().get(cfg.get("channel_id", ""))
+    if preset is None:
+        return None
+    detail = preset.find_detail(cfg.get("detail_id"))
+    if detail is None:
+        return None
+    return preset, detail
+
+
+def _uses_custom_copy_prompt(cfg: dict, ad_copy: AdCopy | None) -> bool:
+    if ad_copy is None:
+        return False
+    return bool(cfg.get("copy_instr_custom") or cfg.get("copy_mode_custom"))
+
+
 def assemble_full_prompt(cfg: dict, ad_copy: AdCopy | None) -> str:
     target = TargetSize(width=cfg["target_w"], height=cfg["target_h"])
-    detail = PresetDetail(
-        id=cfg["detail_id"],
-        label=cfg["detail_label"],
-        width=cfg["target_w"],
-        height=cfg["target_h"],
-        api_size=cfg["api_size"],
-    )
+    repo_selection = _repo_preset_detail(cfg)
+    if repo_selection:
+        preset, detail = repo_selection
+    else:
+        detail = PresetDetail(
+            id=cfg["detail_id"],
+            label=cfg["detail_label"],
+            width=cfg["target_w"],
+            height=cfg["target_h"],
+            api_size=cfg["api_size"],
+        )
     ctx = user_prompt_with_context(cfg.get("user_prompt", ""), target, detail, "cover")
+    if repo_selection and not _uses_custom_copy_prompt(cfg, ad_copy):
+        return build_prompt(preset, ctx, detail, image_copy=ad_copy)
     return merge_image_prompt(assemble_system_prompt(cfg, ad_copy), build_user_prompt(ctx))
 
 
@@ -204,9 +227,7 @@ def prompt_drift_report() -> str | None:
         mismatches: list[tuple[str, str]] = []
         for name, cfg, ad_copy, user_prompt in combos:
             ctx = user_prompt_with_context(user_prompt, target, detail, "cover")
-            expected = backend_prompts.build_prompt(
-                preset, ctx, detail, image_copy=ad_copy
-            )
+            expected = backend_prompts.build_prompt(preset, ctx, detail, image_copy=ad_copy)
             actual = assemble_full_prompt(cfg, ad_copy)
             if actual != expected:
                 diff = "\n".join(

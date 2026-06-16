@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from frontend import api_client
+from frontend.services import api_client
 from frontend.work.state import build_result_context
 
 

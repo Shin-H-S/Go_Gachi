@@ -22,9 +22,9 @@ FastAPI를 호출합니다. 백엔드 연결 실패 시에는 목업으로 대�
 OpenAI에 전송하는 파일만 PNG/RGB로 정규화합니다. 입력 이미지 진단 로그에는 포맷,
 모드, 크기처럼 디버깅에 필요한 메타데이터만 기록합니다.
 
-## Cloud Runtime
+## Production Runtime
 
-Cloud Run runs the same FastAPI app from the Docker image built by `infra/Dockerfile`. The container listens on the `PORT` environment variable provided by Cloud Run. Secrets are injected at runtime through Secret Manager, not copied into the image.
+Render runs the same FastAPI app from the Docker image built by `infra/Dockerfile`. The container listens on the `PORT` environment variable provided by Render. Secrets are injected at runtime through Render environment variables, not copied into the image.
 
 ## Folder Layout
 
@@ -36,8 +36,8 @@ Cloud Run runs the same FastAPI app from the Docker image built by `infra/Docker
 - `tests`: automated tests
 - `.github`: pull request and CI configuration
 - `.vscode`: shared VSCode recommendations
-- `cloudbuild.yaml`: Cloud Build pipeline for Cloud Run
+- `render.yaml`: Render backend blueprint
 
 ## Secret Handling
 
-Never place real API keys in source files. Local development uses `.env`, which is ignored by git and Docker build context. Cloud Run should use Secret Manager and inject `OPENAI_API_KEY` as an environment variable at runtime.
+Never place real API keys in source files. Local development uses `.env`, which is ignored by git and Docker build context. Render and Streamlit Cloud should inject secrets through environment variables at runtime.

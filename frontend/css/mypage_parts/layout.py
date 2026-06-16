@@ -60,6 +60,10 @@ MYPAGE_LAYOUT_CSS = """
     margin-bottom: 18px;
 }
 
+.mypage-sidebar-head > div:not(.mypage-avatar) {
+    max-width: 144px;
+}
+
 .mypage-avatar {
     width: 42px;
     height: 42px;
@@ -76,6 +80,7 @@ MYPAGE_LAYOUT_CSS = """
     color: #151a19;
     font-size: 17px;
     line-height: 1.25;
+    overflow-wrap: anywhere;
 }
 
 .mypage-sidebar-head small {
@@ -84,6 +89,17 @@ MYPAGE_LAYOUT_CSS = """
     color: #717b77;
     font-size: 12px;
     overflow-wrap: anywhere;
+}
+
+.st-key-mypage-shell
+    [data-testid="stColumn"]:has(.mypage-sidebar-head)
+    .st-key-mypage-settings-control {
+    position: absolute;
+    top: 24px;
+    right: -6px;
+    width: 44px !important;
+    height: 44px !important;
+    z-index: 2;
 }
 
 .mypage-title {

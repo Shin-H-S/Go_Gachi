@@ -11,7 +11,7 @@ runner.py가 만든 runs/<run_id>/results.json의 성공 레코드를 vision 모
 
 사용:
   uv run python experiments/judge.py experiments/runs/<run_id>
-  uv run python experiments/judge.py experiments/runs/<run_id> --model gpt-5-mini --force
+  uv run python experiments/judge.py experiments/runs/<run_id> --model gpt-5.4-mini --force
 """
 
 import argparse
@@ -41,7 +41,7 @@ def load_settings() -> Settings:
 
         return Settings(
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
-            openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5"),
+            openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5.4-mini"),
         )
 
 
@@ -204,9 +204,7 @@ async def main_async(args: argparse.Namespace) -> None:
     model = args.model or settings.openai_text_model
 
     targets = [
-        r
-        for r in payload["records"]
-        if r["status"] == "ok" and (args.force or "judge" not in r)
+        r for r in payload["records"] if r["status"] == "ok" and (args.force or "judge" not in r)
     ]
     if not targets:
         raise SystemExit("채점할 레코드가 없습니다 (이미 채점됐으면 --force).")

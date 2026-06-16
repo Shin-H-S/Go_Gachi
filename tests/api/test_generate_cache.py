@@ -181,7 +181,7 @@ def test_generate_reuses_original_file_for_same_image(
     assert Path(original_paths[0]).exists()
 
 
-def test_generate_does_not_store_logo_reference_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generate_does_not_use_logo_reference_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
     captured_call: dict[str, object] = {}
 
     async def _fake_call(**kwargs: object) -> tuple[str, dict[str, object]]:
@@ -204,33 +204,21 @@ def test_generate_does_not_store_logo_reference_metadata(monkeypatch: pytest.Mon
 
     assert response.status_code == 200
 
-    async def _db_state() -> tuple[str | None, bool, str | None, str | None, str, str | None]:
+    async def _db_state() -> tuple[str | None, str]:
         async with async_session_scope() as db:
             result = await db.execute(select(Generation))
             generation = result.scalar_one()
             return (
                 generation.user_copy,
-                generation.has_logo,
-                generation.logo_position,
-                generation.logo_image_hash,
                 generation.instruction_hash,
-                generation.logo_storage_key,
             )
 
     (
         user_copy,
-        has_logo,
-        logo_position,
-        logo_image_hash,
         instruction_hash,
-        logo_storage_key,
     ) = asyncio.run(_db_state())
     assert user_copy is None
-    assert has_logo is False
-    assert logo_position is None
-    assert logo_image_hash is None
     assert instruction_hash != crud.instruction_sha256("bright mood")
-    assert logo_storage_key is None
     assert "reference_images" not in captured_call
 
 

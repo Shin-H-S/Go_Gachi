@@ -16,11 +16,6 @@ frontend/
   css/                  # CSS fragments composed by styles.py
   assets/               # Channel/sample image assets
   styles.py             # CSS composer and injector
-  api_client.py         # Compatibility alias to services/api_client.py
-  config.py             # Compatibility alias to core/config.py
-  router.py             # Compatibility alias to core/router.py
-  upload_utils.py       # Compatibility alias to work/uploads.py
-  image_utils.py        # Compatibility alias to media/image_utils.py
   .env.example          # Frontend env example
 ```
 
@@ -34,6 +29,18 @@ uv sync --group frontend
 uv run streamlit run frontend/app.py
 ```
 
+## Streamlit Cloud Deploy
+
+Streamlit Cloud 배포 엔트리포인트는 아래 파일입니다.
+
+```text
+frontend/app.py
+```
+
+프론트 의존성도 루트 `pyproject.toml`과 `uv.lock`을 기준으로 관리합니다. Streamlit Cloud 배포 설정에서도 별도 `requirements.txt`를 두지 않고 uv 기준으로 설치/실행하도록 맞춥니다.
+
+배포 환경변수에는 최소한 `BACKEND_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`를 설정합니다.
+
 ## Preset Rule
 
 광고 채널과 규격은 레포 루트의 `config/presets.json`을 기준으로 맞춥니다.
@@ -41,7 +48,7 @@ uv run streamlit run frontend/app.py
 
 ## Upload Policy
 
-- 프론트 업로드 허용 확장자는 `frontend/upload_utils.py`의 `UPLOAD_FILE_TYPES`에서 관리합니다.
+- 프론트 업로드 허용 확장자는 `frontend/work/uploads.py`의 `UPLOAD_FILE_TYPES`에서 관리합니다.
 - 현재 허용 형식은 JPG, PNG, WEBP입니다.
 - 백엔드는 업로드 원본을 검증한 뒤 OpenAI 호출 전 PNG/RGB로 정규화하므로, 프론트는 별도 이미지 변환을 하지 않습니다.
 
@@ -54,7 +61,7 @@ uv run streamlit run frontend/app.py
 BACKEND_URL=http://127.0.0.1:8000
 ```
 
-배포된 백엔드나 별도 서버를 바라봐야 하면 `BACKEND_URL`만 해당 주소로 바꿉니다.
+Render에 배포된 백엔드를 바라봐야 하면 `BACKEND_URL`만 해당 주소로 바꿉니다.
 광고 채널/상세 유형 프리셋은 기본적으로 백엔드 `/api/config`를 먼저 읽고, 백엔드가 아직
 준비되지 않은 경우 로컬 `config/presets.json`으로 화면을 구성합니다.
 

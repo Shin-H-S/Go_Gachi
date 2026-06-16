@@ -28,7 +28,7 @@ def import_frontend_module(module_name: str):
 
 
 def test_channel_asset_files_match_preset_ids() -> None:
-    from frontend.config import FORMAT_OPTIONS, get_channel_asset_path
+    from frontend.core.config import FORMAT_OPTIONS, get_channel_asset_path
 
     for format_label, option in FORMAT_OPTIONS.items():
         asset_path = get_channel_asset_path(format_label)
@@ -38,7 +38,7 @@ def test_channel_asset_files_match_preset_ids() -> None:
 
 
 def test_missing_channel_asset_returns_none(monkeypatch, tmp_path) -> None:
-    from frontend import config
+    from frontend.core import config
 
     format_label = next(iter(config.FORMAT_OPTIONS))
     monkeypatch.setattr(config, "CHANNEL_ASSET_DIR", tmp_path)
@@ -47,7 +47,7 @@ def test_missing_channel_asset_returns_none(monkeypatch, tmp_path) -> None:
 
 
 def test_baemin_channel_asset_is_reduced_for_card_ui() -> None:
-    from frontend.config import get_channel_asset_path
+    from frontend.core.config import get_channel_asset_path
 
     asset_path = get_channel_asset_path("배달의 민족")
 

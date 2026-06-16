@@ -126,8 +126,8 @@ div[data-testid="stMainBlockContainer"]:has(.work-profile-card) {
     border-color: transparent !important;
     border-width: 0 !important;
     border-radius: 8px !important;
-    background: #27b4c1 !important;
-    background-color: #27b4c1 !important;
+    background: #53613b !important;
+    background-color: #53613b !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     font-size: 18px !important;
@@ -145,8 +145,8 @@ div[data-testid="stMainBlockContainer"]:has(.work-profile-card) {
     border: 0 !important;
     border-color: transparent !important;
     border-width: 0 !important;
-    background: #20a6b2 !important;
-    background-color: #20a6b2 !important;
+    background: #53613b !important;
+    background-color: #53613b !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     box-shadow: none !important;
@@ -161,8 +161,8 @@ div[data-testid="stMainBlockContainer"]:has(.work-profile-card) {
     border: 0 !important;
     border-color: transparent !important;
     border-width: 0 !important;
-    background: #27b4c1 !important;
-    background-color: #27b4c1 !important;
+    background: #53613b !important;
+    background-color: #53613b !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     opacity: 1 !important;
