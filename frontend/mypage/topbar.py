@@ -83,7 +83,8 @@ def _render_work_from_image_action(selected_items: list[dict], *, enabled: bool)
     if not st.button(
         WORK_FROM_IMAGE_LABEL,
         key="mypage-action-work-from-image",
-        disabled=not can_open, use_container_width=True,
+        disabled=not can_open,
+        use_container_width=True,
     ):
         return
     if not prepare_generation_for_work(st.session_state, selected_item):
@@ -121,8 +122,10 @@ def _render_folder_action(
     enabled: bool,
 ) -> None:
     if not st.button(
-        FOLDER_ACTION_LABEL, key="mypage-action-folder",
-        disabled=not enabled, use_container_width=True,
+        FOLDER_ACTION_LABEL,
+        key="mypage-action-folder",
+        disabled=not enabled,
+        use_container_width=True,
     ):
         return
     if selected_label not in mapping:

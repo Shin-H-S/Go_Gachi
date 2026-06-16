@@ -129,9 +129,7 @@ def test_topbar_renders_left_aligned_select_all_action(monkeypatch) -> None:
     )
 
     select_all_button = next(
-        button
-        for button in fake_st.buttons
-        if button["key"] == "mypage-action-select-all"
+        button for button in fake_st.buttons if button["key"] == "mypage-action-select-all"
     )
     assert select_all_button["label"] == "전체 선택"
     assert select_all_button["disabled"] is False
@@ -153,9 +151,7 @@ def test_topbar_marks_select_all_action_active_when_current_page_is_selected(
     )
 
     select_all_button = next(
-        button
-        for button in fake_st.buttons
-        if button["key"] == "mypage-action-select-all-active"
+        button for button in fake_st.buttons if button["key"] == "mypage-action-select-all-active"
     )
     assert select_all_button["label"] == "전체 선택"
     assert select_all_button["disabled"] is False
@@ -218,10 +214,7 @@ def test_topbar_select_all_uses_visible_folder_page_only(monkeypatch) -> None:
         return kwargs.get("key") == "mypage-action-select-all"
 
     fake_st.button = click_select_all
-    generations = [
-        {"request_id": f"request-{index}", "folder_id": 7}
-        for index in range(13)
-    ]
+    generations = [{"request_id": f"request-{index}", "folder_id": 7} for index in range(13)]
 
     topbar.render_topbar(
         folder_view(7),
@@ -383,9 +376,7 @@ def test_topbar_allows_zip_download_and_folder_change_for_multiple_selected_gene
         button for button in fake_st.buttons if button["key"] == "mypage-action-original"
     )
     work_button = next(
-        button
-        for button in fake_st.buttons
-        if button["key"] == "mypage-action-work-from-image"
+        button for button in fake_st.buttons if button["key"] == "mypage-action-work-from-image"
     )
     folder_button = next(
         button for button in fake_st.buttons if button["key"] == "mypage-action-folder"

@@ -87,7 +87,7 @@ async def edit_image(
     )
 
     if settings.image_provider == "mock":
-        # mock은 GCP 배포/프론트 연동 흐름만 확인할 때 사용한다.
+        # mock은 실제 OpenAI 호출 없이 프론트/백엔드 연동 흐름만 확인할 때 사용한다.
         mock_render_start = time.perf_counter()
         target_png = render_target_png(uploaded.content, target_size, resize_mode)
         encoded = base64.b64encode(target_png).decode("ascii")

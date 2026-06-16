@@ -91,8 +91,14 @@ def test_my_uploads_keeps_r2_url_when_local_file_is_not_available(monkeypatch) -
             )
 
     asyncio.run(_seed())
-    monkeypatch.setattr("backend.app.api.mypage.upload_url_if_exists_async", _fake_upload_url)
-    monkeypatch.setattr("backend.app.api.mypage._file_to_image_data_url", _fake_data_url)
+    monkeypatch.setattr(
+        "backend.app.api.mypage_upload_data.upload_url_if_exists_async",
+        _fake_upload_url,
+    )
+    monkeypatch.setattr(
+        "backend.app.api.mypage_upload_data._file_to_image_data_url",
+        _fake_data_url,
+    )
     app.dependency_overrides[get_current_user] = _override_user
     try:
         response = client.get("/api/auth/me/uploads")

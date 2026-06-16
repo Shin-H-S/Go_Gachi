@@ -34,6 +34,17 @@ class LocalStorage:
             return None
         return await asyncio.to_thread(file_path.read_bytes)
 
+    async def download_url(
+        self,
+        path: str,
+        *,
+        filename: str,
+        content_type: str,
+        expires_in: int,
+    ) -> str | None:
+        _ = path, filename, content_type, expires_in
+        return None
+
     async def exists(self, path: str) -> bool:
         return await asyncio.to_thread(Path(path).is_file)
 

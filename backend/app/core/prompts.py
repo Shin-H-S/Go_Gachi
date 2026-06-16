@@ -5,7 +5,7 @@ from backend.app.services.copywriting import AdCopy
 
 # 프롬프트 본문/구조가 바뀌면 이 라벨도 올려 캐시 무효화한다. env가 아니라 코드 상수로
 # 두는 이유: 프롬프트 변경과 항상 같은 커밋에 들어가야 어긋남이 없어서.
-PROMPT_VERSION = "2026-06-15-v4-channel-copy-rendering-policy"
+PROMPT_VERSION = "2026-06-16-v3-v6-crop-safe-centering-policy"
 
 
 def _clean_parts(parts: list[str]) -> list[str]:
@@ -46,18 +46,22 @@ def build_system_prompt(
         ]
     )
     if image_copy and _should_render_image_copy(preset, detail):
-        parts.extend([
-            _image_copy_layout_instruction(preset, detail),
-            _image_copy_instruction(image_copy),
-            _image_copy_style_instruction(preset, detail),
-            "Do not add unrelated logos, watermarks, UI, signatures, or brand marks.",
-        ])
+        parts.extend(
+            [
+                _image_copy_layout_instruction(preset, detail),
+                _image_copy_instruction(image_copy),
+                _image_copy_style_instruction(preset, detail),
+                "Do not add unrelated logos, watermarks, UI, signatures, or brand marks.",
+            ]
+        )
 
     elif image_copy:
-        parts.extend([
-            _baemin_ignore_image_copy_instruction(),
-            _no_copy_instruction(),
-        ])
+        parts.extend(
+            [
+                _baemin_ignore_image_copy_instruction(),
+                _no_copy_instruction(),
+            ]
+        )
 
     else:
         parts.extend([
@@ -66,8 +70,10 @@ def build_system_prompt(
                 "Do not render, add, draw, suggest, or imitate any text, typography, "
                 "pricing, numbers, labels, or brand information anywhere in the image. "
                 "The image must be completely text-free and ready for later ad copy placement. "
-                "Leave clean, generous negative space at the top, sides, and bottom of the image "
-                "to accommodate future text overlays without cluttering the product."
+                "Preserve visually comfortable negative space only when it does not conflict "
+                "with the selected preset and detail composition policy. "
+                "Follow preset and detail positioning rules with higher priority "
+                "than future text placement."
             ),
         ])
 

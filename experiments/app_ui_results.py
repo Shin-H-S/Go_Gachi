@@ -84,8 +84,7 @@ def render_results_tab() -> None:
                             gkey("ev", row), item.get("evaluator", "사람")
                         ),
                         "criterion": str(
-                            st.session_state.get(gkey("cr", row), item.get("criterion", ""))
-                            or ""
+                            st.session_state.get(gkey("cr", row), item.get("criterion", "")) or ""
                         ).strip(),
                         "scores": scores,
                     }
@@ -156,7 +155,9 @@ def render_results_tab() -> None:
             )
         )
         if not ok_records:
-            st.warning("성공한 이미지가 없습니다." + (f" (실패 {error_count}건)" if error_count else ""))
+            st.warning(
+                "성공한 이미지가 없습니다." + (f" (실패 {error_count}건)" if error_count else "")
+            )
             for message in error_messages:
                 st.error(f"실패 사유: {message}")
         else:
@@ -167,9 +168,7 @@ def render_results_tab() -> None:
 
             size_col, _ = st.columns([1, 3])
             with size_col:
-                img_width = st.slider(
-                    "이미지 너비(px)", 240, 800, 500, 20, key=f"imgw_{run_id}"
-                )
+                img_width = st.slider("이미지 너비(px)", 240, 800, 500, 20, key=f"imgw_{run_id}")
 
             # 고정 폭 컬럼 + 컨테이너 좌우 스크롤. 이미지(1·2행)와 점수 입력칸이 같은
             # 컬럼 그리드를 공유하고, 모든 행이 한 스크롤 컨테이너 안에 있어
@@ -251,9 +250,7 @@ def render_results_tab() -> None:
                     )
 
             valid_averages = [a for a in row_averages if a is not None]
-            total = (
-                round(sum(valid_averages) / len(valid_averages), 1) if valid_averages else None
-            )
+            total = round(sum(valid_averages) / len(valid_averages), 1) if valid_averages else None
             col_add, col_del, col_total = st.columns([1, 1, 4])
             with col_add:
                 if st.button("항목 추가", use_container_width=True):
@@ -282,7 +279,9 @@ def render_results_tab() -> None:
                     if other_id != run_id
                 ]
                 if not eval_runs:
-                    st.caption("평가가 저장된 다른 테스트가 없습니다. (저장하기를 누른 테스트만 나타납니다)")
+                    st.caption(
+                        "평가가 저장된 다른 테스트가 없습니다. (저장하기를 누른 테스트만 나타납니다)"
+                    )
                 else:
                     import_labels = {}
                     for other_id, other_dir in eval_runs:
@@ -405,7 +404,9 @@ def render_results_tab() -> None:
 
         # ── 메모 ───────────────────────────────────────────────────────────
         st.text_area(
-            "메모", key=f"memo_{run_id}", height=100,
+            "메모",
+            key=f"memo_{run_id}",
+            height=100,
             placeholder="이 테스트에서 발견한 점, 다음에 시도할 것 등을 기록하세요. 저장하기를 누르면 함께 저장됩니다.",
         )
 

@@ -1,6 +1,6 @@
 # Development Workflow
 
-이 프로젝트는 GCP/Cloud Run 배포를 우선 지원하도록 구성합니다. 다만 팀 개발, 테스트, 프론트 확인에는 같은 코드베이스를 로컬에서도 활용할 수 있습니다.
+이 프로젝트는 백엔드 Render, 프론트엔드 Streamlit Cloud 배포를 기준으로 구성합니다. 다만 팀 개발, 테스트, 프론트 확인에는 같은 코드베이스를 로컬에서도 활용할 수 있습니다.
 
 ## Team Workflow
 
@@ -8,12 +8,13 @@
 2. 코드 수정
 3. PR 생성
 4. GitHub Actions CI 확인
-5. 필요 시 Cloud Run 배포
-6. 배포 URL 또는 로컬 검증 URL로 smoke test 실행
+5. 필요 시 Render/Streamlit Cloud 배포
+6. 배포 URL 또는 로컬 검증 URL로 smoke check 실행
 
 ## CI Validation
 
 프로젝트 Python 인터프리터는 `3.11.14`를 기준으로 맞춥니다.
+의존성은 `requirements.txt` 없이 `pyproject.toml`과 `uv.lock`을 단일 기준으로 관리합니다.
 
 PR과 `main` push에서 GitHub Actions가 아래 검증을 실행합니다.
 
@@ -24,11 +25,7 @@ uv run pytest
 
 ## Runtime Validation
 
-Cloud Run 배포 후에는 서비스 URL에 대해 확인합니다.
-
-```powershell
-.\scripts\gcp-smoke.ps1 -Url https://YOUR_SERVICE_URL
-```
+Render 백엔드 배포 후에는 서비스 URL에 대해 확인합니다.
 
 확인 대상:
 
@@ -48,7 +45,7 @@ uv run alembic upgrade head
 
 ## Environment
 
-운영 런타임 환경변수는 Cloud Run에 주입합니다. `OPENAI_API_KEY`는 Secret Manager를 사용합니다.
+운영 런타임 환경변수는 Render와 Streamlit Cloud의 환경변수 UI에 주입합니다.
 
 ```env
 APP_ENV=production
@@ -56,7 +53,9 @@ IMAGE_PROVIDER=openai
 OPENAI_TEXT_MODEL=gpt-5.4-mini
 OPENAI_IMAGE_MODEL=gpt-image-2
 OPENAI_IMAGE_QUALITY=medium
+DATABASE_URL=...
+STORAGE_BACKEND=r2
 ```
 
 로컬 `.env`는 레포 최상단 파일을 프론트/백엔드 공통 기준으로 사용합니다.
-운영 값은 Cloud Run 환경변수와 Secret Manager에서 관리합니다.
+운영 값은 배포 서비스의 환경변수/시크릿 설정에서 관리합니다.

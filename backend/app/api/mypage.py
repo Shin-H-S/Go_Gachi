@@ -1,27 +1,28 @@
-"""마이페이지 자료/폴더 관련 라우트."""
+"""My page folder, generation, and upload routes."""
 
 import asyncio
 import logging
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 
+from backend.app.api.mypage_downloads import _download_url_for_row
 from backend.app.api.mypage_models import (
     FolderCreateRequest,
     FolderUpdateRequest,
     GenerationFolderRequest,
     _folder_item,
 )
-from backend.app.api.mypage_upload_data import _file_to_image_data_url
+from backend.app.api.mypage_upload_data import _upload_item
 from backend.app.core.auth import AuthUser, get_current_user
+from backend.app.core.config import get_settings
 from backend.app.core.logging_utils import short_id
 from backend.app.db import crud
 from backend.app.db.database import async_session_scope
 from backend.app.db.models import Generation
+from backend.app.services.storage import get_storage
 from backend.app.services.storage_url import (
-    output_download_url,
     output_url_if_exists_async,
     upload_url_if_exists_async,
 )
@@ -31,43 +32,29 @@ logger = logging.getLogger(__name__)
 PAGE_SIZE = 12
 
 
-async def _upload_item(row: Generation, used_count: int) -> dict[str, object] | None:
-    if row.original_path is None:
-        return None
-
-    original_image_url = await upload_url_if_exists_async(row.original_path)
-    if original_image_url is None:
-        return None
-
-    image_data_url = await _file_to_image_data_url(Path(row.original_path))
-
-    return {
-        "upload_id": row.image_hash,
-        # /me/generations의 original_image_url과 같은 의미(업로드 원본 URL). 필드명 통일.
-        "original_image_url": original_image_url,
-        # DEPRECATED: 프론트가 original_image_url로 전환되면 후속 PR에서 제거.
-        "image_data_url": image_data_url,
-        "created_at": row.created_at.isoformat() if row.created_at else None,
-        "used_count": used_count,
-    }
-
-
 @router.get("/me/generations")
 async def read_my_generations(
     user: AuthUser = Depends(get_current_user),
     page: Annotated[int, Query(ge=1)] = 1,
 ) -> dict[str, object]:
-    """현재 로그인한 사용자가 만든 생성 기록을 최신순으로 반환한다 ("내 작업 기록")."""
     offset = (page - 1) * PAGE_SIZE
     async with async_session_scope() as db:
         rows = await crud.list_user_generations(db, user.id, limit=PAGE_SIZE, offset=offset)
         total = await crud.count_user_generations(db, user.id)
 
+    settings = get_settings()
+    storage = get_storage(settings)
     image_urls = await asyncio.gather(
         *(output_url_if_exists_async(row.output_path) for row in rows)
     )
     upload_urls = await asyncio.gather(
         *(upload_url_if_exists_async(row.original_path) for row in rows)
+    )
+    download_urls = await asyncio.gather(
+        *(
+            _download_url_for_row(storage, settings, row, image_url=image_url)
+            for row, image_url in zip(rows, image_urls, strict=True)
+        )
     )
     items = [
         {
@@ -76,11 +63,13 @@ async def read_my_generations(
             "folder_id": row.folder_id,
             "status": row.status,
             "image_url": image_url,
-            "download_url": output_download_url(row.output_path) if image_url else None,
+            "download_url": download_url,
             "original_image_url": upload_url,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         }
-        for row, image_url, upload_url in zip(rows, image_urls, upload_urls, strict=True)
+        for row, image_url, upload_url, download_url in zip(
+            rows, image_urls, upload_urls, download_urls, strict=True
+        )
     ]
     logger.info(
         "my generations listed user_id=%s page=%d count=%d total=%d",
@@ -94,7 +83,6 @@ async def read_my_generations(
 
 @router.get("/me/folders")
 async def read_my_folders(user: AuthUser = Depends(get_current_user)) -> dict[str, object]:
-    """사용자가 만든 마이페이지 폴더 목록을 반환한다."""
     async with async_session_scope() as db:
         folders = await crud.list_user_folders(db, user.id)
         items = [_folder_item(folder) for folder in folders]
@@ -106,7 +94,6 @@ async def create_my_folder(
     request: FolderCreateRequest,
     user: AuthUser = Depends(get_current_user),
 ) -> dict[str, object]:
-    """사용자가 만든 이미지 정리용 폴더를 추가한다."""
     try:
         async with async_session_scope() as db:
             folder = await crud.create_folder(db, user_id=user.id, name=request.name)
@@ -124,7 +111,6 @@ async def rename_my_folder(
     request: FolderUpdateRequest,
     user: AuthUser = Depends(get_current_user),
 ) -> dict[str, object]:
-    """사용자가 만든 폴더 이름을 변경한다."""
     try:
         async with async_session_scope() as db:
             folder = await crud.rename_folder(
@@ -148,7 +134,6 @@ async def delete_my_folder(
     folder_id: int,
     user: AuthUser = Depends(get_current_user),
 ) -> None:
-    """폴더만 삭제하고, 폴더 안 생성 이미지는 미분류로 이동한다."""
     async with async_session_scope() as db:
         deleted = await crud.delete_folder(db, user_id=user.id, folder_id=folder_id)
         if not deleted:
@@ -161,7 +146,6 @@ async def update_generation_folder(
     request: GenerationFolderRequest,
     user: AuthUser = Depends(get_current_user),
 ) -> dict[str, object]:
-    """내 생성 이미지 1건을 폴더에 넣거나 미분류로 이동한다."""
     async with async_session_scope() as db:
         generation = await crud.set_generation_folder(
             db,
@@ -176,7 +160,6 @@ async def update_generation_folder(
 
 @router.get("/me/uploads")
 async def read_my_uploads(user: AuthUser = Depends(get_current_user)) -> dict[str, object]:
-    """마이페이지 업로드한 메뉴 사진 탭에 필요한 원본 이미지 목록을 반환한다."""
     async with async_session_scope() as db:
         rows = await crud.list_user_upload_generations(db, user.id)
 

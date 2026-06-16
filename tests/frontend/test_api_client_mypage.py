@@ -1,6 +1,6 @@
 import pytest
 
-from frontend import api_client
+from frontend.services import api_client
 
 
 class FakeResponse:

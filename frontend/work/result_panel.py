@@ -132,9 +132,7 @@ def render_result_panel(
                 str(entry_url), entry_format, entry_detail, summary_html=summary_html
             )
         elif isinstance(entry_bytes, bytes):
-            render_image_preview(
-                entry_bytes, entry_format, entry_detail, summary_html=summary_html
-            )
+            render_image_preview(entry_bytes, entry_format, entry_detail, summary_html=summary_html)
         else:
             render_preview_shell(entry_format, "", entry_detail)
         copy_html = result_copy_html(entry.get("copy"), result_context=entry_context)

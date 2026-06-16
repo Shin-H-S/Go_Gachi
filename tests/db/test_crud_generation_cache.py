@@ -112,17 +112,9 @@ async def test_create_pending_generation_stores_generation_metadata(
         original_path=str(tmp_dir / "input.png"),
         prompt="final prompt",
         user_copy="lemonade menu copy",
-        has_logo=True,
-        logo_position="bottom_right",
-        logo_image_hash="a" * 64,
-        logo_storage_key="logos/logo.png",
     )
 
     assert generation.user_copy == "lemonade menu copy"
-    assert generation.has_logo is True
-    assert generation.logo_position == "bottom_right"
-    assert generation.logo_image_hash == "a" * 64
-    assert generation.logo_storage_key == "logos/logo.png"
 
 
 async def test_create_cached_generation_stores_generation_metadata(
@@ -141,18 +133,10 @@ async def test_create_cached_generation_stores_generation_metadata(
         image_url=None,
         prompt="final prompt",
         user_copy="lemonade menu copy",
-        has_logo=True,
-        logo_position="bottom_right",
-        logo_image_hash="b" * 64,
-        logo_storage_key="logos/logo.png",
     )
 
     assert cached.status == "cached"
     assert cached.user_copy == "lemonade menu copy"
-    assert cached.has_logo is True
-    assert cached.logo_position == "bottom_right"
-    assert cached.logo_image_hash == "b" * 64
-    assert cached.logo_storage_key == "logos/logo.png"
 
 
 async def test_find_cached_generation_misses_on_different_instruction(
