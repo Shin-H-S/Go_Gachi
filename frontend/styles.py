@@ -11,6 +11,7 @@ from frontend.css.work_channels import WORK_CHANNELS_CSS
 from frontend.css.work_controls import WORK_CONTROLS_CSS
 from frontend.css.work_forms import WORK_FORMS_CSS
 from frontend.css.work_header import WORK_HEADER_CSS
+from frontend.css.work_loading import WORK_LOADING_CSS
 from frontend.css.work_preview import WORK_PREVIEW_CSS
 from frontend.css.work_selection import WORK_SELECTION_CSS
 from frontend.css.work_upload import WORK_UPLOAD_CSS
@@ -23,6 +24,7 @@ CSS_PARTS = [
     SIGNUP_CSS,
     WORK_FORMS_CSS,
     WORK_PREVIEW_CSS,
+    WORK_LOADING_CSS,
     WORK_CONTROLS_CSS,
     WORK_HEADER_CSS,
     WORK_UPLOAD_CSS,

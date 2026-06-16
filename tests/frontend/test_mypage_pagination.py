@@ -80,20 +80,20 @@ def test_load_generation_pages_fetches_until_backend_total_count(monkeypatch) ->
 
 
 def test_load_recent_generation_page_fetches_only_intersecting_backend_pages(monkeypatch) -> None:
+    # 페이지당 12개로 동일하므로 프론트 페이지 N은 백엔드 페이지 N과 1:1 매칭된다.
     calls: list[int] = []
     pages = {
         2: {
-            "items": [{"request_id": f"generation-{index}"} for index in range(10, 20)],
-            "total_count": 25,
-        },
-        3: {
-            "items": [{"request_id": f"generation-{index}"} for index in range(20, 25)],
+            "items": [{"request_id": f"generation-{index}"} for index in range(12, 24)],
             "total_count": 25,
         },
     }
 
-    def fake_request_my_generations(access_token: str, page: int = 1) -> dict:
+    def fake_request_my_generations(
+        access_token: str, page: int = 1, *, folder_id: int | None = None
+    ) -> dict:
         assert access_token == "jwt"
+        assert folder_id is None
         calls.append(page)
         return pages[page]
 
@@ -104,12 +104,77 @@ def test_load_recent_generation_page_fetches_only_intersecting_backend_pages(mon
         page=2,
     )
 
-    assert calls == [2, 3]
+    assert calls == [2]
     assert total_count == 25
     assert current_page == 2
     assert [item["request_id"] for item in generations] == [
         f"generation-{index}" for index in range(12, 24)
     ]
+
+
+def test_load_recent_generation_page_passes_folder_id_filter(monkeypatch) -> None:
+    calls: list[tuple[int, int | None]] = []
+    pages = {
+        1: {
+            "items": [{"request_id": f"folder-{index}"} for index in range(0, 3)],
+            "total_count": 3,
+        },
+    }
+
+    def fake_request_my_generations(
+        access_token: str, page: int = 1, *, folder_id: int | None = None
+    ) -> dict:
+        assert access_token == "jwt"
+        calls.append((page, folder_id))
+        return pages[page]
+
+    monkeypatch.setattr(mypage_page, "request_my_generations", fake_request_my_generations)
+
+    generations, total_count, current_page = mypage_page._load_recent_generation_page(
+        "jwt",
+        page=1,
+        folder_id=7,
+    )
+
+    assert calls == [(1, 7)]
+    assert total_count == 3
+    assert current_page == 1
+    assert [item["request_id"] for item in generations] == [
+        f"folder-{index}" for index in range(0, 3)
+    ]
+
+
+def test_render_folder_view_with_backend_pagination_skips_local_slice(monkeypatch) -> None:
+    # 백엔드가 folder_id로 이미 페이지 슬라이스 해서 보내준 경우, 프론트가 다시 자르면
+    # 2페이지를 열었을 때 빈 카드 + "1/1" 가 표시되는 버그가 있었다(회귀 방지용).
+    from frontend.mypage import state
+
+    fake_st = FakeStreamlit({"mypage_page_folder_7": 2})
+    captured: dict[str, object] = {}
+
+    def fake_grid(items: list[dict], folders: list[dict], access_token: str) -> None:
+        captured["items"] = items
+
+    def fake_pagination(scope: str, current_page: int, total_pages: int) -> None:
+        captured["pagination"] = (scope, current_page, total_pages)
+
+    monkeypatch.setattr(views, "st", fake_st)
+    monkeypatch.setattr(views, "render_generation_grid", fake_grid)
+    monkeypatch.setattr(views, "render_pagination_controls", fake_pagination)
+
+    backend_slice = [{"request_id": f"gen-{index}"} for index in range(12, 24)]
+    views.render_folder_view(
+        state.folder_view(7),
+        backend_slice,
+        [{"id": 7, "name": "여름"}],
+        "jwt",
+        total_count=25,
+        current_page=2,
+    )
+
+    visible_ids = [item["request_id"] for item in captured["items"]]
+    assert visible_ids == [f"gen-{index}" for index in range(12, 24)]
+    assert captured["pagination"] == (state.folder_view(7), 2, 3)
 
 
 def test_render_recent_work_uses_session_page_and_renders_status(monkeypatch) -> None:

@@ -8,7 +8,7 @@ from frontend.mypage.components import render_generation_grid
 from frontend.mypage.pager_arrows import render_pagination_arrow_css
 from frontend.mypage.pagination import page_count, page_status_text, paginate_items
 from frontend.mypage.state import filter_generations, format_date, profile_name
-from frontend.services.api_client import data_url_to_bytes, to_backend_asset_url
+from frontend.services.api_client import to_backend_asset_url
 
 GENERATION_PAGE_SIZE = 12
 UPLOAD_PAGE_SIZE = 8
@@ -97,16 +97,30 @@ def render_folder_view(
     generations: list[dict],
     folders: list[dict],
     access_token: str,
+    *,
+    total_count: int | None = None,
+    current_page: int | None = None,
 ) -> None:
-    filtered = filter_generations(generations, view)
-    items, current_page, total_pages = paginate_items(
-        filtered,
-        _current_page(view),
-        GENERATION_PAGE_SIZE,
-    )
-    _render_collection_status(len(filtered), current_page, total_pages)
-    render_generation_grid(items, folders, access_token)
-    render_pagination_controls(view, current_page, total_pages)
+    if total_count is None:
+        # 백엔드 페이지네이션을 안 탄 경우(예: FOLDER_NONE_VIEW): 프론트에서 필터+슬라이스.
+        filtered = filter_generations(generations, view)
+        items, page, total_pages = paginate_items(
+            filtered,
+            _current_page(view),
+            GENERATION_PAGE_SIZE,
+        )
+        _render_collection_status(len(filtered), page, total_pages)
+        render_generation_grid(items, folders, access_token)
+        render_pagination_controls(view, page, total_pages)
+        return
+    # 백엔드가 이미 folder_id로 필터 + 페이지 슬라이스 해서 줬으므로 그대로 렌더링한다.
+    total_items = max(0, int(total_count))
+    total_pages = page_count(total_items, GENERATION_PAGE_SIZE)
+    visible_page = current_page if current_page is not None else _current_page(view)
+    visible_page = min(max(1, int(visible_page)), total_pages)
+    _render_collection_status(total_items, visible_page, total_pages)
+    render_generation_grid(generations, folders, access_token)
+    render_pagination_controls(view, visible_page, total_pages)
 
 
 def render_uploads(uploads: list[dict]) -> None:
@@ -131,13 +145,10 @@ def render_uploads(uploads: list[dict]) -> None:
     columns = st.columns(4, gap="medium")
     for index, item in enumerate(visible_uploads):
         image_url = to_backend_asset_url(item.get("original_image_url"))
-        image_data_url = str(item.get("image_data_url") or "")
         with columns[index % 4]:
             with st.container(border=True):
                 if image_url:
                     st.image(image_url, use_container_width=True)
-                elif image_data_url:
-                    st.image(data_url_to_bytes(image_data_url), use_container_width=True)
                 else:
                     st.markdown(
                         '<div class="mypage-empty-thumb">이미지 없음</div>',

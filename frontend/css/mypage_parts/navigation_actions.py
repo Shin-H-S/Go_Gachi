@@ -130,4 +130,25 @@ MYPAGE_NAVIGATION_ACTIONS_CSS = """
     line-height: 0 !important;
 }
 
+[class*="st-key-mypage-folder-row-"] {
+    margin: 0 !important;
+}
+
+.st-key-mypage-shell [class*="st-key-mypage-folder-menu-"] button,
+.st-key-mypage-shell [class*="st-key-mypage-folder-menu-"] button:hover,
+.st-key-mypage-shell [class*="st-key-mypage-folder-menu-"] button:focus,
+.st-key-mypage-shell [class*="st-key-mypage-folder-menu-"] button:active {
+    justify-content: center !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    font-size: 20px !important;
+    font-weight: 900 !important;
+}
+
+.st-key-mypage-shell [class*="st-key-mypage-delete-folder-confirm-"] {
+    margin: 6px 0 10px;
+}
+
 """

@@ -6,12 +6,12 @@ import httpx
 import streamlit as st
 
 from frontend.media.image_data import bytes_to_data_url
+from frontend.mypage.folder_management import render_folder_row
 from frontend.mypage.state import (
     ACCOUNT_VIEW,
     FOLDER_NONE_VIEW,
     RECENT_VIEW,
     UPLOADS_VIEW,
-    folder_view,
     profile_name,
     set_view,
 )
@@ -95,15 +95,12 @@ def render_sidebar(profile: dict, folders: list[dict], view: str, access_token: 
         set_view(FOLDER_NONE_VIEW)
         st.rerun()
     for folder in folders:
-        folder_id = int(folder["id"])
-        _sidebar_button_marker()
-        if st.button(
-            str(folder["name"]),
-            key=f"mypage-folder-{folder_id}",
-            use_container_width=True,
-        ):
-            set_view(folder_view(folder_id))
-            st.rerun()
+        render_folder_row(
+            folder,
+            view=view,
+            access_token=access_token,
+            sidebar_button_marker=_sidebar_button_marker,
+        )
     with st.container(key="mypage-new-folder-control"):
         _render_sidebar_icon_visual("new-folder.png", "mypage-new-folder-icon")
         if st.button(" ", key="mypage-new-folder", help="새 폴더 만들기"):

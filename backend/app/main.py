@@ -35,6 +35,35 @@ from backend.app.services.image_edit import edit_image
 from backend.app.services.openai_copy import generate_ad_copy
 
 logger = logging.getLogger(__name__)
+_settings = get_settings()
+
+
+def _docs_urls(settings: Settings) -> dict[str, str | None]:
+    if settings.app_env == "production":
+        return {
+            "docs_url": None,
+            "redoc_url": None,
+            "openapi_url": None,
+        }
+    return {}
+
+
+def _cors_methods(settings: Settings) -> list[str]:
+    if settings.app_env == "production":
+        return ["GET", "POST", "PATCH", "DELETE"]
+    return ["*"]
+
+
+def _cors_headers(settings: Settings) -> list[str]:
+    if settings.app_env == "production":
+        return ["Authorization", "Content-Type", "X-Request-ID"]
+    return ["*"]
+
+
+def _should_mount_static_assets(settings: Settings) -> bool:
+    return settings.app_env != "production"
+
+
 IMAGE_GENERATION_UNAVAILABLE_MESSAGE = (
     "이미지 생성 서비스에 일시적 문제가 있어요. 잠시 후 다시 시도해주세요."
 )
@@ -78,14 +107,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
     yield
 
 
-app = FastAPI(title="Cafe Ad Maker V1", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="Cafe Ad Maker V1",
+    version="0.1.0",
+    lifespan=lifespan,
+    **_docs_urls(_settings),
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_settings().cors_origins,
+    allow_origins=_settings.cors_origins,
     allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=_cors_methods(_settings),
+    allow_headers=_cors_headers(_settings),
 )
 
 # add_middleware는 역순으로 실행되므로 RequestIDMiddleware를 나중에 등록한다.
@@ -99,26 +133,27 @@ app.include_router(generation_jobs_router)
 
 # production에서는 내부 모니터링 라우터를 아예 등록하지 않는다. 로컬/dev에선 그대로 열림.
 # 운영에서도 사용량을 봐야 한다면 별도 토큰 인증 라우터로 교체하면 됨.
-if get_settings().app_env != "production":
+if _settings.app_env != "production":
     app.include_router(internal_router)
 
 # 생성된 이미지를 /outputs/... 경로로 프론트에 내려주기 위해 outputs 폴더를 정적 파일로 노출한다.
 # 운영 환경은 컨테이너 디스크가 휘발성이라 STORAGE_BACKEND=r2로 외부 스토리지 사용을 권장한다.
-_static_output_dir = get_settings().output_dir
-_static_output_dir.mkdir(parents=True, exist_ok=True)
-app.mount(
-    "/outputs",
-    StaticFiles(directory=str(_static_output_dir)),
-    name="outputs",
-)
+if _should_mount_static_assets(_settings):
+    _static_output_dir = _settings.output_dir
+    _static_output_dir.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        "/outputs",
+        StaticFiles(directory=str(_static_output_dir)),
+        name="outputs",
+    )
 
-_static_upload_dir = get_settings().upload_dir
-_static_upload_dir.mkdir(parents=True, exist_ok=True)
-app.mount(
-    "/uploads",
-    StaticFiles(directory=str(_static_upload_dir)),
-    name="uploads",
-)
+    _static_upload_dir = _settings.upload_dir
+    _static_upload_dir.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        "/uploads",
+        StaticFiles(directory=str(_static_upload_dir)),
+        name="uploads",
+    )
 
 
 @app.get("/")

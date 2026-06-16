@@ -46,38 +46,6 @@ WORK_PREVIEW_CSS = """
     line-height: 1.65;
 }
 
-.loading-state {
-    display: flex;
-    flex: 1 1 auto;
-    min-height: 0;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 150px;
-    box-sizing: border-box;
-    text-align: center;
-}
-
-.loading-panel {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    color: #4d5960;
-    font-size: 18px;
-    font-weight: 900;
-    line-height: 1.55;
-}
-
-.loading-spinner {
-    width: 54px;
-    height: 54px;
-    border-radius: 999px;
-    border: 6px solid rgba(108, 94, 214, 0.14);
-    border-top-color: #5145c6;
-    border-right-color: #a790ff;
-    animation: spin 0.85s linear infinite;
-}
-
 .preview-image-frame {
     flex: 1 1 auto;
     min-height: 0;
@@ -187,12 +155,4 @@ WORK_PREVIEW_CSS = """
     overflow-wrap: anywhere;
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
 """
