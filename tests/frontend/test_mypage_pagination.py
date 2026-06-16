@@ -80,14 +80,11 @@ def test_load_generation_pages_fetches_until_backend_total_count(monkeypatch) ->
 
 
 def test_load_recent_generation_page_fetches_only_intersecting_backend_pages(monkeypatch) -> None:
+    # 페이지당 12개로 동일하므로 프론트 페이지 N은 백엔드 페이지 N과 1:1 매칭된다.
     calls: list[int] = []
     pages = {
         2: {
-            "items": [{"request_id": f"generation-{index}"} for index in range(10, 20)],
-            "total_count": 25,
-        },
-        3: {
-            "items": [{"request_id": f"generation-{index}"} for index in range(20, 25)],
+            "items": [{"request_id": f"generation-{index}"} for index in range(12, 24)],
             "total_count": 25,
         },
     }
@@ -104,7 +101,7 @@ def test_load_recent_generation_page_fetches_only_intersecting_backend_pages(mon
         page=2,
     )
 
-    assert calls == [2, 3]
+    assert calls == [2]
     assert total_count == 25
     assert current_page == 2
     assert [item["request_id"] for item in generations] == [

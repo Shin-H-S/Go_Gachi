@@ -28,7 +28,7 @@ from frontend.services.api_client import (
     request_my_uploads,
 )
 
-BACKEND_GENERATION_PAGE_SIZE = 10
+BACKEND_GENERATION_PAGE_SIZE = 12
 PENDING_REFRESH_SESSION_KEY = "mypage_pending_refresh_last_at"
 PENDING_REFRESH_INTERVAL_SECONDS = 3.0
 

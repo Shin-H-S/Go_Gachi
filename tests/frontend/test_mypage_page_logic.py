@@ -70,14 +70,11 @@ def test_load_mypage_data_recent_fetches_only_server_pages_needed(monkeypatch) -
         "request_my_uploads",
         lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
+    # 페이지당 12개로 정렬되어 프론트 페이지 N은 백엔드 페이지 N 한 번만 요청한다.
     calls: list[int] = []
     backend_pages = {
         2: {
-            "items": [{"request_id": f"generation-{index}"} for index in range(10, 20)],
-            "total_count": 25,
-        },
-        3: {
-            "items": [{"request_id": f"generation-{index}"} for index in range(20, 25)],
+            "items": [{"request_id": f"generation-{index}"} for index in range(12, 24)],
             "total_count": 25,
         },
     }
@@ -95,7 +92,7 @@ def test_load_mypage_data_recent_fetches_only_server_pages_needed(monkeypatch) -
 
     assert profile == {"email": "jwt@example.com"}
     assert folders == [{"id": 7, "name": "Spring"}]
-    assert calls == [2, 3]
+    assert calls == [2]
     assert [item["request_id"] for item in generations] == [
         f"generation-{index}" for index in range(12, 24)
     ]
