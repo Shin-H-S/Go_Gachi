@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 
-from backend.app.api.mypage_downloads import _download_url_for_row
+from backend.app.api.mypage_downloads import build_download_urls
 from backend.app.api.mypage_models import (
     FolderCreateRequest,
     FolderUpdateRequest,
@@ -53,12 +53,7 @@ async def read_my_generations(
     upload_urls = await asyncio.gather(
         *(upload_url_if_exists_async(row.original_path) for row in rows)
     )
-    download_urls = await asyncio.gather(
-        *(
-            _download_url_for_row(storage, settings, row, image_url=image_url)
-            for row, image_url in zip(rows, image_urls, strict=True)
-        )
-    )
+    download_urls = await build_download_urls(storage, settings, rows, image_urls)
     items = [
         {
             "request_id": row.request_id,
