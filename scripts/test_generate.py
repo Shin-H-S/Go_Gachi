@@ -2,20 +2,25 @@
 
 사용:
   uv run python scripts/test_generate.py backend/uploads/<파일명>.jpg
-  (옵션) 같은 명령을 한 번 더 실행 → 두 번째는 캐시 hit이어야 함
+  uv run python scripts/test_generate.py backend/uploads/<파일명>.jpg https://YOUR_BACKEND_URL
+
+같은 이미지와 요청으로 한 번 더 실행하면 두 번째는 캐시 hit 여부를 확인할 수 있다.
 """
 
 import base64
 import json
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 API_URL = "http://localhost:8000/api/generate"
+DEFAULT_USER_PROMPT = "따뜻하고 깔끔한 카페 광고 이미지로 만들어줘"
+DEFAULT_USER_COPY = "오늘 아메리카노 2,500원"
 
 if len(sys.argv) < 2:
-    print("사용: uv run python scripts/test_generate.py <이미지경로>")
+    print("사용: uv run python scripts/test_generate.py <이미지경로> [백엔드URL]")
     raise SystemExit(1)
 
 image_path = Path(sys.argv[1])
@@ -34,33 +39,52 @@ if mime is None:
 
 encoded = base64.b64encode(image_path.read_bytes()).decode("ascii")
 data_url = f"data:{mime};base64,{encoded}"
+api_url = (
+    f"{sys.argv[2].rstrip('/')}/api/generate"
+    if len(sys.argv) >= 3
+    else API_URL
+)
 
 body = json.dumps(
     {
         "imageDataUrl": data_url,
-        "presetId": None,  # 기본 프리셋 사용
-        "feedback": "더 따뜻하고 카페 광고 느낌으로",
+        "presetId": "instagram",
+        "detailType": "story_image",
+        "userPrompt": DEFAULT_USER_PROMPT,
+        "userCopy": DEFAULT_USER_COPY,
+        "copyMode": "polish",
+        "adCopyEnabled": True,
+        "targetWidth": 1080,
+        "targetHeight": 1920,
+        "resizeMode": "cover",
     }
 ).encode("utf-8")
 
 req = urllib.request.Request(
-    API_URL,
+    api_url,
     data=body,
     headers={"Content-Type": "application/json"},
     method="POST",
 )
 
-print(f"[*] POST {API_URL} (이미지: {image_path.name}, {len(encoded):,} chars base64)")
+print(f"[*] POST {api_url} (이미지: {image_path.name}, {len(encoded):,} chars base64)")
 started = time.time()
-with urllib.request.urlopen(req, timeout=180) as resp:
-    elapsed = time.time() - started
-    payload = json.loads(resp.read().decode("utf-8"))
+try:
+    with urllib.request.urlopen(req, timeout=300) as resp:
+        elapsed = time.time() - started
+        payload = json.loads(resp.read().decode("utf-8"))
+        status = resp.status
+except urllib.error.HTTPError as exc:
+    error_body = exc.read().decode("utf-8", errors="replace")
+    raise SystemExit(f"[!] HTTP {exc.code}: {error_body}") from exc
 
-print(f"[+] {resp.status} {elapsed:.1f}s 소요")
-# imageDataUrl은 너무 길어서 앞 60자만, 응답 길이도 같이 보여준다.
-preview = payload.get("imageDataUrl", "")[:60]
+print(f"[+] {status} {elapsed:.1f}s 소요")
 print("  provider:", payload.get("provider"))
 print("  note    :", payload.get("note"))
 print("  preset  :", (payload.get("preset") or {}).get("id"))
+print("  imageUrl:", payload.get("imageUrl"))
+print("  copy    :", payload.get("copy"))
 print("  prompt  :", (payload.get("prompt") or "")[:80], "...")
-print("  result  :", preview, f"... ({len(payload.get('imageDataUrl', '')):,} chars)")
+image_data_url = payload.get("imageDataUrl") or ""
+if image_data_url:
+    print("  fallback imageDataUrl:", image_data_url[:60], f"... ({len(image_data_url):,} chars)")

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from frontend import api_client
+from frontend.services import api_client
 from frontend.work import copy_controls
 
 ROOT_DIR = Path(__file__).resolve().parents[2]

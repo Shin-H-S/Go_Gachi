@@ -32,13 +32,13 @@ def test_menu_uploader_accepts_multiple_files() -> None:
 
 
 def test_upload_policy_is_shared_constant() -> None:
-    from frontend.upload_utils import UPLOAD_FILE_TYPES
+    from frontend.work.uploads import UPLOAD_FILE_TYPES
 
     assert UPLOAD_FILE_TYPES == ["jpg", "jpeg", "png", "webp"]
 
 
 def test_get_primary_uploaded_file_returns_first_file_from_multiple_uploads() -> None:
-    from frontend.upload_utils import get_primary_uploaded_file
+    from frontend.work.uploads import get_primary_uploaded_file
 
     first_file = SimpleNamespace(name="first.jpg")
     second_file = SimpleNamespace(name="second.jpg")
@@ -47,7 +47,7 @@ def test_get_primary_uploaded_file_returns_first_file_from_multiple_uploads() ->
 
 
 def test_get_primary_uploaded_file_returns_none_without_uploads() -> None:
-    from frontend.upload_utils import get_primary_uploaded_file
+    from frontend.work.uploads import get_primary_uploaded_file
 
     assert get_primary_uploaded_file([]) is None
     assert get_primary_uploaded_file(None) is None

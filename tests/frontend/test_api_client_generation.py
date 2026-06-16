@@ -3,8 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from frontend import api_client
-from frontend.services import copy_client
+from frontend.services import api_client, copy_client
 
 
 class FakeResponse:

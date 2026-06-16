@@ -9,7 +9,7 @@
 - 패키지 관리: `uv`
 - 기본 실행 앱: `backend.app.main:app`
 
-Railway·Cloud Run 등 컨테이너 기반 운영 환경을 지원하며, 테스트와 검증을 위해 같은 앱을 로컬 환경에서도 실행할 수 있게 구성합니다.
+운영 백엔드는 Render 배포를 기준으로 하며, 테스트와 검증을 위해 같은 앱을 로컬 환경에서도 실행할 수 있게 구성합니다.
 
 ## Main API
 
@@ -133,5 +133,5 @@ backend/
 ## Notes
 
 - 실제 API 키는 저장소에 커밋하지 않습니다.
-- GCP 배포 시 `OPENAI_API_KEY`는 Secret Manager를 통해 주입합니다.
+- Render 배포 시 `OPENAI_API_KEY`, `DATABASE_URL`, R2 키 등 운영 시크릿은 Render 환경변수로 주입합니다.
 - `DATABASE_URL`은 PostgreSQL 연결 문자열로 설정해야 합니다. SQLite는 실제 실행용 DB로 사용하지 않습니다.

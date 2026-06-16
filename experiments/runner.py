@@ -115,7 +115,7 @@ def load_settings() -> Settings:
         return Settings(
             image_provider="openai" if api_key else "mock",
             openai_api_key=api_key,
-            openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5"),
+            openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5.4-mini"),
             openai_image_model=os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2"),
             openai_image_quality=os.getenv("OPENAI_IMAGE_QUALITY", "medium"),
             openai_image_edit_estimated_cost_usd=float(
