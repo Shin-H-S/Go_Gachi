@@ -43,6 +43,36 @@ def test_completed_generation_job_appends_result_and_toasts(monkeypatch) -> None
     assert fake_st.toasts == ["이미지 생성이 완료됐어요."]
 
 
+def test_done_generation_job_with_image_url_finishes_loading(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state["auth_access_token"] = "jwt-token"
+    fake_st.session_state["active_generation_jobs"] = {
+        "job-1": {
+            "requestId": "job-1",
+            "status": "processing",
+            "context": {"uploadHash": "hash-1"},
+            "format_label": "인스타그램",
+            "detail_label": "정사각형 피드",
+        }
+    }
+
+    monkeypatch.setattr(job_notifications, "st", fake_st)
+    monkeypatch.setattr(
+        job_notifications,
+        "get_generation_job_status",
+        lambda request_id, access_token: {
+            "status": "done",
+            "imageUrl": "https://assets.example/done.png",
+        },
+    )
+
+    job_notifications.process_generation_job_notifications()
+
+    assert not job_notifications.has_active_generation_job(fake_st.session_state)
+    assert fake_st.session_state["result_image_url"] == "https://assets.example/done.png"
+    assert fake_st.toasts == ["이미지 생성이 완료됐어요."]
+
+
 def test_queued_generation_toast_renders_after_rerun(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     fake_st.session_state["generation_toasts"] = ["이미지 생성을 시작했어요."]
