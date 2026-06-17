@@ -5,7 +5,7 @@ from backend.app.services.copywriting import AdCopy
 
 # 프롬프트 본문/구조가 바뀌면 이 라벨도 올려 캐시 무효화한다. env가 아니라 코드 상수로
 # 두는 이유: 프롬프트 변경과 항상 같은 커밋에 들어가야 어긋남이 없어서.
-PROMPT_VERSION = "2026-06-16-v3-v6-crop-safe-centering-policy"
+PROMPT_VERSION = "2026-06-17-v3-v9-layout-priority-and-crop-safe-policy"
 
 
 def _clean_parts(parts: list[str]) -> list[str]:
@@ -30,11 +30,28 @@ def build_system_prompt(
             detail.prompt_hint if detail else "",
             (
                 "Preserve the actual menu item identity, shape, ingredients, and serving size. "
-                "Do not invent a different product."
+                 "Do not invent a different product."
             ),
             (
+                "For products served in visible containers, preserve the complete visible "
+                "serving presentation including only the visible container areas that "
+                "directly hold the served menu item. "
+                "Full visible presentation has higher priority than appetizing close-up "
+                "composition, commercial styling, or product occupancy. "
+                "If any visible part of the served item or its direct container approaches "
+                "the frame edge, reduce the overall product scale until comfortable "
+                "clearance is restored instead of preserving product size. "
+                "Avoid compositions where the lowest visible portion appears visually "
+                "crowded or nearly touching the frame."
+            ),
+
+            (
                 "Improve lighting, color, sharpness, appetizing texture, background cleanliness, "
-                "and commercial food styling."
+                "and commercial food styling. "
+                "Exception: for daangn menu_image layouts, "
+                "preserve full visible product composition "
+                "before prioritizing commercial food styling, "
+                "close-up framing, or strong product presence."
             ),
             # 분위기 제약 없으면 어둡게 해석하는 경우가 있어 밝은 느낌으로 명시한다.
             (
@@ -108,8 +125,14 @@ def _image_copy_layout_instruction(preset: Preset, detail: PresetDetail | None) 
     if preset.id == "instagram":
         return base + (
             "For Instagram, allow clean Korean typography naturally integrated into the "
-            "SNS-style promotional composition. Position the product and text so they form "
-            "a balanced advertising layout without cropping or reducing product clarity."
+            "SNS-style promotional composition. Use the horizontal center axis of the canvas "
+            "as the default anchor for the product or anchored composition unit. When headline, "
+            "subcopy, or CTA text is rendered, preserve horizontal center alignment by default "
+            "and allow only minor horizontal adjustment when it is necessary for a balanced "
+            "text-product relationship. Avoid unintended left or right drift, excessive side "
+            "placement, or moving the product merely to create empty text space. Maintain balanced "
+            "composition around the product while preserving full visibility, readability, "
+            "and natural advertising layout."
         )
 
     if preset.id == "daangn" and detail and detail.id == "discount_event":
