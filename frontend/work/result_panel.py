@@ -1,4 +1,5 @@
 from functools import cache
+from html import escape
 from pathlib import Path
 
 import streamlit as st
@@ -100,6 +101,20 @@ def _render_preview_history_controls(
         st.rerun()
 
 
+def _failure_panel_html(error_info: object) -> str:
+    message = "이미지 생성에 실패했어요. 잠시 후 다시 시도해주세요."
+    if isinstance(error_info, dict):
+        raw_message = str(error_info.get("message") or "").strip()
+        if raw_message:
+            message = f"이미지 생성에 실패했어요: {raw_message}"
+    return (
+        '<div class="empty-guide" role="alert">'
+        f"{escape(message)}"
+        "<br />요청 조건을 확인한 뒤 다시 생성해 주세요."
+        "</div>"
+    )
+
+
 def render_result_panel(
     *,
     is_generating: bool,
@@ -118,6 +133,7 @@ def render_result_panel(
     result_copy = st.session_state.get("result_copy")
     result_url = st.session_state.get("result_image_url")
     result_bytes = st.session_state.get("result_bytes")
+    generation_error = st.session_state.get("generation_error")
 
     if cursor >= 1 and total >= 1:
         entry = history[cursor - 1]
@@ -149,6 +165,9 @@ def render_result_panel(
             )
         copy_html = result_copy_html(result_copy, result_context=result_context)
         _render_preview_history_controls(copy_html=copy_html)
+    elif generation_error:
+        render_preview_shell(format_label, _failure_panel_html(generation_error), detail_label)
+        _render_preview_history_controls()
     elif uploaded_file:
         render_image_preview(uploaded_file.getvalue(), format_label, detail_label)
         _render_preview_history_controls()

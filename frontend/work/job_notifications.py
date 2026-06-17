@@ -7,10 +7,11 @@ from frontend.services.generation_jobs_client import (
 )
 from frontend.work.state import append_result_to_history
 
-DONE_STATUSES = {"success", "cached", "done", "completed"}
+DONE_STATUSES = {"success", "cached"}
 WAITING_STATUSES = {"pending", "processing"}
 ACTIVE_GENERATION_JOBS_KEY = "active_generation_jobs"
 GENERATION_TOASTS_KEY = "generation_toasts"
+GENERATION_ERROR_KEY = "generation_error"
 
 
 def active_generation_jobs(session_state=None) -> dict[str, dict[str, object]]:
@@ -89,6 +90,7 @@ def process_generation_job_notifications() -> None:
 
             context = job.get("context") if isinstance(job.get("context"), dict) else {}
             st.session_state["result_history_upload"] = context.get("uploadHash")
+            st.session_state.pop(GENERATION_ERROR_KEY, None)
             append_result_to_history(
                 {
                     "bytes": None,
@@ -110,9 +112,13 @@ def process_generation_job_notifications() -> None:
         if status == "failed":
             jobs.pop(request_id, None)
             changed = True
+            st.session_state[GENERATION_ERROR_KEY] = {
+                "requestId": request_id,
+                "message": str(data.get("error") or "GENERATION_JOB_FAILED"),
+            }
             if hasattr(st, "toast"):
-                error = data.get("error") or "GENERATION_JOB_FAILED"
-                st.toast(f"이미지 생성에 실패했어요: {error}")
+                message = st.session_state[GENERATION_ERROR_KEY]["message"]
+                st.toast(f"이미지 생성에 실패했어요: {message}")
 
     if changed:
         st.session_state[ACTIVE_GENERATION_JOBS_KEY] = jobs
@@ -128,7 +134,7 @@ def refresh_active_generation_jobs_once() -> None:
         st.rerun()
 
 
-@st.fragment(run_every="3s")
+@st.fragment(run_every="5s")
 def refresh_active_generation_jobs() -> None:
     """Keep the work-page loading panel polling until the generated image is ready."""
     refresh_active_generation_jobs_once()

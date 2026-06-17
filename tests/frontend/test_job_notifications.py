@@ -1,6 +1,12 @@
 from frontend.work import job_notifications
 
 
+def test_active_generation_job_polling_interval_is_five_seconds() -> None:
+    source = job_notifications.__loader__.get_source(job_notifications.__name__)
+
+    assert '@st.fragment(run_every="5s")' in str(source)
+
+
 class FakeStreamlit:
     def __init__(self) -> None:
         self.session_state: dict[str, object] = {}
@@ -58,7 +64,7 @@ def test_completed_generation_job_appends_result_and_toasts(monkeypatch) -> None
     assert fake_st.toasts == ["이미지 생성이 완료됐어요."]
 
 
-def test_done_generation_job_with_image_url_finishes_loading(monkeypatch) -> None:
+def test_success_generation_job_with_image_url_finishes_loading(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     fake_st.session_state["auth_access_token"] = "jwt-token"
     fake_st.session_state["active_generation_jobs"] = {
@@ -76,8 +82,8 @@ def test_done_generation_job_with_image_url_finishes_loading(monkeypatch) -> Non
         job_notifications,
         "get_generation_job_status",
         lambda request_id, access_token: {
-            "status": "done",
-            "imageUrl": "https://assets.example/done.png",
+            "status": "success",
+            "imageUrl": "https://assets.example/success.png",
         },
     )
     monkeypatch.setattr(
@@ -91,7 +97,7 @@ def test_done_generation_job_with_image_url_finishes_loading(monkeypatch) -> Non
     job_notifications.process_generation_job_notifications()
 
     assert not job_notifications.has_active_generation_job(fake_st.session_state)
-    assert fake_st.session_state["result_image_url"] == "https://assets.example/done.png"
+    assert fake_st.session_state["result_image_url"] == "https://assets.example/success.png"
     assert (
         fake_st.session_state["result_download_url"]
         == "https://signed.example/job-1?token=jwt-token"
@@ -208,4 +214,8 @@ def test_failed_generation_job_is_removed_with_toast(monkeypatch) -> None:
     job_notifications.process_generation_job_notifications()
 
     assert fake_st.session_state["active_generation_jobs"] == {}
+    assert fake_st.session_state["generation_error"] == {
+        "requestId": "job-1",
+        "message": "IMAGE_API_TIMEOUT",
+    }
     assert fake_st.toasts == ["이미지 생성에 실패했어요: IMAGE_API_TIMEOUT"]

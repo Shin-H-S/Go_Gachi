@@ -20,7 +20,7 @@ from backend.app.services.storage_url import output_url_if_exists_async, upload_
 logger = logging.getLogger(__name__)
 
 STALE_AFTER = timedelta(minutes=5)
-KEEP_DONE_JOBS_FOR = timedelta(minutes=20)
+KEEP_FINISHED_JOBS_FOR = timedelta(minutes=20)
 
 
 @dataclass
@@ -79,11 +79,11 @@ def _is_stale(value: datetime | None) -> bool:
 
 def cleanup_jobs() -> None:
     """완료/실패 후 20분 지난 메모리 job을 정리한다."""
-    cutoff = datetime.now(UTC) - KEEP_DONE_JOBS_FOR
+    cutoff = datetime.now(UTC) - KEEP_FINISHED_JOBS_FOR
     expired = [
         request_id
         for request_id, job in _jobs.items()
-        if job.status in {"done", "failed"} and job.updated_at < cutoff
+        if job.status in {"success", "cached", "failed"} and job.updated_at < cutoff
     ]
     for request_id in expired:
         _jobs.pop(request_id, None)
@@ -156,7 +156,7 @@ async def run_generation_job(
         )
         _set_job_status(
             request_id,
-            "done",
+            "success",
             image_url=str(result.get("image_url") or "") or None,
         )
     except Exception as exc:

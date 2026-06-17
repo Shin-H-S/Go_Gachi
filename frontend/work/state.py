@@ -17,6 +17,7 @@ def clear_result_state(session_state=None) -> None:
     state.pop("result_download_url", None)
     state.pop("result_copy", None)
     state.pop("result_context", None)
+    state.pop("generation_error", None)
 
 
 def get_result_history(session_state=None) -> list:
