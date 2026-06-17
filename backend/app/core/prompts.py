@@ -5,7 +5,7 @@ from backend.app.services.copywriting import AdCopy
 
 # 프롬프트 본문/구조가 바뀌면 이 라벨도 올려 캐시 무효화한다. env가 아니라 코드 상수로
 # 두는 이유: 프롬프트 변경과 항상 같은 커밋에 들어가야 어긋남이 없어서.
-PROMPT_VERSION = "2026-06-17-v3-v11"
+PROMPT_VERSION = "2026-06-17-v3-v12-hotfix"
 
 
 def _clean_parts(parts: list[str]) -> list[str]:
@@ -33,9 +33,11 @@ def build_system_prompt(
                  "Do not invent a different product."
             ),
             (
-                "Remove straws from the final generated image even if they exist in the uploaded image "
-                "unless explicitly requested by the user. Do not preserve, regenerate, replace, add, "
-                "or substitute straws with other accessories, serving tools, or decorative elements."
+                "Remove straws from the final generated image even if they exist "
+                "in the uploaded image unless explicitly requested by the user. "
+                "Do not preserve, regenerate, replace, add, or substitute "
+                "straws with other accessories, serving tools, or decorative "
+                "elements."
             ),
             (
                 "For products served in visible containers, preserve the complete visible "
@@ -89,11 +91,13 @@ def build_system_prompt(
         parts.extend([
             _no_copy_instruction(),
             (
-                "When no text, headline, product name, sticker, or marketing copy is requested, "
-                "do not reserve intentional empty space for future text placement, advertising layout, "
-                "editorial balance, captions, stickers, or downstream copy insertion. "
-                "Place the full product or anchored composition unit visually at the center of the canvas "
-                "by default while preserving balanced surrounding margins."
+                "When no text, headline, product name, sticker, or marketing "
+                "copy is requested, do not reserve intentional empty space "
+                "for future text placement, advertising layout, editorial "
+                "balance, captions, stickers, or downstream copy insertion. "
+                "Place the full product or anchored composition unit visually "
+                "at the center of the canvas by default while preserving "
+                "balanced surrounding margins."
             ),
 
             (
