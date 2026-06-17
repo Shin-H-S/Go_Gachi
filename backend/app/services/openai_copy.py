@@ -189,11 +189,9 @@ async def call_openai_copy(
     user_prompt: str,
     user_copy: str,
     copy_mode: CopyMode,
-    system_prompt_override: str | None = None,
 ) -> CopyGenerationResult:
     """Responses API로 광고 문구를 생성하고 AdCopy로 반환한다."""
     start = time.perf_counter()
-    system_prompt = (system_prompt_override or "").strip() or _copy_system_prompt(copy_mode)
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             response = await client.post(
@@ -205,7 +203,7 @@ async def call_openai_copy(
                 json={
                     "model": settings.openai_text_model,
                     "input": [
-                        {"role": "system", "content": system_prompt},
+                        {"role": "system", "content": _copy_system_prompt(copy_mode)},
                         {
                             "role": "user",
                             "content": _copy_user_prompt(
@@ -301,14 +299,13 @@ async def generate_ad_copy(
     user_prompt: str,
     user_copy: str,
     copy_mode: CopyMode,
-    system_prompt_override: str | None = None,
 ) -> CopyGenerationResult:
     """실행 환경에 맞게 AI 문구 생성 또는 로컬 fallback을 수행한다."""
     if settings.image_provider != "openai" or not settings.openai_api_key:
         # mock/로컬 키 없음 상태에서는 userPrompt를 문구로 오해하지 않도록 userCopy만 사용한다.
         return CopyGenerationResult(copy=build_ad_copy(user_copy, copy_mode))
 
-    if not system_prompt_override and copy_mode == "preserve" and user_copy.strip():
+    if copy_mode == "preserve" and user_copy.strip():
         # 그대로 사용은 모델 호출보다 사용자 입력 보존이 더 중요하다.
         return CopyGenerationResult(copy=build_ad_copy(user_copy, copy_mode))
 
@@ -319,5 +316,4 @@ async def generate_ad_copy(
         user_prompt=user_prompt,
         user_copy=user_copy,
         copy_mode=copy_mode,
-        system_prompt_override=system_prompt_override,
     )

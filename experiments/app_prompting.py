@@ -1,5 +1,6 @@
 """Prompt assembly helpers for the experiments Streamlit console."""
 
+import httpx
 from app_common import ROOT_DIR  # noqa: F401  Ensures backend imports resolve.
 
 from backend.app.core.presets import Preset, PresetDetail, get_presets
@@ -15,7 +16,15 @@ from backend.app.core.prompts import (
 from backend.app.services.copywriting import AdCopy, build_ad_copy
 from backend.app.services.generation_inputs import user_prompt_with_context
 from backend.app.services.image_types import TargetSize
-from backend.app.services.openai_copy import generate_ad_copy
+from backend.app.services.openai_copy import (
+    COPY_JSON_SCHEMA,
+    CopyGenerationResult,
+    _copy_user_prompt,
+    _extract_output_text,
+    _extract_usage,
+    _parse_copy_json,
+    generate_ad_copy,
+)
 from frontend.services.prompting import build_user_prompt as build_frontend_user_prompt
 
 BASE_LINE = (
@@ -141,6 +150,63 @@ def _adcopy_from_result(result: object) -> AdCopy:
     return getattr(result, "copy", result)
 
 
+async def generate_custom_ad_copy(
+    *,
+    settings,
+    preset: Preset,
+    detail: PresetDetail | None,
+    user_prompt: str,
+    user_copy: str,
+    system_prompt: str,
+) -> CopyGenerationResult:
+    clean_system_prompt = system_prompt.strip()
+    if (
+        not clean_system_prompt
+        or settings.image_provider != "openai"
+        or not settings.openai_api_key
+    ):
+        return CopyGenerationResult(copy=build_ad_copy(user_copy, "preserve"))
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post(
+            "https://api.openai.com/v1/responses",
+            headers={
+                "Authorization": f"Bearer {settings.openai_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": settings.openai_text_model,
+                "input": [
+                    {"role": "system", "content": clean_system_prompt},
+                    {
+                        "role": "user",
+                        "content": _copy_user_prompt(
+                            preset=preset,
+                            detail=detail,
+                            user_prompt=user_prompt,
+                            user_copy=user_copy,
+                        ),
+                    },
+                ],
+                "text": {
+                    "format": {
+                        "type": "json_schema",
+                        "name": "ad_copy",
+                        "schema": COPY_JSON_SCHEMA,
+                        "strict": True,
+                    }
+                },
+            },
+        )
+    response.raise_for_status()
+    payload = response.json()
+    return CopyGenerationResult(
+        copy=_parse_copy_json(_extract_output_text(payload), "preserve"),
+        usage=_extract_usage(payload),
+        used_openai=True,
+    )
+
+
 async def resolve_ad_copy(cfg: dict, settings) -> AdCopy | None:
     if not cfg["copy_on"]:
         return None
@@ -165,14 +231,13 @@ async def resolve_ad_copy(cfg: dict, settings) -> AdCopy | None:
         if not custom_prompt:
             return build_ad_copy(cfg["copy_text"], "preserve")
         try:
-            result = await generate_ad_copy(
+            result = await generate_custom_ad_copy(
                 settings=settings,
                 preset=preset,
                 detail=detail,
                 user_prompt=_frontend_user_prompt(cfg, detail),
                 user_copy=cfg["copy_text"],
-                copy_mode="preserve",
-                system_prompt_override=custom_prompt,
+                system_prompt=custom_prompt,
             )
             return _adcopy_from_result(result)
         except Exception:

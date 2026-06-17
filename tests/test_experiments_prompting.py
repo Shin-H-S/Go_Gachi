@@ -125,13 +125,13 @@ def test_custom_copy_mode_prompt_replaces_copy_processing_prompt_only() -> None:
     assert 'Headline: "Rendered headline"' in prompt
 
 
-def test_custom_copy_mode_forwards_replacement_prompt_to_copy_generation(monkeypatch) -> None:
+def test_custom_copy_mode_uses_experiments_replacement_prompt_generator(monkeypatch) -> None:
     preset = get_presets()["instagram"]
     detail = preset.find_detail("square_feed")
     assert detail is not None
     captured: dict[str, object] = {}
 
-    async def fake_generate_ad_copy(**kwargs: object) -> SimpleNamespace:
+    async def fake_generate_custom_ad_copy(**kwargs: object) -> SimpleNamespace:
         captured.update(kwargs)
         return SimpleNamespace(
             copy=AdCopy(
@@ -142,7 +142,7 @@ def test_custom_copy_mode_forwards_replacement_prompt_to_copy_generation(monkeyp
             )
         )
 
-    monkeypatch.setattr(app_prompting, "generate_ad_copy", fake_generate_ad_copy)
+    monkeypatch.setattr(app_prompting, "generate_custom_ad_copy", fake_generate_custom_ad_copy)
     cfg = {
         **_cfg(preset, detail, user_prompt="brighter mood"),
         "copy_on": True,
@@ -159,5 +159,5 @@ def test_custom_copy_mode_forwards_replacement_prompt_to_copy_generation(monkeyp
     )
 
     assert ad_copy.headline == "Custom generated headline"
-    assert captured["system_prompt_override"] == "CUSTOM_COPY_PROCESSING_PROMPT"
-    assert captured["copy_mode"] == "preserve"
+    assert captured["system_prompt"] == "CUSTOM_COPY_PROCESSING_PROMPT"
+    assert captured["user_prompt"] == build_frontend_user_prompt("brighter mood", detail.label)
