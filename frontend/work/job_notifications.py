@@ -6,17 +6,37 @@ from frontend.work.state import append_result_to_history
 
 DONE_STATUSES = {"success", "cached"}
 WAITING_STATUSES = {"pending", "processing", "done"}
+ACTIVE_GENERATION_JOBS_KEY = "active_generation_jobs"
+GENERATION_TOASTS_KEY = "generation_toasts"
 
 
-def _toast(message: str) -> None:
-    """Streamlit 버전에 따라 toast가 없을 수 있어 안전하게 호출한다."""
-    if hasattr(st, "toast"):
-        st.toast(message)
-
-
-def _active_jobs() -> dict[str, dict[str, object]]:
-    jobs = st.session_state.get("active_generation_jobs")
+def active_generation_jobs(session_state=None) -> dict[str, dict[str, object]]:
+    """현재 앱에서 추적 중인 이미지 생성 job 목록을 반환한다."""
+    state = st.session_state if session_state is None else session_state
+    jobs = state.get(ACTIVE_GENERATION_JOBS_KEY)
     return jobs if isinstance(jobs, dict) else {}
+
+
+def has_active_generation_job(session_state=None) -> bool:
+    """작업 페이지 로딩 패널을 유지할 active job이 있는지 확인한다."""
+    return bool(active_generation_jobs(session_state))
+
+
+def queue_generation_toast(message: str, session_state=None) -> None:
+    """rerun 이후 표시할 알림 문구를 세션에 저장한다."""
+    state = st.session_state if session_state is None else session_state
+    toasts = list(state.get(GENERATION_TOASTS_KEY) or [])
+    toasts.append(message)
+    state[GENERATION_TOASTS_KEY] = toasts
+
+
+def render_queued_generation_toasts() -> None:
+    """이전 rerun에서 예약한 알림을 화면에 표시한다."""
+    messages = list(st.session_state.pop(GENERATION_TOASTS_KEY, []) or [])
+    if not hasattr(st, "toast"):
+        return
+    for message in messages:
+        st.toast(str(message))
 
 
 def process_generation_job_notifications() -> None:
@@ -25,7 +45,7 @@ def process_generation_job_notifications() -> None:
     if not access_token:
         return
 
-    jobs = dict(_active_jobs())
+    jobs = dict(active_generation_jobs())
     if not jobs:
         return
 
@@ -70,13 +90,16 @@ def process_generation_job_notifications() -> None:
             )
             jobs.pop(request_id, None)
             changed = True
-            _toast("이미지 생성이 완료됐어요.")
+            if hasattr(st, "toast"):
+                st.toast("이미지 생성이 완료됐어요.")
             continue
 
         if status == "failed":
             jobs.pop(request_id, None)
             changed = True
-            _toast(f"이미지 생성에 실패했어요: {data.get('error') or 'GENERATION_JOB_FAILED'}")
+            if hasattr(st, "toast"):
+                error = data.get("error") or "GENERATION_JOB_FAILED"
+                st.toast(f"이미지 생성에 실패했어요: {error}")
 
     if changed:
-        st.session_state["active_generation_jobs"] = jobs
+        st.session_state[ACTIVE_GENERATION_JOBS_KEY] = jobs
