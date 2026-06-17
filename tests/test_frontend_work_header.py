@@ -1,5 +1,6 @@
 import importlib
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 WORK_COMPONENTS = ROOT_DIR / "frontend" / "work" / "components.py"
@@ -63,3 +64,27 @@ def test_work_header_profile_summary_for_guest_has_question_mark_and_no_email() 
     summary = components._build_mypage_profile_summary({}, is_logged_in=False)
 
     assert summary == {"avatar": "?", "title": "마이페이지", "email": ""}
+
+
+def test_work_header_refreshes_cached_profile_when_display_name_missing(monkeypatch) -> None:
+    components = importlib.import_module("frontend.work.components")
+    session_state = {
+        "auth_access_token": "jwt-token",
+        "auth_user_email": "manatoki74@gmail.com",
+        components.WORK_HEADER_PROFILE_TOKEN_KEY: "jwt-token",
+        components.WORK_HEADER_PROFILE_KEY: {"email": "manatoki74@gmail.com"},
+    }
+    request_calls = []
+
+    def fake_request_me(access_token: str) -> dict:
+        request_calls.append(access_token)
+        return {"display_name": "닉네임", "email": "manatoki74@gmail.com"}
+
+    monkeypatch.setattr(components, "st", SimpleNamespace(session_state=session_state))
+    monkeypatch.setattr(components, "request_me", fake_request_me)
+
+    profile = components._get_work_header_profile()
+
+    assert request_calls == ["jwt-token"]
+    assert profile["display_name"] == "닉네임"
+    assert session_state[components.WORK_HEADER_PROFILE_KEY]["display_name"] == "닉네임"

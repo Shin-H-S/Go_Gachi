@@ -3,6 +3,7 @@ from html import escape
 import streamlit as st
 
 from frontend.core.router import navigate_to
+from frontend.mypage.cache import clear_mypage_cache
 from frontend.mypage.download_actions import render_download_action
 from frontend.mypage.pagination import paginate_items
 from frontend.mypage.selection import (
@@ -134,6 +135,7 @@ def _render_folder_action(
         request_id = str(item.get("request_id") or "")
         if request_id:
             move_generation_to_folder(access_token, request_id, mapping[selected_label])
+    clear_mypage_cache()
     st.rerun()
 
 

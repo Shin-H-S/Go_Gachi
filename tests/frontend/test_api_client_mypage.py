@@ -28,12 +28,22 @@ def test_mypage_get_requests_attach_authorization_header(
     monkeypatch.setattr(api_client.httpx, "get", fake_get)
 
     assert api_client.request_my_generations("jwt-token") == {"items": [], "count": 0}
+    assert api_client.request_my_generations("jwt-token", page=2, uncategorized=True) == {
+        "items": [],
+        "count": 0,
+    }
     assert api_client.request_my_folders("jwt-token") == {"items": [], "count": 0}
     assert api_client.request_my_uploads("jwt-token") == {"items": [], "count": 0}
+    assert api_client.request_my_uploads("jwt-token", page=2) == {"items": [], "count": 0}
 
     assert captured_requests == [
         {
             "url": "https://backend.example/api/auth/me/generations",
+            "headers": {"Authorization": "Bearer jwt-token"},
+            "timeout": 30,
+        },
+        {
+            "url": "https://backend.example/api/auth/me/generations?page=2&uncategorized=true",
             "headers": {"Authorization": "Bearer jwt-token"},
             "timeout": 30,
         },
@@ -44,6 +54,11 @@ def test_mypage_get_requests_attach_authorization_header(
         },
         {
             "url": "https://backend.example/api/auth/me/uploads",
+            "headers": {"Authorization": "Bearer jwt-token"},
+            "timeout": 30,
+        },
+        {
+            "url": "https://backend.example/api/auth/me/uploads?page=2",
             "headers": {"Authorization": "Bearer jwt-token"},
             "timeout": 30,
         },

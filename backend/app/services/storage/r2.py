@@ -2,6 +2,7 @@
 
 import inspect
 import logging
+from collections.abc import Sequence
 from pathlib import PurePosixPath
 from typing import Final
 from urllib.parse import quote
@@ -15,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 _NOT_FOUND_CODES: Final[set[str]] = {"404", "NoSuchKey", "NotFound"}
 _IMAGE_CACHE_CONTROL: Final[str] = "public, max-age=604800"
+
+
+def _download_disposition(filename: str) -> str:
+    quoted = quote(filename)
+    return f"attachment; filename={quoted}; filename*=UTF-8''{quoted}"
 
 
 class R2Storage:
@@ -62,23 +68,34 @@ class R2Storage:
         content_type: str,
         expires_in: int,
     ) -> str | None:
-        quoted = quote(filename)
-        disposition = f"attachment; filename={quoted}; filename*=UTF-8''{quoted}"
         session = aioboto3.Session()
         async with session.client("s3", **self._client_kwargs()) as s3:
-            url = s3.generate_presigned_url(
-                ClientMethod="get_object",
-                Params={
-                    "Bucket": self.settings.r2_bucket_name,
-                    "Key": path,
-                    "ResponseContentDisposition": disposition,
-                    "ResponseContentType": content_type,
-                },
-                ExpiresIn=expires_in,
+            return await self._presigned_download_url(
+                s3,
+                path=path,
+                filename=filename,
+                content_type=content_type,
+                expires_in=expires_in,
             )
-            if inspect.isawaitable(url):
-                url = await url
-            return str(url)
+
+    async def download_urls(
+        self,
+        items: Sequence[dict[str, str]],
+        *,
+        expires_in: int,
+    ) -> list[str | None]:
+        session = aioboto3.Session()
+        async with session.client("s3", **self._client_kwargs()) as s3:
+            return [
+                await self._presigned_download_url(
+                    s3,
+                    path=item["path"],
+                    filename=item["filename"],
+                    content_type=item["content_type"],
+                    expires_in=expires_in,
+                )
+                for item in items
+            ]
 
     async def exists(self, path: str) -> bool:
         session = aioboto3.Session()
@@ -125,6 +142,29 @@ class R2Storage:
             object_key = f"{prefix}/{PurePosixPath(normalized).name}"
         base = self.settings.r2_public_url.rstrip("/")
         return f"{base}/{object_key}"
+
+    async def _presigned_download_url(
+        self,
+        s3,
+        *,
+        path: str,
+        filename: str,
+        content_type: str,
+        expires_in: int,
+    ) -> str:
+        url = s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": self.settings.r2_bucket_name,
+                "Key": path,
+                "ResponseContentDisposition": _download_disposition(filename),
+                "ResponseContentType": content_type,
+            },
+            ExpiresIn=expires_in,
+        )
+        if inspect.isawaitable(url):
+            url = await url
+        return str(url)
 
 
 def _is_not_found(exc: ClientError) -> bool:

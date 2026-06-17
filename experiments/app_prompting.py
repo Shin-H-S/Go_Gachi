@@ -1,5 +1,6 @@
 """Prompt assembly helpers for the experiments Streamlit console."""
 
+import httpx
 from app_common import ROOT_DIR  # noqa: F401  Ensures backend imports resolve.
 
 from backend.app.core.presets import Preset, PresetDetail, get_presets
@@ -7,13 +8,24 @@ from backend.app.core.prompts import (
     _image_copy_instruction,
     _no_copy_instruction,
     build_prompt,
-    build_user_prompt,
     merge_image_prompt,
+)
+from backend.app.core.prompts import (
+    build_user_prompt as build_backend_user_prompt,
 )
 from backend.app.services.copywriting import AdCopy, build_ad_copy
 from backend.app.services.generation_inputs import user_prompt_with_context
 from backend.app.services.image_types import TargetSize
-from backend.app.services.openai_copy import generate_ad_copy
+from backend.app.services.openai_copy import (
+    COPY_JSON_SCHEMA,
+    CopyGenerationResult,
+    _copy_user_prompt,
+    _extract_output_text,
+    _extract_usage,
+    _parse_copy_json,
+    generate_ad_copy,
+)
+from frontend.services.prompting import build_user_prompt as build_frontend_user_prompt
 
 BASE_LINE = (
     "Edit the uploaded cafe menu photo into a polished promotional food image "
@@ -83,8 +95,6 @@ def assemble_system_prompt(cfg: dict, ad_copy: AdCopy | None) -> str:
                 COPY_ACCURACY_LINE,
                 COPY_NO_EXTRA_LINE,
             ]
-        if cfg["copy_mode_custom"]:
-            parts.append(cfg["copy_mode_custom"])
     else:
         parts += [_no_copy_instruction(), NEGATIVE_SPACE_LINE]
     return "\n".join(part for part in parts if part)
@@ -103,7 +113,11 @@ def _repo_preset_detail(cfg: dict) -> tuple[Preset, PresetDetail] | None:
 def _uses_custom_copy_prompt(cfg: dict, ad_copy: AdCopy | None) -> bool:
     if ad_copy is None:
         return False
-    return bool(cfg.get("copy_instr_custom") or cfg.get("copy_mode_custom"))
+    return bool(cfg.get("copy_instr_custom"))
+
+
+def _frontend_user_prompt(cfg: dict, detail: PresetDetail) -> str:
+    return build_frontend_user_prompt(cfg.get("user_prompt", ""), detail.label)
 
 
 def assemble_full_prompt(cfg: dict, ad_copy: AdCopy | None) -> str:
@@ -119,10 +133,10 @@ def assemble_full_prompt(cfg: dict, ad_copy: AdCopy | None) -> str:
             height=cfg["target_h"],
             api_size=cfg["api_size"],
         )
-    ctx = user_prompt_with_context(cfg.get("user_prompt", ""), target, detail, "cover")
+    ctx = user_prompt_with_context(_frontend_user_prompt(cfg, detail), target, detail, "cover")
     if repo_selection and not _uses_custom_copy_prompt(cfg, ad_copy):
         return build_prompt(preset, ctx, detail, image_copy=ad_copy)
-    return merge_image_prompt(assemble_system_prompt(cfg, ad_copy), build_user_prompt(ctx))
+    return merge_image_prompt(assemble_system_prompt(cfg, ad_copy), build_backend_user_prompt(ctx))
 
 
 def preview_ad_copy(cfg: dict) -> AdCopy | None:
@@ -136,12 +150,67 @@ def _adcopy_from_result(result: object) -> AdCopy:
     return getattr(result, "copy", result)
 
 
+async def generate_custom_ad_copy(
+    *,
+    settings,
+    preset: Preset,
+    detail: PresetDetail | None,
+    user_prompt: str,
+    user_copy: str,
+    system_prompt: str,
+) -> CopyGenerationResult:
+    clean_system_prompt = system_prompt.strip()
+    if (
+        not clean_system_prompt
+        or settings.image_provider != "openai"
+        or not settings.openai_api_key
+    ):
+        return CopyGenerationResult(copy=build_ad_copy(user_copy, "preserve"))
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post(
+            "https://api.openai.com/v1/responses",
+            headers={
+                "Authorization": f"Bearer {settings.openai_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": settings.openai_text_model,
+                "input": [
+                    {"role": "system", "content": clean_system_prompt},
+                    {
+                        "role": "user",
+                        "content": _copy_user_prompt(
+                            preset=preset,
+                            detail=detail,
+                            user_prompt=user_prompt,
+                            user_copy=user_copy,
+                        ),
+                    },
+                ],
+                "text": {
+                    "format": {
+                        "type": "json_schema",
+                        "name": "ad_copy",
+                        "schema": COPY_JSON_SCHEMA,
+                        "strict": True,
+                    }
+                },
+            },
+        )
+    response.raise_for_status()
+    payload = response.json()
+    return CopyGenerationResult(
+        copy=_parse_copy_json(_extract_output_text(payload), "preserve"),
+        usage=_extract_usage(payload),
+        used_openai=True,
+    )
+
+
 async def resolve_ad_copy(cfg: dict, settings) -> AdCopy | None:
     if not cfg["copy_on"]:
         return None
     mode = cfg["copy_mode"]
-    if mode == "custom":
-        return build_ad_copy(cfg["copy_text"], "preserve")
     preset = Preset(
         id=cfg["channel_id"],
         label=cfg["channel_label"],
@@ -157,12 +226,28 @@ async def resolve_ad_copy(cfg: dict, settings) -> AdCopy | None:
         height=cfg["target_h"],
         api_size=cfg["api_size"],
     )
+    if mode == "custom":
+        custom_prompt = (cfg.get("copy_mode_custom") or "").strip()
+        if not custom_prompt:
+            return build_ad_copy(cfg["copy_text"], "preserve")
+        try:
+            result = await generate_custom_ad_copy(
+                settings=settings,
+                preset=preset,
+                detail=detail,
+                user_prompt=_frontend_user_prompt(cfg, detail),
+                user_copy=cfg["copy_text"],
+                system_prompt=custom_prompt,
+            )
+            return _adcopy_from_result(result)
+        except Exception:
+            return build_ad_copy(cfg["copy_text"], "preserve")
     try:
         result = await generate_ad_copy(
             settings=settings,
             preset=preset,
             detail=detail,
-            user_prompt=cfg.get("user_prompt", ""),
+            user_prompt=_frontend_user_prompt(cfg, detail),
             user_copy=cfg["copy_text"],
             copy_mode=mode,
         )
@@ -226,7 +311,8 @@ def prompt_drift_report() -> str | None:
         ]
         mismatches: list[tuple[str, str]] = []
         for name, cfg, ad_copy, user_prompt in combos:
-            ctx = user_prompt_with_context(user_prompt, target, detail, "cover")
+            frontend_user_prompt = build_frontend_user_prompt(user_prompt, detail.label)
+            ctx = user_prompt_with_context(frontend_user_prompt, target, detail, "cover")
             expected = backend_prompts.build_prompt(preset, ctx, detail, image_copy=ad_copy)
             actual = assemble_full_prompt(cfg, ad_copy)
             if actual != expected:

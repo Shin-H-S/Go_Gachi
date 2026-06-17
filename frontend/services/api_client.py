@@ -6,8 +6,6 @@ from frontend.core.config import (
     BACKEND_URL,
     DEFAULT_BACKEND_URL,
     FORMAT_OPTIONS,
-    get_detail_id,
-    get_detail_size,
 )
 from frontend.services import mypage_client
 from frontend.services.assets import (
@@ -17,11 +15,13 @@ from frontend.services.assets import (
 )
 from frontend.services.copy_client import request_auto_copy
 from frontend.services.generation_jobs_client import request_generate_job_result
+from frontend.services.generation_payload import build_generate_payload
 from frontend.services.prompting import build_user_prompt
 
 __all__ = [
     "BACKEND_URL",
     "DEFAULT_BACKEND_URL",
+    "FORMAT_OPTIONS",
     "GenerationResult",
     "build_user_prompt",
     "create_my_folder",
@@ -66,6 +66,7 @@ def request_my_generations(
     page: int = 1,
     *,
     folder_id: int | None = None,
+    uncategorized: bool = False,
 ) -> dict:
     page = max(1, int(page))
     params: list[str] = []
@@ -73,6 +74,8 @@ def request_my_generations(
         params.append(f"page={page}")
     if folder_id is not None:
         params.append(f"folder_id={int(folder_id)}")
+    if uncategorized:
+        params.append("uncategorized=true")
     suffix = ("?" + "&".join(params)) if params else ""
     response = httpx.get(
         f"{BACKEND_URL}/api/auth/me/generations{suffix}",
@@ -88,9 +91,9 @@ def request_my_folders(access_token: str) -> dict:
     return mypage_client.request_my_folders(access_token)
 
 
-def request_my_uploads(access_token: str) -> dict:
+def request_my_uploads(access_token: str, page: int = 1) -> dict:
     _sync_mypage_backend_url()
-    return mypage_client.request_my_uploads(access_token)
+    return mypage_client.request_my_uploads(access_token, page=page)
 
 
 def create_my_folder(access_token: str, name: str) -> dict:
@@ -125,30 +128,6 @@ def to_backend_asset_url(path: str | None) -> str | None:
     if path.startswith("/"):
         return f"{BACKEND_URL.rstrip('/')}{path}"
     return f"{BACKEND_URL.rstrip('/')}/{path}"
-
-
-def _build_generate_payload(
-    uploaded_file,
-    prompt: str,
-    format_label: str,
-    detail_label: str,
-    ad_copy_enabled: bool,
-    copy_mode: str,
-    ad_copy_prompt: str,
-) -> dict[str, object]:
-    target_size = get_detail_size(format_label, detail_label)
-    user_copy = ad_copy_prompt.strip() if ad_copy_enabled else ""
-    return {
-        "imageDataUrl": file_to_data_url(uploaded_file),
-        "presetId": FORMAT_OPTIONS[format_label]["value"],
-        "detailType": get_detail_id(format_label, detail_label),
-        "userPrompt": build_user_prompt(prompt, detail_label),
-        "userCopy": user_copy,
-        "copyMode": copy_mode,
-        "adCopyEnabled": ad_copy_enabled,
-        "targetWidth": target_size[0],
-        "targetHeight": target_size[1],
-    }
 
 
 def _request_generate_sync(payload: dict[str, object], access_token: str) -> GenerationResult:
@@ -201,7 +180,7 @@ def request_backend(
     copy_mode: str = "preserve",
     ad_copy_prompt: str = "",
 ) -> GenerationResult:
-    payload = _build_generate_payload(
+    payload = build_generate_payload(
         uploaded_file,
         prompt,
         format_label,

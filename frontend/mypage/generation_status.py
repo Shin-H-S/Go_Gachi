@@ -47,3 +47,17 @@ def is_generation_waiting_for_image(item: dict) -> bool:
 
 def has_generation_waiting_for_image(items: list[dict]) -> bool:
     return any(is_generation_waiting_for_image(item) for item in items)
+
+
+def generation_status_badge(status: str, created_at: object) -> tuple[str, str]:
+    """마이페이지 작업 카드에 표시할 상태 라벨과 CSS 상태값을 반환한다."""
+    normalized = status.strip().lower()
+    if is_stale_in_progress(status, created_at):
+        return "시간초과", "stale"
+    if normalized in IN_PROGRESS_STATUSES or normalized not in FINISHED_STATUSES:
+        return "생성중", "progress"
+    if normalized == "failed":
+        return "실패", "failed"
+    if normalized == "cached":
+        return "완료", "cached"
+    return "완료", "success"
