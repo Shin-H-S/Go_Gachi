@@ -86,6 +86,10 @@ def _build_mypage_profile_summary(profile: dict, is_logged_in: bool) -> dict[str
     }
 
 
+def _has_display_name(profile: dict) -> bool:
+    return bool(str(profile.get("display_name") or "").strip())
+
+
 def _get_work_header_profile() -> dict:
     access_token = str(st.session_state.get("auth_access_token") or "")
     session_email = str(st.session_state.get("auth_user_email") or "")
@@ -94,15 +98,17 @@ def _get_work_header_profile() -> dict:
 
     cached_token = st.session_state.get(WORK_HEADER_PROFILE_TOKEN_KEY)
     cached_profile = st.session_state.get(WORK_HEADER_PROFILE_KEY)
-    if cached_token == access_token and isinstance(cached_profile, dict):
+    cache_matches_token = cached_token == access_token and isinstance(cached_profile, dict)
+    if cache_matches_token and _has_display_name(cached_profile):
         profile = dict(cached_profile)
     else:
         try:
             profile = dict(request_me(access_token))
         except Exception:
-            profile = {}
-        st.session_state[WORK_HEADER_PROFILE_TOKEN_KEY] = access_token
-        st.session_state[WORK_HEADER_PROFILE_KEY] = profile
+            profile = dict(cached_profile) if cache_matches_token else {}
+        else:
+            st.session_state[WORK_HEADER_PROFILE_TOKEN_KEY] = access_token
+            st.session_state[WORK_HEADER_PROFILE_KEY] = profile
 
     if session_email and not profile.get("email"):
         profile["email"] = session_email
