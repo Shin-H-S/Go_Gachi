@@ -1,5 +1,6 @@
 MAIN_LAYOUT_SHELL_CSS = """
 .st-key-main-landing {
+    position: relative;
     min-height: 100vh;
     min-height: 100dvh;
     padding: 34px;
