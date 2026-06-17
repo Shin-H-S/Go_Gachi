@@ -99,7 +99,17 @@ def _render_home_button() -> None:
 
 def _render_header_download_button() -> None:
     result_url = st.session_state.get("result_image_url")
+    result_download_url = st.session_state.get("result_download_url")
     result_bytes = st.session_state.get("result_bytes")
+
+    if isinstance(result_download_url, str) and result_download_url:
+        st.link_button(
+            "⇩ 다운로드",
+            result_download_url,
+            key="work-header-download-link",
+            use_container_width=True,
+        )
+        return
 
     if not isinstance(result_bytes, bytes) and isinstance(result_url, str) and result_url:
         fetch_clicked = st.button(

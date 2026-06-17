@@ -1,7 +1,9 @@
 WORK_HEADER_DOWNLOAD_CSS = """
+.st-key-work-header-download-link a,
 .st-key-work-header-download-button button,
 .st-key-work-header-download-fetch button,
 .st-key-work-header-download-empty button,
+.st-key-work-header-download-link div[data-testid="stLinkButton"] a,
 .st-key-work-header-download-button div[data-testid="stDownloadButton"] button,
 .st-key-work-header-download-fetch div[data-testid="stButton"] button,
 .st-key-work-header-download-empty div[data-testid="stButton"] button {
@@ -20,9 +22,11 @@ WORK_HEADER_DOWNLOAD_CSS = """
     opacity: 1 !important;
 }
 
+.st-key-work-header-download-link a:hover,
 .st-key-work-header-download-button button:hover,
 .st-key-work-header-download-fetch button:hover,
 .st-key-work-header-download-empty button:hover,
+.st-key-work-header-download-link div[data-testid="stLinkButton"] a:hover,
 .st-key-work-header-download-button div[data-testid="stDownloadButton"] button:hover,
 .st-key-work-header-download-fetch div[data-testid="stButton"] button:hover,
 .st-key-work-header-download-empty div[data-testid="stButton"] button:hover {
@@ -34,6 +38,12 @@ WORK_HEADER_DOWNLOAD_CSS = """
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     box-shadow: none !important;
+}
+
+.st-key-work-header-download-link a:visited,
+.st-key-work-header-download-link div[data-testid="stLinkButton"] a:visited {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 
 .st-key-work-header-download-button button:disabled,

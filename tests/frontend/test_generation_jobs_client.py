@@ -48,3 +48,43 @@ def test_generate_job_polling_waits_two_seconds_between_status_checks(
 
     assert sleep_calls == [2]
     assert str(result["imageUrl"]).endswith("/outputs/job-result.png")
+
+
+def test_create_generation_download_url_keeps_signed_download_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_post(
+        url: str,  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        return FakeResponse({"downloadUrl": "https://signed.example/job-1?sig=abc"})
+
+    monkeypatch.setattr(generation_jobs_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(generation_jobs_client.httpx, "post", fake_post)
+
+    data = generation_jobs_client.create_generation_download_url("job-1", "jwt-token")
+
+    assert data["downloadUrl"] == "https://signed.example/job-1?sig=abc"
+
+
+def test_create_generation_download_url_ignores_backend_fallback_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_post(
+        url: str,  # noqa: ARG001
+        headers: dict[str, str],  # noqa: ARG001
+        timeout: int,  # noqa: ARG001
+    ) -> FakeResponse:
+        return FakeResponse({"downloadUrl": "/api/assets/generations/job-1/download"})
+
+    monkeypatch.setattr(generation_jobs_client, "BACKEND_URL", "https://backend.example")
+    monkeypatch.setattr(
+        "frontend.services.assets.BACKEND_URL",
+        "https://backend.example",
+    )
+    monkeypatch.setattr(generation_jobs_client.httpx, "post", fake_post)
+
+    data = generation_jobs_client.create_generation_download_url("job-1", "jwt-token")
+
+    assert data["downloadUrl"] is None

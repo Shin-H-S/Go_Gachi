@@ -246,6 +246,7 @@ def test_work_page_moves_download_and_history_controls_to_result_panel() -> None
     assert "undo_clicked" not in work_source
     assert "redo_clicked" not in work_source
     assert "_render_header_download_button(" in header_source
+    assert 'key="work-header-download-link"' in header_source
     assert "request_asset_bytes" in header_source
     assert 'key="work-header-download-button"' in header_source
     assert 'key="work-header-download-fetch"' in header_source
