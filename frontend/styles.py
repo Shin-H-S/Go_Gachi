@@ -1,6 +1,7 @@
 import streamlit as st
 
 from frontend.css.base import BASE_CSS
+from frontend.css.home_navigation import HOME_NAVIGATION_CSS
 from frontend.css.login import LOGIN_CSS
 from frontend.css.main_layout import MAIN_LAYOUT_CSS
 from frontend.css.main_visual import MAIN_VISUAL_CSS
@@ -31,6 +32,7 @@ CSS_PARTS = [
     WORK_CHANNELS_CSS,
     WORK_SELECTION_CSS,
     MYPAGE_CSS,
+    HOME_NAVIGATION_CSS,
     RESPONSIVE_CSS,
 ]
 

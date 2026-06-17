@@ -75,8 +75,19 @@ RESPONSIVE_CSS = """
         padding: 30px;
     }
 
-    .blue-panel strong {
-        font-size: 38px;
+    .blue-panel-image-stage {
+        inset: 22px 22px 104px;
+        border-radius: 22px;
+    }
+
+    .blue-panel-image {
+        width: min(88%, 360px);
+        height: min(88%, 360px);
+        border-radius: 16px;
+    }
+
+    .blue-panel-caption strong {
+        font-size: 32px;
     }
 
 }

@@ -1,9 +1,10 @@
 from pathlib import Path
 
+from frontend.css.work_header import WORK_HEADER_CSS
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 STYLE_BASE_FILE = ROOT_DIR / "frontend" / "css" / "base.py"
 STYLE_WORK_CONTROLS_FILE = ROOT_DIR / "frontend" / "css" / "work_controls.py"
-STYLE_WORK_HEADER_FILE = ROOT_DIR / "frontend" / "css" / "work_header.py"
 STYLE_WORK_PREVIEW_FILE = ROOT_DIR / "frontend" / "css" / "work_preview.py"
 STYLE_WORK_SELECTION_FILE = ROOT_DIR / "frontend" / "css" / "work_selection.py"
 STYLE_WORK_FORMS_FILE = ROOT_DIR / "frontend" / "css" / "work_forms.py"
@@ -33,6 +34,15 @@ def test_work_header_styles_override_global_work_button_styles() -> None:
     assert css_parts.index("WORK_CONTROLS_CSS") < css_parts.index("WORK_HEADER_CSS")
 
 
+def test_home_navigation_styles_load_after_page_button_styles() -> None:
+    source = FRONTEND_STYLES_FILE.read_text(encoding="utf-8")
+    css_parts = source.split("CSS_PARTS = [", 1)[1].split("]", 1)[0]
+
+    assert "from frontend.css.home_navigation import HOME_NAVIGATION_CSS" in source
+    assert css_parts.index("WORK_HEADER_CSS") < css_parts.index("HOME_NAVIGATION_CSS")
+    assert css_parts.index("MYPAGE_CSS") < css_parts.index("HOME_NAVIGATION_CSS")
+
+
 def test_section_labels_render_at_twenty_pixels() -> None:
     styles = STYLE_WORK_FORMS_FILE.read_text(encoding="utf-8")
 
@@ -42,7 +52,7 @@ def test_section_labels_render_at_twenty_pixels() -> None:
 
 
 def test_work_header_keeps_original_background_without_divider() -> None:
-    styles = STYLE_WORK_HEADER_FILE.read_text(encoding="utf-8")
+    styles = WORK_HEADER_CSS
 
     assert ".block-container:has(.work-profile-card)" in styles
     assert 'div[data-testid="stMainBlockContainer"]:has(.work-profile-card)' in styles
@@ -64,7 +74,7 @@ def test_work_header_keeps_original_background_without_divider() -> None:
 
 
 def test_work_mypage_profile_button_is_borderless_card_like_control() -> None:
-    styles = STYLE_WORK_HEADER_FILE.read_text(encoding="utf-8")
+    styles = WORK_HEADER_CSS
 
     assert ".work-profile-card" in styles
     assert ".work-profile-avatar" in styles
@@ -81,12 +91,28 @@ def test_work_mypage_profile_button_is_borderless_card_like_control() -> None:
     assert "z-index: 2;" in styles
 
 
+def test_work_guest_auth_links_reuse_landing_button_design_at_header_size() -> None:
+    styles = WORK_HEADER_CSS
+
+    assert ".work-auth" in styles
+    assert ".work-auth .landing-login" in styles
+    assert ".work-auth .landing-signup" in styles
+    assert "min-height: 52px;" in styles
+    assert "padding: 0 18px;" in styles
+    assert "font-size: 15px;" in styles
+    assert ".work-profile-card" in styles
+    assert ".st-key-work-mypage-link button" in styles
+    assert 'href="?page=login"' not in styles
+
+
 def test_header_places_single_download_top_right_and_large_history_under_preview() -> None:
-    header_styles = STYLE_WORK_HEADER_FILE.read_text(encoding="utf-8")
+    header_styles = WORK_HEADER_CSS
     preview_styles = STYLE_WORK_PREVIEW_FILE.read_text(encoding="utf-8")
     control_styles = STYLE_WORK_CONTROLS_FILE.read_text(encoding="utf-8")
 
+    assert ".st-key-work-header-download-link a" in header_styles
     assert ".st-key-work-header-download-button button" in header_styles
+    assert ".st-key-work-header-download-link a" in header_styles
     assert ".st-key-work-header-download-fetch button" in header_styles
     assert ".st-key-work-header-download-empty button" in header_styles
     assert "background: #53613b !important;" in header_styles

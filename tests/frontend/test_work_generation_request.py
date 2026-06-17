@@ -65,6 +65,7 @@ def test_generation_request_passes_generation_options(monkeypatch) -> None:
 
     assert "logo_file" not in captured_kwargs
     assert "logo_position" not in captured_kwargs
+    assert captured_kwargs["access_token"] == ""
     assert captured_kwargs["copy_mode"] == "preserve"
     assert fake_st.session_state["result_bytes"] == b"result-image"
 
@@ -125,6 +126,7 @@ def test_generation_request_stores_image_url_without_downloading_bytes(monkeypat
         return GenerationResult(
             image_bytes=None,
             image_url="https://assets.example/result.png",
+            download_url="https://signed.example/result.png",
             copy=None,
         )
 
@@ -133,6 +135,7 @@ def test_generation_request_stores_image_url_without_downloading_bytes(monkeypat
     _run_generation(monkeypatch, fake_st, fake_request_backend)
 
     assert fake_st.session_state["result_image_url"] == "https://assets.example/result.png"
+    assert fake_st.session_state["result_download_url"] == "https://signed.example/result.png"
     assert "result_bytes" not in fake_st.session_state
 
 

@@ -30,6 +30,8 @@ class TransientJob:
     error: str | None
     created_at: datetime
     updated_at: datetime
+    image_url: str | None = None
+    original_image_url: str | None = None
 
 
 _jobs: dict[str, TransientJob] = {}
@@ -48,12 +50,23 @@ def register_job(request_id: str, user_id: str) -> None:
     )
 
 
-def _set_job_status(request_id: str, status: str, error: str | None = None) -> None:
+def _set_job_status(
+    request_id: str,
+    status: str,
+    error: str | None = None,
+    *,
+    image_url: str | None = None,
+    original_image_url: str | None = None,
+) -> None:
     job = _jobs.get(request_id)
     if job is None:
         return
     job.status = status
     job.error = error
+    if image_url is not None:
+        job.image_url = image_url
+    if original_image_url is not None:
+        job.original_image_url = original_image_url
     job.updated_at = datetime.now(UTC)
 
 
@@ -126,7 +139,7 @@ async def run_generation_job(
                 )
             ad_copy = copy_result.copy
 
-        await edit_image(
+        result = await edit_image(
             image_data_url=request.image_data_url,
             preset=preset,
             detail=detail,
@@ -141,7 +154,11 @@ async def run_generation_job(
             text_cost_usd=text_cost_usd,
             generation_id=request_id,
         )
-        _set_job_status(request_id, "done")
+        _set_job_status(
+            request_id,
+            "done",
+            image_url=str(result.get("image_url") or "") or None,
+        )
     except Exception as exc:
         logger.exception(
             "generation job failed request_id=%s user_id=%s",
@@ -208,8 +225,8 @@ def _status_from_transient(request_id: str, job: TransientJob) -> GenerateJobSta
         requestId=request_id,
         jobId=request_id,
         status=status,
-        imageUrl=None,
-        originalImageUrl=None,
+        imageUrl=job.image_url,
+        originalImageUrl=job.original_image_url,
         error=error,
         createdAt=_iso(job.created_at),
         updatedAt=_iso(job.updated_at),

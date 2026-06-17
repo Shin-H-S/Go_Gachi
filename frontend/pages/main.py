@@ -1,15 +1,106 @@
+from html import escape
+from pathlib import Path
+
 import streamlit as st
 
 from frontend.core.router import navigate_to
+from frontend.media.image_data import bytes_to_data_url
+
+MAIN_SLIDE_ASSET_DIR = (
+    Path(__file__).resolve().parents[1] / "assets" / "main" / "optimized"
+)
+MAIN_HERO_SLIDES = (
+    {
+        "filename": "main-slide-01.webp",
+        "eyebrow": "당근마켓",
+        "title": "메뉴 이미지",
+        "alt": "당근마켓 메뉴 이미지 미리보기",
+        "class_name": "blue-panel-one",
+    },
+    {
+        "filename": "main-slide-02.webp",
+        "eyebrow": "인스타그램",
+        "title": "정사각형 피드",
+        "alt": "인스타그램 정사각형 피드 이미지 미리보기",
+        "class_name": "blue-panel-two",
+    },
+    {
+        "filename": "main-slide-03.webp",
+        "eyebrow": "당근마켓",
+        "title": "메뉴 이미지",
+        "alt": "당근마켓 메뉴 이미지 미리보기",
+        "class_name": "blue-panel-three",
+    },
+    {
+        "filename": "main-slide-04.webp",
+        "eyebrow": "배달의 민족",
+        "title": "단색 배경 이미지",
+        "alt": "배달의 민족 단색 배경 이미지 미리보기",
+        "class_name": "blue-panel-four",
+    },
+    {
+        "filename": "main-slide-05.webp",
+        "eyebrow": "인스타그램",
+        "title": "정사각형 피드",
+        "alt": "인스타그램 정사각형 피드 이미지 미리보기",
+        "class_name": "blue-panel-five",
+    },
+)
+
+
+def _main_slide_image_src(filename: str) -> str:
+    return bytes_to_data_url((MAIN_SLIDE_ASSET_DIR / filename).read_bytes(), "image/webp")
+
+
+def _build_hero_visual_html() -> str:
+    panels = []
+    loop_slides = (*MAIN_HERO_SLIDES, MAIN_HERO_SLIDES[0])
+
+    for index, slide in enumerate(loop_slides):
+        filename = str(slide["filename"])
+        class_name = escape(str(slide["class_name"]))
+        eyebrow = escape(str(slide["eyebrow"]))
+        title = escape(str(slide["title"]))
+        alt = escape(str(slide["alt"]))
+        loading = "eager" if index == 0 else "lazy"
+        image_src = _main_slide_image_src(filename)
+
+        panels.append(
+            "\n".join(
+                (
+                    f'<article class="blue-panel {class_name}">',
+                    '<div class="blue-panel-image-stage">',
+                    (
+                        f'<img class="blue-panel-image" src="{image_src}" '
+                        f'alt="{alt}" loading="{loading}" />'
+                    ),
+                    "</div>",
+                    '<div class="blue-panel-caption">',
+                    f"<span>{eyebrow}</span>",
+                    f"<strong>{title}</strong>",
+                    "</div>",
+                    "</article>",
+                )
+            )
+        )
+
+    slides_html = "\n".join(panels)
+    return "\n".join(
+        (
+            '<section class="hero-visual" aria-label="Go Gachi AI ad preview carousel">',
+            '<div class="blue-slide-window">',
+            '<div class="blue-slide-track">',
+            slides_html,
+            "</div>",
+            "</div>",
+            "</section>",
+        )
+    )
 
 
 def _handle_start_click() -> None:
-    if st.session_state.get("auth_access_token"):
-        st.session_state["auth_redirect_page"] = ""
-        navigate_to("work")
-    else:
-        st.session_state["auth_redirect_page"] = "work"
-        navigate_to("login")
+    st.session_state["auth_redirect_page"] = ""
+    navigate_to("work")
     st.rerun()
 
 
@@ -83,30 +174,4 @@ def render_main_page() -> None:
                 _handle_start_click()
 
         with hero_right:
-            st.markdown(
-                """
-                <section class="hero-visual" aria-label="moving blue preview placeholder">
-                    <div class="blue-slide-window">
-                        <div class="blue-slide-track">
-                            <div class="blue-panel">
-                                <span>오늘의 메뉴</span>
-                                <strong>신메뉴 광고</strong>
-                            </div>
-                            <div class="blue-panel blue-panel-two">
-                                <span>카페 채널</span>
-                                <strong>SNS 배너</strong>
-                            </div>
-                            <div class="blue-panel blue-panel-three">
-                                <span>배달앱</span>
-                                <strong>할인 프로모션</strong>
-                            </div>
-                            <div class="blue-panel">
-                                <span>오늘의 메뉴</span>
-                                <strong>신메뉴 광고</strong>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                """,
-                unsafe_allow_html=True,
-            )
+            st.markdown(_build_hero_visual_html(), unsafe_allow_html=True)

@@ -10,6 +10,11 @@ def _auth_headers(access_token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {access_token}"} if access_token else {}
 
 
+def _is_backend_download_fallback(url: str, request_id: str) -> bool:
+    expected = f"{BACKEND_URL.rstrip('/')}/api/assets/generations/{request_id}/download"
+    return url == expected
+
+
 def create_generation_job(payload: dict[str, object], access_token: str) -> dict[str, object]:
     """이미지 생성 job을 시작하고 즉시 식별자를 받는다."""
     create_response = httpx.post(
@@ -20,6 +25,25 @@ def create_generation_job(payload: dict[str, object], access_token: str) -> dict
     )
     create_response.raise_for_status()
     return create_response.json()
+
+
+def create_generation_download_url(request_id: str, access_token: str) -> dict[str, object]:
+    """생성 완료된 job 결과의 다운로드 URL을 발급받는다."""
+    response = httpx.post(
+        f"{BACKEND_URL}/api/assets/generations/{request_id}/download-url",
+        headers=_auth_headers(access_token),
+        timeout=30,
+    )
+    response.raise_for_status()
+    data = response.json()
+    download_url = data.get("downloadUrl")
+    if download_url:
+        normalized_url = to_backend_asset_url(str(download_url))
+        if normalized_url and not _is_backend_download_fallback(normalized_url, request_id):
+            data["downloadUrl"] = normalized_url
+        else:
+            data["downloadUrl"] = None
+    return data
 
 
 def get_generation_job_status(request_id: str, access_token: str) -> dict[str, object]:
