@@ -130,6 +130,7 @@ def sync_result_state(current_context, session_state=None) -> None:
         for key in (
             "result_bytes",
             "result_image_url",
+            "result_download_url",
             "result_copy",
             "result_context",
             "result_history",

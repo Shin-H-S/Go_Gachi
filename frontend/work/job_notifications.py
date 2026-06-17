@@ -1,7 +1,10 @@
 import httpx
 import streamlit as st
 
-from frontend.services.generation_jobs_client import get_generation_job_status
+from frontend.services.generation_jobs_client import (
+    create_generation_download_url,
+    get_generation_job_status,
+)
 from frontend.work.state import append_result_to_history
 
 DONE_STATUSES = {"success", "cached", "done", "completed"}
@@ -74,6 +77,15 @@ def process_generation_job_notifications() -> None:
                 jobs[request_id] = job
                 changed = True
                 continue
+            download_url = None
+            try:
+                download_payload = create_generation_download_url(request_id, str(access_token))
+            except httpx.HTTPError:
+                download_payload = None
+            if isinstance(download_payload, dict):
+                raw_download_url = download_payload.get("downloadUrl")
+                if raw_download_url:
+                    download_url = str(raw_download_url)
 
             context = job.get("context") if isinstance(job.get("context"), dict) else {}
             st.session_state["result_history_upload"] = context.get("uploadHash")
@@ -81,6 +93,7 @@ def process_generation_job_notifications() -> None:
                 {
                     "bytes": None,
                     "url": str(image_url),
+                    "download_url": download_url,
                     "copy": data.get("copy") if isinstance(data.get("copy"), dict) else None,
                     "context": context,
                     "format_label": job.get("format_label"),

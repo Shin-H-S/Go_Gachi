@@ -29,6 +29,7 @@ def test_work_header_renders_left_mypage_and_right_download_button() -> None:
     assert "_render_home_button()" in source
     assert "_render_header_download_button()" in source
     assert "work-main-link" in source
+    assert 'key="work-header-download-link"' in source
     assert 'key="work-header-download-button"' in source
     assert 'key="work-header-download-link"' in source
     assert 'key="work-header-download-fetch"' in source
@@ -182,6 +183,9 @@ class FakeHeaderStreamlit:
 
     def download_button(self, label: str, **kwargs) -> None:
         self.buttons.append({"label": label, **kwargs})
+
+    def link_button(self, label: str, url: str, **kwargs) -> None:
+        self.buttons.append({"label": label, "url": url, **kwargs})
 
     def rerun(self) -> None:
         self.rerun_called = True
