@@ -4,8 +4,8 @@ import streamlit as st
 from frontend.services.generation_jobs_client import get_generation_job_status
 from frontend.work.state import append_result_to_history
 
-DONE_STATUSES = {"success", "cached"}
-WAITING_STATUSES = {"pending", "processing", "done"}
+DONE_STATUSES = {"success", "cached", "done", "completed"}
+WAITING_STATUSES = {"pending", "processing"}
 ACTIVE_GENERATION_JOBS_KEY = "active_generation_jobs"
 GENERATION_TOASTS_KEY = "generation_toasts"
 
