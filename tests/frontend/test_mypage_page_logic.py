@@ -52,12 +52,12 @@ class FakeContext:
 def _patch_common_profile_requests(monkeypatch) -> None:
     monkeypatch.setattr(
         mypage_page,
-        "request_me",
+        "cached_request_me",
         lambda access_token: {"email": f"{access_token}@example.com"},
     )
     monkeypatch.setattr(
         mypage_page,
-        "request_my_folders",
+        "cached_request_my_folders",
         lambda access_token: {"items": [{"id": 7, "name": "Spring"}]},
     )
 
@@ -67,8 +67,8 @@ def test_load_mypage_data_recent_fetches_only_server_pages_needed(monkeypatch) -
     monkeypatch.setattr(views, "current_page", lambda scope: 2)
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
-        lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
+        "cached_request_my_uploads",
+        lambda access_token, page=1: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
     # 페이지당 12개로 정렬되어 프론트 페이지 N은 백엔드 페이지 N 한 번만 요청한다.
     calls: list[int] = []
@@ -79,13 +79,20 @@ def test_load_mypage_data_recent_fetches_only_server_pages_needed(monkeypatch) -
         },
     }
 
-    def fake_generations(access_token: str, page: int = 1, *, folder_id: int | None = None) -> dict:
+    def fake_generations(
+        access_token: str,
+        page: int = 1,
+        *,
+        folder_id: int | None = None,
+        uncategorized: bool = False,
+    ) -> dict:
         assert access_token == "jwt"
         assert folder_id is None
+        assert uncategorized is False
         calls.append(page)
         return backend_pages[page]
 
-    monkeypatch.setattr(mypage_page, "request_my_generations", fake_generations)
+    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_generations)
 
     profile, folders, generations, uploads, total_count, current_page = (
         mypage_page._load_mypage_data("jwt", state.RECENT_VIEW)
@@ -107,8 +114,8 @@ def test_load_mypage_data_folder_view_uses_backend_folder_id_pagination(monkeypa
     monkeypatch.setattr(views, "current_page", lambda scope: 1)
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
-        lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
+        "cached_request_my_uploads",
+        lambda access_token, page=1: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
     calls: list[tuple[int, int | None]] = []
     backend_pages = {
@@ -118,12 +125,19 @@ def test_load_mypage_data_folder_view_uses_backend_folder_id_pagination(monkeypa
         },
     }
 
-    def fake_generations(access_token: str, page: int = 1, *, folder_id: int | None = None) -> dict:
+    def fake_generations(
+        access_token: str,
+        page: int = 1,
+        *,
+        folder_id: int | None = None,
+        uncategorized: bool = False,
+    ) -> dict:
         assert access_token == "jwt"
+        assert uncategorized is False
         calls.append((page, folder_id))
         return backend_pages[page]
 
-    monkeypatch.setattr(mypage_page, "request_my_generations", fake_generations)
+    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_generations)
 
     _, _, generations, uploads, total_count, current_page = mypage_page._load_mypage_data(
         "jwt",
@@ -137,14 +151,15 @@ def test_load_mypage_data_folder_view_uses_backend_folder_id_pagination(monkeypa
     assert current_page == 1
 
 
-def test_load_mypage_data_folder_none_view_falls_back_to_full_load(monkeypatch) -> None:
+def test_load_mypage_data_folder_none_view_uses_backend_uncategorized_filter(monkeypatch) -> None:
     _patch_common_profile_requests(monkeypatch)
+    monkeypatch.setattr(views, "current_page", lambda scope: 1)
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
-        lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
+        "cached_request_my_uploads",
+        lambda access_token, page=1: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
-    calls: list[tuple[int, int | None]] = []
+    calls: list[tuple[int, int | None, bool]] = []
     backend_pages = {
         1: {
             "items": [{"request_id": "a"}, {"request_id": "b"}],
@@ -152,37 +167,46 @@ def test_load_mypage_data_folder_none_view_falls_back_to_full_load(monkeypatch) 
         },
     }
 
-    def fake_generations(access_token: str, page: int = 1, *, folder_id: int | None = None) -> dict:
+    def fake_generations(
+        access_token: str,
+        page: int = 1,
+        *,
+        folder_id: int | None = None,
+        uncategorized: bool = False,
+    ) -> dict:
         assert access_token == "jwt"
-        calls.append((page, folder_id))
+        calls.append((page, folder_id, uncategorized))
         return backend_pages[page]
 
-    monkeypatch.setattr(mypage_page, "request_my_generations", fake_generations)
+    monkeypatch.setattr(mypage_page, "cached_request_my_generations", fake_generations)
 
-    _, _, generations, _, total_count, _ = mypage_page._load_mypage_data(
+    _, _, generations, _, total_count, current_page = mypage_page._load_mypage_data(
         "jwt",
         state.FOLDER_NONE_VIEW,
     )
 
-    # FOLDER_NONE_VIEW(미분류)는 backend 필터가 아직 없어 전체 로드로 fallback한다.
-    assert calls == [(1, None)]
+    assert calls == [(1, None, True)]
     assert [item["request_id"] for item in generations] == ["a", "b"]
     assert total_count == 2
+    assert current_page == 1
 
 
 def test_load_mypage_data_uploads_and_account_views_skip_generation_fetches(monkeypatch) -> None:
     _patch_common_profile_requests(monkeypatch)
     monkeypatch.setattr(
         mypage_page,
-        "request_my_generations",
-        lambda access_token, page=1: (_ for _ in ()).throw(
+        "cached_request_my_generations",
+        lambda access_token, page=1, folder_id=None, uncategorized=False: (_ for _ in ()).throw(
             AssertionError("generations not expected")
         ),
     )
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
-        lambda access_token: {"items": [{"id": "upload-1"}]},
+        "cached_request_my_uploads",
+        lambda access_token, page=1: {
+            "items": [{"id": f"upload-{page}"}],
+            "total_count": 9,
+        },
     )
 
     _, _, generations, uploads, total_count, current_page = mypage_page._load_mypage_data(
@@ -192,13 +216,13 @@ def test_load_mypage_data_uploads_and_account_views_skip_generation_fetches(monk
 
     assert generations == []
     assert uploads == [{"id": "upload-1"}]
-    assert total_count == 0
+    assert total_count == 9
     assert current_page == 1
 
     monkeypatch.setattr(
         mypage_page,
-        "request_my_uploads",
-        lambda access_token: (_ for _ in ()).throw(AssertionError("uploads not expected")),
+        "cached_request_my_uploads",
+        lambda access_token, page=1: (_ for _ in ()).throw(AssertionError("uploads not expected")),
     )
 
     _, _, generations, uploads, total_count, current_page = mypage_page._load_mypage_data(

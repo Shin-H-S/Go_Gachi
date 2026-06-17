@@ -66,6 +66,7 @@ def request_my_generations(
     page: int = 1,
     *,
     folder_id: int | None = None,
+    uncategorized: bool = False,
 ) -> dict:
     page = max(1, int(page))
     params: list[str] = []
@@ -73,6 +74,8 @@ def request_my_generations(
         params.append(f"page={page}")
     if folder_id is not None:
         params.append(f"folder_id={int(folder_id)}")
+    if uncategorized:
+        params.append("uncategorized=true")
     suffix = ("?" + "&".join(params)) if params else ""
     response = httpx.get(
         f"{BACKEND_URL}/api/auth/me/generations{suffix}",
@@ -88,9 +91,9 @@ def request_my_folders(access_token: str) -> dict:
     return mypage_client.request_my_folders(access_token)
 
 
-def request_my_uploads(access_token: str) -> dict:
+def request_my_uploads(access_token: str, page: int = 1) -> dict:
     _sync_mypage_backend_url()
-    return mypage_client.request_my_uploads(access_token)
+    return mypage_client.request_my_uploads(access_token, page=page)
 
 
 def create_my_folder(access_token: str, name: str) -> dict:

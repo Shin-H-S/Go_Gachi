@@ -6,6 +6,7 @@ import httpx
 import streamlit as st
 
 from frontend.media.image_data import bytes_to_data_url
+from frontend.mypage.cache import clear_mypage_cache
 from frontend.mypage.folder_management import render_folder_row
 from frontend.mypage.state import (
     ACCOUNT_VIEW,
@@ -56,6 +57,7 @@ def _render_folder_form(access_token: str) -> None:
                 detail = exc.response.json().get("detail", "폴더를 만들지 못했습니다.")
                 st.error(detail)
             else:
+                clear_mypage_cache()
                 st.session_state["mypage_show_folder_form"] = False
                 st.rerun()
 

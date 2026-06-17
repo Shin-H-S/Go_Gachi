@@ -123,7 +123,12 @@ def render_folder_view(
     render_pagination_controls(view, visible_page, total_pages)
 
 
-def render_uploads(uploads: list[dict]) -> None:
+def render_uploads(
+    uploads: list[dict],
+    *,
+    total_count: int | None = None,
+    current_page: int | None = None,
+) -> None:
     if not uploads:
         st.markdown(
             """
@@ -135,12 +140,18 @@ def render_uploads(uploads: list[dict]) -> None:
             unsafe_allow_html=True,
         )
         return
-    total_uploads = len(uploads)
-    visible_uploads, current_page, total_pages = paginate_items(
-        uploads,
-        _current_page("uploads"),
-        UPLOAD_PAGE_SIZE,
-    )
+    total_uploads = len(uploads) if total_count is None else max(0, int(total_count))
+    if total_count is None:
+        visible_uploads, current_page, total_pages = paginate_items(
+            uploads,
+            _current_page("uploads"),
+            UPLOAD_PAGE_SIZE,
+        )
+    else:
+        total_pages = page_count(total_uploads, UPLOAD_PAGE_SIZE)
+        current_page = current_page if current_page is not None else _current_page("uploads")
+        current_page = min(max(1, int(current_page)), total_pages)
+        visible_uploads = uploads
     _render_collection_status(total_uploads, current_page, total_pages)
     columns = st.columns(4, gap="medium")
     for index, item in enumerate(visible_uploads):

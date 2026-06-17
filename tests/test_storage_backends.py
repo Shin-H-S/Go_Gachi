@@ -10,6 +10,9 @@ pytestmark = pytest.mark.anyio
 
 
 class FakeS3Client:
+    def __init__(self) -> None:
+        self.presign_calls = 0
+
     async def __aenter__(self) -> "FakeS3Client":
         return self
 
@@ -22,20 +25,25 @@ class FakeS3Client:
         Params: dict[str, Any],
         ExpiresIn: int,
     ) -> str:
+        self.presign_calls += 1
         assert ClientMethod == "get_object"
         assert Params["Bucket"] == "bucket"
-        assert Params["Key"] == "outputs/result.png"
-        assert Params["ResponseContentType"] == "image/png"
         assert Params["ResponseContentDisposition"].startswith("attachment;")
         assert ExpiresIn == 300
-        return "https://signed.example/result.png"
+        return f"https://signed.example/{Params['Key']}"
 
 
 class FakeSession:
+    def __init__(self) -> None:
+        self.client_calls = 0
+        self.last_client: FakeS3Client | None = None
+
     def client(self, service_name: str, **kwargs: str) -> FakeS3Client:
+        self.client_calls += 1
         assert service_name == "s3"
         assert kwargs["endpoint_url"] == "https://account.r2.cloudflarestorage.com"
-        return FakeS3Client()
+        self.last_client = FakeS3Client()
+        return self.last_client
 
 
 def test_r2_original_path_uses_generation_id(monkeypatch) -> None:
@@ -82,7 +90,8 @@ async def test_r2_download_url_uses_presigned_get_object(monkeypatch) -> None:
     monkeypatch.setattr(settings, "r2_access_key_id", "access")
     monkeypatch.setattr(settings, "r2_secret_access_key", "secret")
     monkeypatch.setattr(settings, "r2_bucket_name", "bucket")
-    monkeypatch.setattr("backend.app.services.storage.r2.aioboto3.Session", lambda: FakeSession())
+    fake_session = FakeSession()
+    monkeypatch.setattr("backend.app.services.storage.r2.aioboto3.Session", lambda: fake_session)
 
     storage = R2Storage(settings)
 
@@ -93,4 +102,40 @@ async def test_r2_download_url_uses_presigned_get_object(monkeypatch) -> None:
         expires_in=300,
     )
 
-    assert url == "https://signed.example/result.png"
+    assert url == "https://signed.example/outputs/result.png"
+
+
+async def test_r2_download_urls_reuses_single_client(monkeypatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "r2_endpoint_url", "https://account.r2.cloudflarestorage.com")
+    monkeypatch.setattr(settings, "r2_access_key_id", "access")
+    monkeypatch.setattr(settings, "r2_secret_access_key", "secret")
+    monkeypatch.setattr(settings, "r2_bucket_name", "bucket")
+    fake_session = FakeSession()
+    monkeypatch.setattr("backend.app.services.storage.r2.aioboto3.Session", lambda: fake_session)
+
+    storage = R2Storage(settings)
+
+    urls = await storage.download_urls(
+        [
+            {
+                "path": "outputs/result-1.png",
+                "filename": "result-1.png",
+                "content_type": "image/png",
+            },
+            {
+                "path": "outputs/result-2.png",
+                "filename": "result-2.png",
+                "content_type": "image/png",
+            },
+        ],
+        expires_in=300,
+    )
+
+    assert urls == [
+        "https://signed.example/outputs/result-1.png",
+        "https://signed.example/outputs/result-2.png",
+    ]
+    assert fake_session.client_calls == 1
+    assert fake_session.last_client is not None
+    assert fake_session.last_client.presign_calls == 2

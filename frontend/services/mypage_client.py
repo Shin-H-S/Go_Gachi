@@ -31,8 +31,14 @@ def request_my_folders(access_token: str) -> dict:
     return _get_json("/api/auth/me/folders", access_token)
 
 
-def request_my_uploads(access_token: str) -> dict:
-    return _get_json("/api/auth/me/uploads", access_token)
+def request_my_uploads(access_token: str, page: int = 1) -> dict:
+    page = max(1, int(page))
+    params: list[str] = []
+    if page != 1:
+        params.append(f"page={page}")
+    suffix = ("?" + "&".join(params)) if params else ""
+    path = f"/api/auth/me/uploads{suffix}"
+    return _get_json(path, access_token)
 
 
 def create_my_folder(access_token: str, name: str) -> dict:
