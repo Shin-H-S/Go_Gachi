@@ -148,7 +148,6 @@ def _request_generate_sync(payload: dict[str, object], access_token: str) -> Gen
         if not image_data_url:
             raise ValueError("백엔드 응답에 imageUrl 또는 imageDataUrl이 없습니다.")
         image_bytes = data_url_to_bytes(str(image_data_url))
-
     return GenerationResult(
         image_bytes=image_bytes,
         image_url=image_url,
