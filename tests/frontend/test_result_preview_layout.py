@@ -118,3 +118,48 @@ def test_result_copy_uses_context_mode_when_job_copy_has_no_mode(monkeypatch) ->
     assert "헤드라인" in html
     assert "서브카피" in html
     assert "CTA" in html
+
+
+def test_result_panel_shows_generation_failure_before_original_preview(monkeypatch) -> None:
+    events: list[tuple[str, object, object] | str] = []
+    fake_st = FakeStreamlit(
+        {
+            "generation_error": {
+                "requestId": "job-1",
+                "message": "IMAGE_API_TIMEOUT",
+            }
+        }
+    )
+
+    def fake_render_preview_shell(
+        format_label: str,
+        body_html: str,
+        detail_label: str | None = None,
+        summary_html: str = "",
+    ) -> None:
+        events.append(("shell", detail_label, body_html))
+
+    monkeypatch.setattr(result_panel, "st", fake_st)
+    monkeypatch.setattr(result_panel, "render_preview_shell", fake_render_preview_shell)
+    monkeypatch.setattr(
+        result_panel,
+        "render_image_preview",
+        lambda *args, **kwargs: events.append("original"),
+    )
+    monkeypatch.setattr(
+        result_panel,
+        "_render_preview_history_controls",
+        lambda **kwargs: events.append("history"),
+    )
+
+    result_panel.render_result_panel(
+        is_generating=False,
+        uploaded_file=object(),
+        format_label="인스타그램",
+        detail_label="스토리 이미지",
+    )
+
+    assert events[0][0] == "shell"
+    assert "IMAGE_API_TIMEOUT" in str(events[0][2])
+    assert "original" not in events
+    assert "history" in events

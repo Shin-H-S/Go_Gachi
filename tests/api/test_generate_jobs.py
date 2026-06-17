@@ -167,20 +167,22 @@ def test_generate_job_failure_hides_raw_exception(monkeypatch) -> None:
     assert status_response.json()["error"] != "secret internal failure"
 
 
-def test_done_memory_job_returns_image_url_when_db_row_is_not_visible_yet(monkeypatch) -> None:
+def test_success_memory_job_returns_image_url_when_db_row_is_not_visible_yet(
+    monkeypatch,
+) -> None:
     from datetime import UTC, datetime
 
     from backend.app.services import generation_jobs
     from backend.app.services.generation_jobs import TransientJob
 
     now = datetime.now(UTC)
-    _jobs["fresh-done-job"] = TransientJob(
+    _jobs["fresh-success-job"] = TransientJob(
         user_id="job-done-user",
-        status="done",
+        status="success",
         error=None,
         created_at=now,
         updated_at=now,
-        image_url="/outputs/fresh-done-job.png",
+        image_url="/outputs/fresh-success-job.png",
     )
 
     async def _override_user() -> AuthUser:
@@ -192,26 +194,26 @@ def test_done_memory_job_returns_image_url_when_db_row_is_not_visible_yet(monkey
     monkeypatch.setattr(generation_jobs.crud, "get_user_generation_by_request_id", _fake_status)
     app.dependency_overrides[get_current_user] = _override_user
     try:
-        response = client.get("/api/generate/jobs/fresh-done-job")
+        response = client.get("/api/generate/jobs/fresh-success-job")
     finally:
         app.dependency_overrides.pop(get_current_user, None)
-        _jobs.pop("fresh-done-job", None)
+        _jobs.pop("fresh-success-job", None)
 
     assert response.status_code == 200
-    assert response.json()["status"] == "done"
-    assert response.json()["imageUrl"] == "/outputs/fresh-done-job.png"
+    assert response.json()["status"] == "success"
+    assert response.json()["imageUrl"] == "/outputs/fresh-success-job.png"
 
 
-def test_done_memory_job_is_cleaned_after_20_minutes(monkeypatch) -> None:
+def test_success_memory_job_is_cleaned_after_20_minutes(monkeypatch) -> None:
     from datetime import UTC, datetime, timedelta
 
     from backend.app.services import generation_jobs
     from backend.app.services.generation_jobs import TransientJob
 
     old_time = datetime.now(UTC) - timedelta(minutes=21)
-    _jobs["old-done-job"] = TransientJob(
+    _jobs["old-success-job"] = TransientJob(
         user_id="job-cleanup-user",
-        status="done",
+        status="success",
         error=None,
         created_at=old_time,
         updated_at=old_time,
@@ -226,9 +228,9 @@ def test_done_memory_job_is_cleaned_after_20_minutes(monkeypatch) -> None:
     monkeypatch.setattr(generation_jobs.crud, "get_user_generation_by_request_id", _fake_status)
     app.dependency_overrides[get_current_user] = _override_user
     try:
-        response = client.get("/api/generate/jobs/old-done-job")
+        response = client.get("/api/generate/jobs/old-success-job")
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
     assert response.status_code == 404
-    assert "old-done-job" not in _jobs
+    assert "old-success-job" not in _jobs

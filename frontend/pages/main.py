@@ -1,101 +1,28 @@
-from html import escape
-from pathlib import Path
-
 import streamlit as st
 
 from frontend.core.router import navigate_to
-from frontend.media.image_data import bytes_to_data_url
+from frontend.main.hero_visual import build_hero_visual_html
+from frontend.main.navigation import render_main_navigation
 
-MAIN_SLIDE_ASSET_DIR = (
-    Path(__file__).resolve().parents[1] / "assets" / "main" / "optimized"
+HERO_ARIA_LABEL = (
+    "\uc0ac\uc7a5\ub2d8\uc758 \uba54\ub274 \uc0ac\uc9c4\uc744 "
+    "\uad11\uace0 \uc774\ubbf8\uc9c0\ub85c \ubc14\uafb8\ub294 "
+    "\uac00\uc7a5 \ube60\ub978 \ubc29\ubc95"
 )
-MAIN_HERO_SLIDES = (
-    {
-        "filename": "main-slide-01.webp",
-        "eyebrow": "당근마켓",
-        "title": "메뉴 이미지",
-        "alt": "당근마켓 메뉴 이미지 미리보기",
-        "class_name": "blue-panel-one",
-    },
-    {
-        "filename": "main-slide-02.webp",
-        "eyebrow": "인스타그램",
-        "title": "정사각형 피드",
-        "alt": "인스타그램 정사각형 피드 이미지 미리보기",
-        "class_name": "blue-panel-two",
-    },
-    {
-        "filename": "main-slide-03.webp",
-        "eyebrow": "당근마켓",
-        "title": "메뉴 이미지",
-        "alt": "당근마켓 메뉴 이미지 미리보기",
-        "class_name": "blue-panel-three",
-    },
-    {
-        "filename": "main-slide-04.webp",
-        "eyebrow": "배달의 민족",
-        "title": "단색 배경 이미지",
-        "alt": "배달의 민족 단색 배경 이미지 미리보기",
-        "class_name": "blue-panel-four",
-    },
-    {
-        "filename": "main-slide-05.webp",
-        "eyebrow": "인스타그램",
-        "title": "정사각형 피드",
-        "alt": "인스타그램 정사각형 피드 이미지 미리보기",
-        "class_name": "blue-panel-five",
-    },
+HERO_TITLE_LINES = (
+    "\uc0ac\uc7a5\ub2d8\uc758 \uba54\ub274 \uc0ac\uc9c4\uc744",
+    "\uad11\uace0 \uc774\ubbf8\uc9c0\ub85c \ubc14\uafb8\ub294",
+    "\uac00\uc7a5 \ube60\ub978 \ubc29\ubc95",
 )
-
-
-def _main_slide_image_src(filename: str) -> str:
-    return bytes_to_data_url((MAIN_SLIDE_ASSET_DIR / filename).read_bytes(), "image/webp")
-
-
-def _build_hero_visual_html() -> str:
-    panels = []
-    loop_slides = (*MAIN_HERO_SLIDES, MAIN_HERO_SLIDES[0])
-
-    for index, slide in enumerate(loop_slides):
-        filename = str(slide["filename"])
-        class_name = escape(str(slide["class_name"]))
-        eyebrow = escape(str(slide["eyebrow"]))
-        title = escape(str(slide["title"]))
-        alt = escape(str(slide["alt"]))
-        loading = "eager" if index == 0 else "lazy"
-        image_src = _main_slide_image_src(filename)
-
-        panels.append(
-            "\n".join(
-                (
-                    f'<article class="blue-panel {class_name}">',
-                    '<div class="blue-panel-image-stage">',
-                    (
-                        f'<img class="blue-panel-image" src="{image_src}" '
-                        f'alt="{alt}" loading="{loading}" />'
-                    ),
-                    "</div>",
-                    '<div class="blue-panel-caption">',
-                    f"<span>{eyebrow}</span>",
-                    f"<strong>{title}</strong>",
-                    "</div>",
-                    "</article>",
-                )
-            )
-        )
-
-    slides_html = "\n".join(panels)
-    return "\n".join(
-        (
-            '<section class="hero-visual" aria-label="Go Gachi AI ad preview carousel">',
-            '<div class="blue-slide-window">',
-            '<div class="blue-slide-track">',
-            slides_html,
-            "</div>",
-            "</div>",
-            "</section>",
-        )
-    )
+HERO_COPY = (
+    "\uba54\ub274 \uc0ac\uc9c4\uc744 \uc62c\ub9ac\uace0 "
+    "\ucc44\ub110\uc744 \uace0\ub974\uba74 "
+    "\uc778\uc2a4\ud0c0\uadf8\ub7a8\uacfc \ubc30\ub2ec\uc571\uc5d0 "
+    "\ubc14\ub85c \uc4f8 \uc218 \uc788\ub294 \uad11\uace0 "
+    "\uc774\ubbf8\uc9c0\ub97c \ube60\ub974\uac8c "
+    "\ub9cc\ub4e4\uc5b4\ub4dc\ub9bd\ub2c8\ub2e4."
+)
+START_BUTTON_LABEL = "\ubb34\ub8cc\ub85c \uc2dc\uc791\ud558\uae30"
 
 
 def _handle_start_click() -> None:
@@ -132,37 +59,25 @@ def render_main_page() -> None:
     )
 
     with st.container(key="main-landing"):
-        st.markdown(
-            """
-            <nav class="landing-nav" aria-label="Go Gachi navigation">
-                <div class="landing-brand">Go Gachi<span>*</span></div>
-                <div class="landing-auth">
-                    <a class="landing-login" href="?page=login" target="_self">로그인</a>
-                    <a class="landing-signup" href="?page=signup" target="_self">회원가입</a>
-                </div>
-            </nav>
-            """,
-            unsafe_allow_html=True,
-        )
+        render_main_navigation()
 
         hero_left, hero_right = st.columns([0.55, 0.45], gap="large")
 
         with hero_left:
             st.markdown(
-                """
+                f"""
                 <section
                     class="main-landing"
-                    aria-label="사장님의 메뉴 사진을 광고 이미지로 바꾸는 가장 빠른 방법"
+                    aria-label="{HERO_ARIA_LABEL}"
                 >
                     <p class="hero-kicker">AI CAFE AD MAKER</p>
                     <h1 class="hero-title">
-                        사장님의 메뉴 사진을<br />
-                        광고 이미지로 바꾸는<br />
-                        가장 빠른 방법
+                        {HERO_TITLE_LINES[0]}<br />
+                        {HERO_TITLE_LINES[1]}<br />
+                        {HERO_TITLE_LINES[2]}
                     </h1>
                     <p class="hero-copy">
-                        메뉴 사진을 올리고 채널을 고르면, 인스타그램과 배달앱에 바로 쓸 수
-                        있는 광고 이미지를 빠르게 만들어드립니다.
+                        {HERO_COPY}
                     </p>
                 </section>
                 """,
@@ -170,8 +85,8 @@ def render_main_page() -> None:
             )
 
             st.markdown('<div class="main-start-button-marker"></div>', unsafe_allow_html=True)
-            if st.button("무료로 시작하기", key="main-start-button"):
+            if st.button(START_BUTTON_LABEL, key="main-start-button"):
                 _handle_start_click()
 
         with hero_right:
-            st.markdown(_build_hero_visual_html(), unsafe_allow_html=True)
+            st.markdown(build_hero_visual_html(), unsafe_allow_html=True)

@@ -14,7 +14,7 @@ class FakeResponse:
         return self.payload
 
 
-def test_generate_job_polling_waits_two_seconds_between_status_checks(
+def test_generate_job_polling_waits_five_seconds_between_status_checks(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     sleep_calls: list[int] = []
@@ -46,7 +46,7 @@ def test_generate_job_polling_waits_two_seconds_between_status_checks(
 
     result = generation_jobs_client.request_generate_job_result({"prompt": "coffee"}, "jwt-token")
 
-    assert sleep_calls == [2]
+    assert sleep_calls == [5]
     assert str(result["imageUrl"]).endswith("/outputs/job-result.png")
 
 

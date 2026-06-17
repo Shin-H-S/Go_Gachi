@@ -9,6 +9,7 @@ from frontend.services.backend_errors import format_backend_http_error
 from frontend.services.generation_job_requests import request_backend_job
 from frontend.work.job_notifications import (
     ACTIVE_GENERATION_JOBS_KEY,
+    GENERATION_ERROR_KEY,
     queue_generation_toast,
 )
 from frontend.work.state import append_result_to_history
@@ -33,6 +34,7 @@ def handle_generation_request(
             try:
                 access_token = st.session_state.get("auth_access_token", "")
                 result_context = dict(current_result_context or {})
+                st.session_state.pop(GENERATION_ERROR_KEY, None)
                 if access_token:
                     job = request_backend_job(
                         uploaded_file,
