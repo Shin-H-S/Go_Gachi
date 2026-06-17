@@ -32,7 +32,7 @@ from frontend.mypage.state import (
 
 BACKEND_GENERATION_PAGE_SIZE = data_loader.BACKEND_GENERATION_PAGE_SIZE
 PENDING_REFRESH_SESSION_KEY = "mypage_pending_refresh_last_at"
-PENDING_REFRESH_INTERVAL_SECONDS = 3.0
+PENDING_REFRESH_INTERVAL_SECONDS = 5.0
 
 MYPAGE_COPY_MARKERS = (
     "닉네임의 마이페이지",
@@ -44,7 +44,7 @@ MYPAGE_COPY_MARKERS = (
 )
 
 
-@st.fragment(run_every="3s")
+@st.fragment(run_every="5s")
 def _pending_generation_auto_refresh() -> None:
     now = time.monotonic()
     last_refresh = st.session_state.get(PENDING_REFRESH_SESSION_KEY)

@@ -30,8 +30,10 @@ def main() -> None:
     init_session_state()
     add_css()
     render_queued_generation_toasts()
-    process_generation_job_notifications()
     current_page = get_current_page()
+    # 작업 페이지는 자체 fragment가 job 상태를 확인하므로 전역 polling과 중복 호출하지 않는다.
+    if current_page != "work":
+        process_generation_job_notifications()
 
     if current_page == "main":
         render_main_page()

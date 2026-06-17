@@ -5,6 +5,10 @@ import httpx
 from frontend.core.config import BACKEND_URL
 from frontend.services.assets import to_backend_asset_url
 
+JOB_DONE_STATUSES = {"success", "cached"}
+LEGACY_JOB_POLL_INTERVAL_SECONDS = 5
+LEGACY_JOB_TIMEOUT_SECONDS = 300
+
 
 def _auth_headers(access_token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {access_token}"} if access_token else {}
@@ -70,14 +74,16 @@ def request_generate_job_result(
     if not request_id:
         return create_data
 
-    deadline = time.monotonic() + 300
+    deadline = time.monotonic() + LEGACY_JOB_TIMEOUT_SECONDS
     last_status = "pending"
     while time.monotonic() < deadline:
-        time.sleep(2)
+        # 현재 UI는 비동기 job polling을 사용한다.
+        # 이 경로는 레거시 fallback이므로 호출 빈도를 낮춘다.
+        time.sleep(LEGACY_JOB_POLL_INTERVAL_SECONDS)
         data = get_generation_job_status(str(request_id), access_token)
         last_status = data.get("status") or last_status
 
-        if last_status in {"success", "cached"}:
+        if last_status in JOB_DONE_STATUSES:
             image_url = data.get("imageUrl")
             if not image_url:
                 raise ValueError("백엔드 job 응답에 imageUrl 또는 imageDataUrl이 없습니다.")
