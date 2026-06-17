@@ -38,6 +38,26 @@ RESPONSIVE_CSS = """
         padding: 0 14px;
     }
 
+    .landing-auth-logout-slot {
+        min-width: 78px;
+        min-height: 52px;
+    }
+
+    .st-key-main-logout-button {
+        top: 28px;
+        right: 28px;
+    }
+
+    .st-key-main-logout-button button {
+        min-height: 52px !important;
+        padding: 0 14px !important;
+        font-size: 14px !important;
+    }
+
+    .st-key-main-logout-button button * {
+        font-size: 14px !important;
+    }
+
     .main-landing {
         padding-top: 58px;
     }
