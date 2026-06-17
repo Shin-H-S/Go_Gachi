@@ -12,6 +12,10 @@ def test_main_nav_keeps_login_signup_links_for_guest(monkeypatch) -> None:
     rendered_html = "\n".join(fake_st.markdowns)
     assert 'href="?page=login"' in rendered_html
     assert 'href="?page=signup"' in rendered_html
+    assert "\ub85c\uadf8\uc778</a>" in rendered_html
+    assert "\ud68c\uc6d0\uac00\uc785</a>" in rendered_html
+    assert "\ub85c\uadf8\uc778/a>" not in rendered_html
+    assert "\ud68c\uc6d0\uac00\uc785/a>" not in rendered_html
     assert not any(button.get("key") == "main-logout-button" for button in fake_st.buttons)
 
 
@@ -29,7 +33,8 @@ def test_main_nav_shows_only_logout_button_for_logged_in_user(monkeypatch) -> No
     assert 'href="?page=login"' not in rendered_html
     assert 'href="?page=signup"' not in rendered_html
     assert any(
-        button.get("key") == "main-logout-button" and button.get("label") == "濡쒓렇?꾩썐"
+        button.get("key") == "main-logout-button"
+        and button.get("label") == "\ub85c\uadf8\uc544\uc6c3"
         for button in fake_st.buttons
     )
 
@@ -52,7 +57,9 @@ def test_main_logout_button_clears_session_and_stays_on_main(monkeypatch) -> Non
     assert fake_st.session_state["auth_access_token"] == ""
     assert fake_st.session_state["auth_user_id"] == ""
     assert fake_st.session_state["auth_user_email"] == ""
-    assert fake_st.session_state["auth_notice"] == "濡쒓렇?꾩썐?섏뿀?듬땲??"
+    assert fake_st.session_state["auth_notice"] == (
+        "\ub85c\uadf8\uc544\uc6c3\ub418\uc5c8\uc2b5\ub2c8\ub2e4."
+    )
     assert navigated_pages == ["main"]
     assert fake_st.rerun_called is True
 

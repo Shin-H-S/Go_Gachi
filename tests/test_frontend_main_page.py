@@ -70,3 +70,67 @@ def test_main_start_click_routes_by_auth_state(monkeypatch) -> None:
     assert logged_in_st.session_state["auth_access_token"] == "token-123"
     assert logged_in_st.session_state["auth_redirect_page"] == ""
     assert logged_in_reruns == ["rerun"]
+
+
+def test_main_page_renders_readable_korean_copy_and_line_breaks(monkeypatch) -> None:
+    main_page = importlib.import_module("frontend.pages.main")
+    fake_st = FakeMainPageStreamlit()
+
+    monkeypatch.setattr(main_page, "st", fake_st)
+    monkeypatch.setattr(main_page, "render_main_navigation", lambda: None)
+    monkeypatch.setattr(main_page, "build_hero_visual_html", lambda: "<section></section>")
+
+    main_page.render_main_page()
+
+    rendered_html = "\n".join(fake_st.markdowns)
+    assert "\uc0ac\uc7a5\ub2d8\uc758 \uba54\ub274 \uc0ac\uc9c4\uc744<br />" in rendered_html
+    assert "\uad11\uace0 \uc774\ubbf8\uc9c0\ub85c \ubc14\uafb8\ub294<br />" in rendered_html
+    assert "\uac00\uc7a5 \ube60\ub978 \ubc29\ubc95" in rendered_html
+    assert "\ubb34\ub8cc\ub85c \uc2dc\uc791\ud558\uae30" in [
+        button["label"] for button in fake_st.buttons
+    ]
+    assert "??br />" not in rendered_html
+    assert "\u003c/a>" not in rendered_html
+
+
+class FakeMainPageContext:
+    def __enter__(self) -> "FakeMainPageContext":
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        return None
+
+
+class FakeMainPageContainer:
+    def __enter__(self) -> "FakeMainPageContainer":
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        return None
+
+
+class FakeMainPageStreamlit:
+    def __init__(self) -> None:
+        self.session_state: dict[str, object] = {}
+        self.markdowns: list[str] = []
+        self.buttons: list[dict[str, object]] = []
+
+    def container(self, *, key: str | None = None) -> FakeMainPageContainer:
+        return FakeMainPageContainer()
+
+    def columns(
+        self,
+        spec: object,
+        *,
+        gap: str | None = None,
+        vertical_alignment: str | None = None,
+    ) -> list[FakeMainPageContext]:
+        count = len(spec) if isinstance(spec, list) else int(spec)
+        return [FakeMainPageContext() for _ in range(count)]
+
+    def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+        self.markdowns.append(body)
+
+    def button(self, label: str, **kwargs) -> bool:
+        self.buttons.append({"label": label, **kwargs})
+        return False
