@@ -7,6 +7,7 @@ import streamlit as st
 from frontend.core.config import CHANNEL_SLUGS, FORMAT_OPTIONS, get_existing_channel_asset_path
 from frontend.core.router import navigate_to
 from frontend.css.work_generation_lock import WORK_GENERATION_LOCK_CSS
+from frontend.home_button import HOME_BUTTON_HELP, HOME_BUTTON_LABEL
 from frontend.media.image_data import bytes_to_data_url
 from frontend.services.api_client import request_asset_bytes, request_me
 
@@ -134,6 +135,27 @@ def _render_mypage_profile_button() -> None:
         st.rerun()
 
 
+def _render_work_auth_links() -> None:
+    st.markdown(
+        """
+<nav class="work-auth" aria-label="Work page auth navigation">
+<a class="landing-login work-auth-login" href="?page=login" target="_self">
+로그인</a>
+<a class="landing-signup work-auth-signup" href="?page=signup" target="_self">
+회원가입</a>
+</nav>
+""".strip(),
+        unsafe_allow_html=True,
+    )
+
+
+def _render_home_button() -> None:
+    with st.container(key="work-main-link-control"):
+        if st.button(HOME_BUTTON_LABEL, key="work-main-link", help=HOME_BUTTON_HELP):
+            navigate_to("main")
+            st.rerun()
+
+
 def _render_header_download_button() -> None:
     result_url = st.session_state.get("result_image_url")
     result_bytes = st.session_state.get("result_bytes")
@@ -177,7 +199,18 @@ def render_header() -> None:
         vertical_alignment="top",
     )
     with button_col:
-        _render_mypage_profile_button()
+        profile_col, home_col = st.columns(
+            [0.78, 0.22],
+            gap="small",
+            vertical_alignment="center",
+        )
+        with profile_col:
+            if st.session_state.get("auth_access_token"):
+                _render_mypage_profile_button()
+            else:
+                _render_work_auth_links()
+        with home_col:
+            _render_home_button()
     with download_col:
         _render_header_download_button()
 

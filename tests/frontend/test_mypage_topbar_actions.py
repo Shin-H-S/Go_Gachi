@@ -44,6 +44,10 @@ class FakeStreamlit:
         count = len(spec) if isinstance(spec, list) else int(spec)
         return [FakeContext() for _ in range(count)]
 
+    def container(self, *, key: str) -> "FakeContext":
+        self.markdowns.append(key)
+        return FakeContext()
+
     def rerun(self) -> None:
         self.rerun_called = True
 
@@ -275,6 +279,91 @@ def test_topbar_work_from_image_sets_handoff_upload_and_moves_to_work_page(
     assert "result_context" not in fake_st.session_state
     assert navigated_pages == ["work"]
     assert fake_st.rerun_called is True
+
+
+def test_topbar_home_button_navigates_to_main_without_clearing_session(
+    monkeypatch,
+) -> None:
+    fake_st = FakeStreamlit({"auth_access_token": "jwt-token"})
+    _patch_streamlit(monkeypatch, fake_st)
+    navigated_pages: list[str] = []
+    monkeypatch.setattr(topbar, "navigate_to", navigated_pages.append)
+
+    def click_home(label: str, **kwargs) -> bool:
+        fake_st.buttons.append({"label": label, **kwargs})
+        return kwargs.get("key") == "mypage-main-link"
+
+    fake_st.button = click_home
+
+    topbar.render_topbar(
+        RECENT_VIEW,
+        "?꾩껜 ?묒뾽",
+        "jwt",
+        generations=[{"request_id": "request-1"}],
+        folders=[],
+    )
+
+    home_button = next(
+        button for button in fake_st.buttons if button.get("key") == "mypage-main-link"
+    )
+    assert home_button["label"] == topbar.HOME_BUTTON_LABEL
+    assert home_button["help"] == topbar.HOME_BUTTON_HELP
+    assert navigated_pages == ["main"]
+    assert fake_st.session_state["auth_access_token"] == "jwt-token"
+    assert fake_st.rerun_called is True
+    assert not any('href="?page=main"' in body for body in fake_st.markdowns)
+
+
+def test_topbar_work_button_navigates_to_work_page_with_icon_button(
+    monkeypatch,
+) -> None:
+    fake_st = FakeStreamlit({"auth_access_token": "jwt-token"})
+    _patch_streamlit(monkeypatch, fake_st)
+    navigated_pages: list[str] = []
+    monkeypatch.setattr(topbar, "navigate_to", navigated_pages.append)
+
+    def click_work(label: str, **kwargs) -> bool:
+        fake_st.buttons.append({"label": label, **kwargs})
+        return kwargs.get("key") == "mypage-work-link"
+
+    fake_st.button = click_work
+
+    topbar.render_topbar(
+        RECENT_VIEW,
+        "?袁⑷퍥 ?臾믩씜",
+        "jwt",
+        generations=[{"request_id": "request-1"}],
+        folders=[],
+    )
+
+    assert not any(
+        button.get("key") in {"mypage-new-work", "mypage-new-work-simple"}
+        for button in fake_st.buttons
+    )
+    work_button = next(
+        button for button in fake_st.buttons if button.get("key") == "mypage-work-link"
+    )
+    home_button = next(
+        button for button in fake_st.buttons if button.get("key") == "mypage-main-link"
+    )
+    work_button_index = next(
+        index
+        for index, button in enumerate(fake_st.buttons)
+        if button.get("key") == "mypage-work-link"
+    )
+    home_button_index = next(
+        index
+        for index, button in enumerate(fake_st.buttons)
+        if button.get("key") == "mypage-main-link"
+    )
+    assert work_button_index < home_button_index
+    assert work_button["label"] == topbar.WORK_BUTTON_LABEL
+    assert work_button["help"] == topbar.WORK_BUTTON_HELP
+    assert home_button["label"] == topbar.HOME_BUTTON_LABEL
+    assert navigated_pages == ["work"]
+    assert fake_st.session_state["auth_access_token"] == "jwt-token"
+    assert fake_st.rerun_called is True
+    assert not any('href="?page=work"' in body for body in fake_st.markdowns)
 
 
 def test_topbar_single_download_falls_back_to_image_url_when_download_url_is_missing(

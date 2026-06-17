@@ -33,6 +33,15 @@ def test_work_header_styles_override_global_work_button_styles() -> None:
     assert css_parts.index("WORK_CONTROLS_CSS") < css_parts.index("WORK_HEADER_CSS")
 
 
+def test_home_navigation_styles_load_after_page_button_styles() -> None:
+    source = FRONTEND_STYLES_FILE.read_text(encoding="utf-8")
+    css_parts = source.split("CSS_PARTS = [", 1)[1].split("]", 1)[0]
+
+    assert "from frontend.css.home_navigation import HOME_NAVIGATION_CSS" in source
+    assert css_parts.index("WORK_HEADER_CSS") < css_parts.index("HOME_NAVIGATION_CSS")
+    assert css_parts.index("MYPAGE_CSS") < css_parts.index("HOME_NAVIGATION_CSS")
+
+
 def test_section_labels_render_at_twenty_pixels() -> None:
     styles = STYLE_WORK_FORMS_FILE.read_text(encoding="utf-8")
 
@@ -79,6 +88,20 @@ def test_work_mypage_profile_button_is_borderless_card_like_control() -> None:
     assert "color: transparent !important;" in styles
     assert "pointer-events: none;" in styles
     assert "z-index: 2;" in styles
+
+
+def test_work_guest_auth_links_reuse_landing_button_design_at_header_size() -> None:
+    styles = STYLE_WORK_HEADER_FILE.read_text(encoding="utf-8")
+
+    assert ".work-auth" in styles
+    assert ".work-auth .landing-login" in styles
+    assert ".work-auth .landing-signup" in styles
+    assert "min-height: 52px;" in styles
+    assert "padding: 0 18px;" in styles
+    assert "font-size: 15px;" in styles
+    assert ".work-profile-card" in styles
+    assert ".st-key-work-mypage-link button" in styles
+    assert 'href="?page=login"' not in styles
 
 
 def test_header_places_single_download_top_right_and_large_history_under_preview() -> None:

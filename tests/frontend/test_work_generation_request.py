@@ -64,6 +64,7 @@ def test_generation_request_passes_generation_options(monkeypatch) -> None:
 
     assert "logo_file" not in captured_kwargs
     assert "logo_position" not in captured_kwargs
+    assert captured_kwargs["access_token"] == ""
     assert captured_kwargs["copy_mode"] == "preserve"
     assert fake_st.session_state["result_bytes"] == b"result-image"
 

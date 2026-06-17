@@ -1,6 +1,8 @@
 WORK_HEADER_CSS = """
 .block-container:has(.work-profile-card),
-div[data-testid="stMainBlockContainer"]:has(.work-profile-card) {
+.block-container:has(.work-auth),
+div[data-testid="stMainBlockContainer"]:has(.work-profile-card),
+div[data-testid="stMainBlockContainer"]:has(.work-auth) {
     padding-top: 12px !important;
     padding-bottom: 0 !important;
     margin-bottom: calc(var(--work-generate-button-height, 60px) * -0.55);
@@ -64,6 +66,25 @@ div[data-testid="stMainBlockContainer"]:has(.work-profile-card) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.work-auth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+    width: 100%;
+}
+
+.work-auth .landing-login,
+.work-auth .landing-signup {
+    min-height: 52px;
+    padding: 0 18px;
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1;
+    text-decoration: none !important;
+    white-space: nowrap;
 }
 
 .st-key-work-mypage-link {
@@ -170,7 +191,9 @@ div[data-testid="stMainBlockContainer"]:has(.work-profile-card) {
 
 @media (max-width: 900px) {
     .block-container:has(.work-profile-card),
-    div[data-testid="stMainBlockContainer"]:has(.work-profile-card) {
+    .block-container:has(.work-auth),
+    div[data-testid="stMainBlockContainer"]:has(.work-profile-card),
+    div[data-testid="stMainBlockContainer"]:has(.work-auth) {
         padding-top: 9px !important;
     }
 
