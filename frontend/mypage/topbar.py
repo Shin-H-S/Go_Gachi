@@ -14,12 +14,12 @@ from frontend.mypage.selection import (
     toggle_generation_page_selection,
 )
 from frontend.mypage.state import (
-    FOLDER_PREFIX,
     RECENT_VIEW,
     filter_generations,
     folder_choices,
     folder_name_by_id,
 )
+from frontend.mypage.topbar_navigation import render_navigation_buttons
 from frontend.mypage.work_handoff import (
     generation_work_image_url,
     prepare_generation_for_work,
@@ -190,12 +190,7 @@ def render_topbar(
         st.markdown(f'<h1 class="mypage-title">{escape(title)}</h1>', unsafe_allow_html=True)
         _render_select_all_action(_current_page_items(view, generations or []))
     with action_col:
-        button_key = "mypage-new-work-simple"
-        if view.startswith(FOLDER_PREFIX):
-            button_key = "mypage-new-work"
-        if st.button("작업페이지로 돌아가기", key=button_key, use_container_width=True):
-            navigate_to("work")
-            st.rerun()
+        render_navigation_buttons()
         _render_selection_actions(
             view=view,
             access_token=access_token,

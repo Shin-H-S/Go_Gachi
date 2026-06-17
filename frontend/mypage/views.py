@@ -2,16 +2,24 @@ from html import escape
 
 import streamlit as st
 
-from frontend.auth.session import clear_auth_session
-from frontend.core.router import navigate_to
+from frontend.mypage.account_settings import render_account_settings
 from frontend.mypage.components import render_generation_grid
 from frontend.mypage.pager_arrows import render_pagination_arrow_css
 from frontend.mypage.pagination import page_count, page_status_text, paginate_items
-from frontend.mypage.state import filter_generations, format_date, profile_name
+from frontend.mypage.state import filter_generations, format_date
 from frontend.services.api_client import to_backend_asset_url
 
 GENERATION_PAGE_SIZE = 12
 UPLOAD_PAGE_SIZE = 8
+
+__all__ = [
+    "current_page",
+    "render_account_settings",
+    "render_folder_view",
+    "render_pagination_controls",
+    "render_recent_work",
+    "render_uploads",
+]
 
 
 def _page_key(scope: str) -> str:
@@ -176,29 +184,3 @@ def render_uploads(
                 )
     render_pagination_controls("uploads", current_page, total_pages)
 
-
-def render_account_settings(profile: dict) -> None:
-    display_name = profile_name(profile)
-    st.markdown(
-        f"""
-        <div class="mypage-account-panel">
-            <div>
-                <span>닉네임</span>
-                <strong>{escape(display_name)}</strong>
-            </div>
-            <div>
-                <span>이메일</span>
-                <strong>{escape(str(profile.get("email") or "-"))}</strong>
-            </div>
-            <div>
-                <span>권한</span>
-                <strong>{escape(str(profile.get("role") or "user"))}</strong>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("로그아웃", key="mypage-logout", use_container_width=False):
-        clear_auth_session(st.session_state, "로그아웃되었습니다.")
-        navigate_to("main")
-        st.rerun()

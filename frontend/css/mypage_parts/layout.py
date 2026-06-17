@@ -55,13 +55,15 @@ MYPAGE_LAYOUT_CSS = """
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 18px 14px 22px;
+    padding: 18px 58px 22px 14px;
     border-bottom: 1px solid #e5e2da;
     margin-bottom: 18px;
 }
 
 .mypage-sidebar-head > div:not(.mypage-avatar) {
-    max-width: 144px;
+    flex: 1 1 187px;
+    max-width: 187px;
+    min-width: 0;
 }
 
 .mypage-avatar {
@@ -80,7 +82,9 @@ MYPAGE_LAYOUT_CSS = """
     color: #151a19;
     font-size: 17px;
     line-height: 1.25;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .mypage-sidebar-head small {
@@ -88,14 +92,16 @@ MYPAGE_LAYOUT_CSS = """
     margin-top: 4px;
     color: #717b77;
     font-size: 12px;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .st-key-mypage-shell
     [data-testid="stColumn"]:has(.mypage-sidebar-head)
     .st-key-mypage-settings-control {
     position: absolute;
-    top: 24px;
+    top: 18px;
     right: -6px;
     width: 44px !important;
     height: 44px !important;

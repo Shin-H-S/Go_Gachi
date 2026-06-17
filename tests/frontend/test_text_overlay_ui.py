@@ -10,7 +10,7 @@ from frontend.work import copy_controls
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 WORK_PAGE = ROOT_DIR / "frontend" / "pages" / "work.py"
-WORK_COMPONENTS = ROOT_DIR / "frontend" / "work" / "components.py"
+WORK_HEADER = ROOT_DIR / "frontend" / "work" / "header.py"
 COPY_CONTROLS = ROOT_DIR / "frontend" / "work" / "copy_controls.py"
 RESULT_PANEL = ROOT_DIR / "frontend" / "work" / "result_panel.py"
 
@@ -238,19 +238,19 @@ def test_work_page_displays_result_inclusion_summary() -> None:
 
 def test_work_page_moves_download_and_history_controls_to_result_panel() -> None:
     work_source = WORK_PAGE.read_text(encoding="utf-8")
-    components_source = WORK_COMPONENTS.read_text(encoding="utf-8")
+    header_source = WORK_HEADER.read_text(encoding="utf-8")
     result_panel_source = RESULT_PANEL.read_text(encoding="utf-8")
 
     assert "tool-row" not in work_source
     assert "request_asset_bytes" not in work_source
     assert "undo_clicked" not in work_source
     assert "redo_clicked" not in work_source
-    assert "_render_header_download_button(" in components_source
-    assert "request_asset_bytes" in components_source
-    assert 'key="work-header-download-button"' in components_source
-    assert 'key="work-header-download-fetch"' in components_source
-    assert 'key="work-header-download-empty"' in components_source
-    assert "disabled=True" in components_source
+    assert "_render_header_download_button(" in header_source
+    assert "request_asset_bytes" in header_source
+    assert 'key="work-header-download-button"' in header_source
+    assert 'key="work-header-download-fetch"' in header_source
+    assert 'key="work-header-download-empty"' in header_source
+    assert "disabled=True" in header_source
     assert "_render_download_action(" not in result_panel_source
     assert "result-download" not in result_panel_source
     assert "request_asset_bytes" not in result_panel_source

@@ -5,9 +5,13 @@ class FakeStreamlit:
     def __init__(self) -> None:
         self.session_state: dict[str, object] = {}
         self.toasts: list[str] = []
+        self.rerun_count = 0
 
     def toast(self, message: str) -> None:
         self.toasts.append(message)
+
+    def rerun(self) -> None:
+        self.rerun_count += 1
 
 
 def test_completed_generation_job_appends_result_and_toasts(monkeypatch) -> None:
@@ -103,6 +107,55 @@ def test_waiting_generation_job_stays_active(monkeypatch) -> None:
     assert job_notifications.has_active_generation_job(fake_st.session_state)
     assert fake_st.session_state["active_generation_jobs"]["job-1"]["status"] == "processing"
     assert fake_st.toasts == []
+
+
+def test_active_generation_job_refresh_reruns_when_result_is_ready(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state["auth_access_token"] = "jwt-token"
+    fake_st.session_state["active_generation_jobs"] = {
+        "job-1": {
+            "requestId": "job-1",
+            "status": "processing",
+            "context": {"uploadHash": "hash-1"},
+        }
+    }
+
+    monkeypatch.setattr(job_notifications, "st", fake_st)
+    monkeypatch.setattr(
+        job_notifications,
+        "get_generation_job_status",
+        lambda request_id, access_token: {
+            "status": "success",
+            "imageUrl": "https://assets.example/result.png",
+        },
+    )
+
+    job_notifications.refresh_active_generation_jobs_once()
+
+    assert fake_st.session_state["active_generation_jobs"] == {}
+    assert fake_st.session_state["result_image_url"] == "https://assets.example/result.png"
+    assert fake_st.rerun_count == 1
+
+
+def test_active_generation_job_refresh_waits_without_full_rerun(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state["auth_access_token"] = "jwt-token"
+    fake_st.session_state["active_generation_jobs"] = {
+        "job-1": {"requestId": "job-1", "status": "pending"}
+    }
+
+    monkeypatch.setattr(job_notifications, "st", fake_st)
+    monkeypatch.setattr(
+        job_notifications,
+        "get_generation_job_status",
+        lambda request_id, access_token: {"status": "processing"},
+    )
+
+    job_notifications.refresh_active_generation_jobs_once()
+
+    assert job_notifications.has_active_generation_job(fake_st.session_state)
+    assert fake_st.session_state["active_generation_jobs"]["job-1"]["status"] == "processing"
+    assert fake_st.rerun_count == 0
 
 
 def test_failed_generation_job_is_removed_with_toast(monkeypatch) -> None:

@@ -103,3 +103,19 @@ def process_generation_job_notifications() -> None:
 
     if changed:
         st.session_state[ACTIVE_GENERATION_JOBS_KEY] = jobs
+
+
+def refresh_active_generation_jobs_once() -> None:
+    """Poll active jobs once and rerun the page when a result becomes previewable."""
+    if not has_active_generation_job():
+        return
+
+    process_generation_job_notifications()
+    if not has_active_generation_job():
+        st.rerun()
+
+
+@st.fragment(run_every="3s")
+def refresh_active_generation_jobs() -> None:
+    """Keep the work-page loading panel polling until the generated image is ready."""
+    refresh_active_generation_jobs_once()

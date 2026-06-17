@@ -10,6 +10,9 @@ FRONTEND_MYPAGE_CARD = ROOT_DIR / "frontend" / "mypage" / "generation_card.py"
 FRONTEND_MYPAGE_SECTIONS = ROOT_DIR / "frontend" / "mypage" / "page_sections.py"
 FRONTEND_MYPAGE_STATE = ROOT_DIR / "frontend" / "mypage" / "state.py"
 FRONTEND_MYPAGE_TOPBAR = ROOT_DIR / "frontend" / "mypage" / "topbar.py"
+FRONTEND_MYPAGE_TOPBAR_NAVIGATION = (
+    ROOT_DIR / "frontend" / "mypage" / "topbar_navigation.py"
+)
 FRONTEND_MYPAGE_DOWNLOAD_ACTIONS = ROOT_DIR / "frontend" / "mypage" / "download_actions.py"
 FRONTEND_MYPAGE_VIEWS = ROOT_DIR / "frontend" / "mypage" / "views.py"
 FRONTEND_MYPAGE_SIDEBAR = ROOT_DIR / "frontend" / "mypage" / "sidebar.py"
@@ -168,6 +171,42 @@ def test_mypage_api_and_styles_are_registered() -> None:
     assert ".mypage-card-grid" in card_styles
 
 
+def test_mypage_sidebar_profile_header_truncates_long_identity_text() -> None:
+    layout_styles = STYLE_MYPAGE_LAYOUT.read_text(encoding="utf-8")
+    profile_text_block = layout_styles.split(
+        ".mypage-sidebar-head > div:not(.mypage-avatar)",
+        1,
+    )[1].split("}", 1)[0]
+    profile_title_block = layout_styles.split(".mypage-sidebar-head strong", 1)[1].split(
+        "}",
+        1,
+    )[0]
+    profile_email_block = layout_styles.split(".mypage-sidebar-head small", 1)[1].split(
+        "}",
+        1,
+    )[0]
+
+    assert "padding: 18px 58px 22px 14px;" in layout_styles
+    assert "flex: 1 1 187px;" in profile_text_block
+    assert "max-width: 187px;" in profile_text_block
+    assert "min-width: 0;" in profile_text_block
+    for block in (profile_title_block, profile_email_block):
+        assert "white-space: nowrap;" in block
+        assert "overflow: hidden;" in block
+        assert "text-overflow: ellipsis;" in block
+        assert "overflow-wrap: anywhere;" not in block
+
+
+def test_mypage_settings_button_aligns_with_profile_header_top() -> None:
+    layout_styles = STYLE_MYPAGE_LAYOUT.read_text(encoding="utf-8")
+    settings_control_block = layout_styles.split(".st-key-mypage-settings-control", 1)[
+        1
+    ].split("}", 1)[0]
+
+    assert "top: 18px;" in settings_control_block
+    assert "right: -6px;" in settings_control_block
+
+
 def test_mypage_generations_api_accepts_page_query() -> None:
     api_source = FRONTEND_API_CLIENT.read_text(encoding="utf-8")
 
@@ -206,6 +245,7 @@ def test_mypage_uses_requested_user_facing_copy() -> None:
             FRONTEND_MYPAGE_PAGE.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_STATE.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_TOPBAR.read_text(encoding="utf-8"),
+            FRONTEND_MYPAGE_TOPBAR_NAVIGATION.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_VIEWS.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_SIDEBAR.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_CARD.read_text(encoding="utf-8"),
@@ -213,7 +253,8 @@ def test_mypage_uses_requested_user_facing_copy() -> None:
     )
 
     assert "업로드한 원본 이미지" in combined_source
-    assert "작업페이지로 돌아가기" in combined_source
+    assert "작업 페이지로 돌아가기" in combined_source
+    assert "WORK_BUTTON_LABEL" in combined_source
     assert "업로드한 메뉴 사진" not in combined_source
     assert "새로 생성하기" not in combined_source
 
