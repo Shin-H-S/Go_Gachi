@@ -34,8 +34,10 @@ from backend.app.core.config import Settings, get_settings, load_env  # noqa: E4
 from backend.app.core.presets import Preset, PresetDetail, get_presets  # noqa: E402
 from backend.app.core.prompts import (  # noqa: E402
     build_system_prompt,
-    build_user_prompt,
     merge_image_prompt,
+)
+from backend.app.core.prompts import (  # noqa: E402
+    build_user_prompt as build_backend_user_prompt,
 )
 from backend.app.services import openai_images  # noqa: E402
 from backend.app.services.copywriting import AdCopy  # noqa: E402
@@ -51,6 +53,9 @@ from backend.app.services.image_processing import (  # noqa: E402
 from backend.app.services.image_types import TargetSize  # noqa: E402
 from backend.app.services.image_validation import parse_image  # noqa: E402
 from backend.app.services.openai_images import call_openai_edit  # noqa: E402
+from frontend.services.prompting import (  # noqa: E402
+    build_user_prompt as build_frontend_user_prompt,
+)
 
 # 실험 도구 전용: 서비스 코드는 그대로 두고, 이미지 API 타임아웃만 연장한다.
 # (openai_images.py는 120초 고정 — 고품질/세로형 생성이 가끔 이를 넘겨 실패할 수 있음)
@@ -174,8 +179,12 @@ def build_case_prompt(
     resize_mode = case.get("resize_mode", "cover")
 
     target_size = target_size_or_detail(detail=detail, target_width=None, target_height=None)
+    frontend_user_prompt = build_frontend_user_prompt(case.get("user_prompt", ""), detail.label)
     ctx_user_prompt = user_prompt_with_context(
-        case.get("user_prompt", ""), target_size, detail, resize_mode
+        frontend_user_prompt,
+        target_size,
+        detail,
+        resize_mode,
     )
 
     # 시스템 프롬프트: 전체 교체(system_override) > 서비스 조립 + 추가(system_append)
@@ -185,7 +194,7 @@ def build_case_prompt(
     if case.get("system_append"):
         system_text = f"{system_text}\n{case['system_append']}"
 
-    prompt = merge_image_prompt(system_text, build_user_prompt(ctx_user_prompt))
+    prompt = merge_image_prompt(system_text, build_backend_user_prompt(ctx_user_prompt))
     meta = {
         "copy": copy_def,
         "user_prompt": case.get("user_prompt", ""),

@@ -128,7 +128,7 @@ def render_new_tab() -> None:
         copy_mode = next(mode for label, mode in COPY_MODE_OPTIONS if label == mode_label)
         if copy_mode == "custom":
             copy_mode_custom = st.text_area(
-                "문구 처리 지시 직접입력 (입력 문구는 그대로 렌더되고, 이 지시문이 추가됨)",
+                "문구 처리 프롬프트 직접입력 (기본 문구 처리 프롬프트 전체를 대체)",
                 key="copy_mode_custom",
                 height=80,
                 placeholder="예: Render the headline in a bold retro Korean font style. ...",
