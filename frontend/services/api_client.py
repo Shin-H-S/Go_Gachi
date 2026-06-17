@@ -6,8 +6,6 @@ from frontend.core.config import (
     BACKEND_URL,
     DEFAULT_BACKEND_URL,
     FORMAT_OPTIONS,
-    get_detail_id,
-    get_detail_size,
 )
 from frontend.services import mypage_client
 from frontend.services.assets import (
@@ -17,11 +15,13 @@ from frontend.services.assets import (
 )
 from frontend.services.copy_client import request_auto_copy
 from frontend.services.generation_jobs_client import request_generate_job_result
+from frontend.services.generation_payload import build_generate_payload
 from frontend.services.prompting import build_user_prompt
 
 __all__ = [
     "BACKEND_URL",
     "DEFAULT_BACKEND_URL",
+    "FORMAT_OPTIONS",
     "GenerationResult",
     "build_user_prompt",
     "create_my_folder",
@@ -130,30 +130,6 @@ def to_backend_asset_url(path: str | None) -> str | None:
     return f"{BACKEND_URL.rstrip('/')}/{path}"
 
 
-def _build_generate_payload(
-    uploaded_file,
-    prompt: str,
-    format_label: str,
-    detail_label: str,
-    ad_copy_enabled: bool,
-    copy_mode: str,
-    ad_copy_prompt: str,
-) -> dict[str, object]:
-    target_size = get_detail_size(format_label, detail_label)
-    user_copy = ad_copy_prompt.strip() if ad_copy_enabled else ""
-    return {
-        "imageDataUrl": file_to_data_url(uploaded_file),
-        "presetId": FORMAT_OPTIONS[format_label]["value"],
-        "detailType": get_detail_id(format_label, detail_label),
-        "userPrompt": build_user_prompt(prompt, detail_label),
-        "userCopy": user_copy,
-        "copyMode": copy_mode,
-        "adCopyEnabled": ad_copy_enabled,
-        "targetWidth": target_size[0],
-        "targetHeight": target_size[1],
-    }
-
-
 def _request_generate_sync(payload: dict[str, object], access_token: str) -> GenerationResult:
     response = httpx.post(
         f"{BACKEND_URL}/api/generate",
@@ -204,7 +180,7 @@ def request_backend(
     copy_mode: str = "preserve",
     ad_copy_prompt: str = "",
 ) -> GenerationResult:
-    payload = _build_generate_payload(
+    payload = build_generate_payload(
         uploaded_file,
         prompt,
         format_label,

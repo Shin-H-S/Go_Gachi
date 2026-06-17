@@ -4,6 +4,7 @@ from html import escape
 import streamlit as st
 
 from frontend.mypage.generation_status import (
+    generation_status_badge,
     has_generation_waiting_for_image,
     is_generation_in_progress,
     is_stale_in_progress,
@@ -73,6 +74,7 @@ def _render_generation_card(
     created_at_value = item.get("created_at")
     created_at = format_date(created_at_value)
     stale_in_progress = is_stale_in_progress(status, created_at_value)
+    status_label, status_kind = generation_status_badge(status, created_at_value)
     folder_name = _folder_name_for_generation(item, folders)
 
     if image_url:
@@ -104,7 +106,12 @@ def _render_generation_card(
     st.markdown(
         f"""
         <div class="mypage-card-meta">
-            <span class="mypage-card-identity">{escape(preset_id)} {escape(created_at)}</span>
+            <span class="mypage-card-identity">
+                {escape(preset_id)} {escape(created_at)}
+                <span class="mypage-status-badge mypage-status-{escape(status_kind)}">
+                    {escape(status_label)}
+                </span>
+            </span>
             <span class="mypage-card-folder">폴더: {escape(folder_name)}</span>
         </div>
         <div class="mypage-card-select-zone"></div>

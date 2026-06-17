@@ -13,6 +13,7 @@ from frontend.pages.main import render_main_page  # noqa: E402
 from frontend.pages.signup import render_signup_page  # noqa: E402
 from frontend.pages.work import render_work_page  # noqa: E402
 from frontend.styles import add_css  # noqa: E402
+from frontend.work.job_notifications import process_generation_job_notifications  # noqa: E402
 
 st.set_page_config(
     page_title="Go Gachi",
@@ -25,6 +26,7 @@ st.set_page_config(
 def main() -> None:
     init_session_state()
     add_css()
+    process_generation_job_notifications()
     current_page = get_current_page()
 
     if current_page == "main":
