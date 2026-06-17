@@ -31,6 +31,7 @@ def test_work_header_renders_left_mypage_and_right_download_button() -> None:
     assert "work-main-link" in source
     assert 'key="work-header-download-link"' in source
     assert 'key="work-header-download-button"' in source
+    assert 'key="work-header-download-link"' in source
     assert 'key="work-header-download-fetch"' in source
     assert 'key="work-header-download-empty"' in source
     assert "GO-GACHI CAFE AD MAKER V1" not in source

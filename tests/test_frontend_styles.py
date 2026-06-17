@@ -112,6 +112,7 @@ def test_header_places_single_download_top_right_and_large_history_under_preview
 
     assert ".st-key-work-header-download-link a" in header_styles
     assert ".st-key-work-header-download-button button" in header_styles
+    assert ".st-key-work-header-download-link a" in header_styles
     assert ".st-key-work-header-download-fetch button" in header_styles
     assert ".st-key-work-header-download-empty button" in header_styles
     assert "background: #53613b !important;" in header_styles

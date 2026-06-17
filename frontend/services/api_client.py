@@ -45,6 +45,7 @@ __all__ = [
 class GenerationResult:
     image_bytes: bytes | None
     image_url: str | None = None
+    download_url: str | None = None
     copy: dict[str, object] | None = None
 
 
@@ -140,16 +141,17 @@ def _request_generate_sync(payload: dict[str, object], access_token: str) -> Gen
     response.raise_for_status()
     data = response.json()
     image_url = to_backend_asset_url(str(data.get("imageUrl") or ""))
+    download_url = to_backend_asset_url(str(data.get("downloadUrl") or ""))
     image_data_url = data.get("imageDataUrl")
     image_bytes = None
     if image_url is None:
         if not image_data_url:
             raise ValueError("백엔드 응답에 imageUrl 또는 imageDataUrl이 없습니다.")
         image_bytes = data_url_to_bytes(str(image_data_url))
-
     return GenerationResult(
         image_bytes=image_bytes,
         image_url=image_url,
+        download_url=download_url,
         copy=data.get("copy"),
     )
 
@@ -157,6 +159,7 @@ def _request_generate_sync(payload: dict[str, object], access_token: str) -> Gen
 def _request_generate_job(payload: dict[str, object], access_token: str) -> GenerationResult:
     data = request_generate_job_result(payload, access_token)
     image_url = to_backend_asset_url(str(data.get("imageUrl") or ""))
+    download_url = to_backend_asset_url(str(data.get("downloadUrl") or ""))
     image_bytes = None
     if not image_url:
         image_data_url = data.get("imageDataUrl")
@@ -166,6 +169,7 @@ def _request_generate_job(payload: dict[str, object], access_token: str) -> Gene
     return GenerationResult(
         image_bytes=image_bytes,
         image_url=image_url,
+        download_url=download_url,
         copy=data.get("copy") if isinstance(data.get("copy"), dict) else None,
     )
 

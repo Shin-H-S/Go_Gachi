@@ -1,6 +1,7 @@
 """FastAPI 진입점."""
 
 import logging
+import mimetypes
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -33,6 +34,7 @@ from backend.app.services.costs import calculate_text_cost
 from backend.app.services.generation_files import new_generation_id
 from backend.app.services.image_edit import edit_image
 from backend.app.services.openai_copy import generate_ad_copy
+from backend.app.services.storage import get_storage
 
 logger = logging.getLogger(__name__)
 _settings = get_settings()
@@ -98,6 +100,28 @@ async def _record_text_usage(
             text_cost_usd=text_cost,
             cached=False,
         )
+
+
+async def _download_url_for_generate_result(
+    *,
+    settings: Settings,
+    result: dict[str, str | None],
+) -> str | None:
+    output_path = result.get("output_path")
+    image_url = result.get("image_url")
+    if not output_path or not image_url:
+        return None
+
+    filename = output_path.replace("\\", "/").rsplit("/", 1)[-1]
+    if not filename:
+        return None
+    storage = get_storage(settings)
+    return await storage.download_url(
+        output_path,
+        filename=filename,
+        content_type=mimetypes.guess_type(filename)[0] or "application/octet-stream",
+        expires_in=settings.download_url_ttl_seconds,
+    )
 
 
 @asynccontextmanager
@@ -398,6 +422,7 @@ async def generate(
     return GenerateResponse(
         imageDataUrl=result.get("image_data_url"),
         imageUrl=result.get("image_url"),
+        downloadUrl=await _download_url_for_generate_result(settings=settings, result=result),
         provider=result["provider"] or settings.image_provider,
         preset=preset,
         copy=copy_info,

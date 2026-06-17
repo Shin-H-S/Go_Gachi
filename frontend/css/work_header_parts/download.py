@@ -1,10 +1,12 @@
 WORK_HEADER_DOWNLOAD_CSS = """
 .st-key-work-header-download-link a,
 .st-key-work-header-download-button button,
+.st-key-work-header-download-link a,
 .st-key-work-header-download-fetch button,
 .st-key-work-header-download-empty button,
 .st-key-work-header-download-link div[data-testid="stLinkButton"] a,
 .st-key-work-header-download-button div[data-testid="stDownloadButton"] button,
+.st-key-work-header-download-link div[data-testid="stLinkButton"] a,
 .st-key-work-header-download-fetch div[data-testid="stButton"] button,
 .st-key-work-header-download-empty div[data-testid="stButton"] button {
     min-height: 50px !important;
@@ -24,10 +26,12 @@ WORK_HEADER_DOWNLOAD_CSS = """
 
 .st-key-work-header-download-link a:hover,
 .st-key-work-header-download-button button:hover,
+.st-key-work-header-download-link a:hover,
 .st-key-work-header-download-fetch button:hover,
 .st-key-work-header-download-empty button:hover,
 .st-key-work-header-download-link div[data-testid="stLinkButton"] a:hover,
 .st-key-work-header-download-button div[data-testid="stDownloadButton"] button:hover,
+.st-key-work-header-download-link div[data-testid="stLinkButton"] a:hover,
 .st-key-work-header-download-fetch div[data-testid="stButton"] button:hover,
 .st-key-work-header-download-empty div[data-testid="stButton"] button:hover {
     border: 0 !important;

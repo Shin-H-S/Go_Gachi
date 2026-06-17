@@ -80,6 +80,7 @@ def handle_generation_request(
                     {
                         "bytes": result.image_bytes,
                         "url": result.image_url,
+                        "download_url": result.download_url,
                         "copy": result.copy,
                         "context": result_context,
                         "format_label": format_label,
