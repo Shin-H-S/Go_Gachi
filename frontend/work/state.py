@@ -14,6 +14,7 @@ def clear_result_state(session_state=None) -> None:
     state = _state(session_state)
     state.pop("result_bytes", None)
     state.pop("result_image_url", None)
+    state.pop("result_download_url", None)
     state.pop("result_copy", None)
     state.pop("result_context", None)
 
@@ -59,6 +60,11 @@ def apply_cursor_to_result_state(session_state=None) -> None:
             state["result_image_url"] = image_url
         else:
             state.pop("result_image_url", None)
+        download_url = entry.get("download_url")
+        if download_url:
+            state["result_download_url"] = download_url
+        else:
+            state.pop("result_download_url", None)
         state["result_copy"] = entry.get("copy")
         state["result_context"] = entry.get("context")
     else:

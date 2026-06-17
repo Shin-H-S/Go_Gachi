@@ -128,6 +128,7 @@ async def cached_response(
     return {
         "image_data_url": None,
         "image_url": image_url,
+        "output_path": snapshot["output_path"],
         "provider": "openai",
         "note": "캐시된 결과 재사용",
         "prompt": snapshot["prompt"],

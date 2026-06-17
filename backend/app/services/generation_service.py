@@ -106,6 +106,7 @@ async def edit_image(
             "image_data_url": f"data:image/png;base64,{encoded}",
             # mock은 파일을 저장하지 않으므로 외부에서 받을 수 있는 URL이 없다.
             "image_url": None,
+            "output_path": None,
             "provider": "mock",
             "note": "OPENAI_API_KEY가 없어 선택한 규격으로 로컬 흐름만 확인했습니다.",
             "prompt": None,
@@ -413,6 +414,7 @@ async def edit_image(
     return {
         "image_data_url": None,
         "image_url": image_url,
+        "output_path": paths.output_path,
         "provider": "openai",
         "note": None,
         "prompt": prompt,

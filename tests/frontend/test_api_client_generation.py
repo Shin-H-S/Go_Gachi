@@ -72,7 +72,13 @@ def test_request_backend_prefers_image_url_without_decoding_image_data(
         headers: dict[str, str],  # noqa: ARG001
         timeout: int,  # noqa: ARG001
     ) -> FakeResponse:
-        return FakeResponse({"imageUrl": "/outputs/result.png", "imageDataUrl": None})
+        return FakeResponse(
+            {
+                "imageUrl": "/outputs/result.png",
+                "downloadUrl": "https://signed.example/result.png",
+                "imageDataUrl": None,
+            }
+        )
 
     uploaded_file = SimpleNamespace(type="image/png", getvalue=lambda: b"source-image")
     monkeypatch.setattr(api_client, "BACKEND_URL", "https://backend.example")
@@ -86,6 +92,7 @@ def test_request_backend_prefers_image_url_without_decoding_image_data(
     )
 
     assert result.image_url == "https://backend.example/outputs/result.png"
+    assert result.download_url == "https://signed.example/result.png"
     assert result.image_bytes is None
 
 

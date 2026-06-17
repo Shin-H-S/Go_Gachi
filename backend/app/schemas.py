@@ -82,6 +82,7 @@ class GenerateResponse(BaseModel):
     # 저장 URL을 우선 사용한다. imageDataUrl은 mock/fallback처럼 URL이 없을 때만 내려준다.
     image_data_url: str | None = Field(default=None, alias="imageDataUrl")
     image_url: str | None = Field(default=None, alias="imageUrl")
+    download_url: str | None = Field(default=None, alias="downloadUrl")
     provider: str
     preset: Preset
     copy_info: CopyResponse | None = Field(default=None, alias="copy")
