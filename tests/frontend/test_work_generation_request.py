@@ -170,6 +170,9 @@ def test_logged_in_generation_starts_job_without_waiting(monkeypatch) -> None:
         "prompt": "make it bright",
         "uploadHash": "hash-1",
     }
+    assert fake_st.session_state["generation_toasts"] == [
+        "이미지 생성을 시작했어요. 완료되면 알려드릴게요."
+    ]
     assert "result_bytes" not in fake_st.session_state
     assert fake_st.rerun_count == 1
 
