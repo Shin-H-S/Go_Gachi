@@ -14,6 +14,10 @@ from frontend.work.components import (
 )
 from frontend.work.copy_controls import render_copy_controls
 from frontend.work.generation import handle_generation_request
+from frontend.work.job_notifications import (
+    has_active_generation_job,
+    refresh_active_generation_jobs,
+)
 from frontend.work.result_panel import render_result_panel
 from frontend.work.state import build_result_context, get_selected_channel, sync_result_state
 from frontend.work.uploads import UPLOAD_FILE_TYPES, UPLOAD_HELP_TEXT, get_effective_uploaded_file
@@ -102,10 +106,13 @@ def render_work_page() -> None:
         st.markdown('<div class="generate-button-marker"></div>', unsafe_allow_html=True)
         generate = st.button("✦ 이미지 만들기", use_container_width=True, type="primary")
 
-    is_generating = bool(generate and uploaded_file)
+    active_generation_job = has_active_generation_job()
+    is_generating = bool((generate and uploaded_file) or active_generation_job)
 
     if is_generating:
         render_generation_lock_css()
+    if active_generation_job:
+        refresh_active_generation_jobs()
 
     with right_col:
         render_result_panel(

@@ -10,9 +10,13 @@ FRONTEND_MYPAGE_CARD = ROOT_DIR / "frontend" / "mypage" / "generation_card.py"
 FRONTEND_MYPAGE_SECTIONS = ROOT_DIR / "frontend" / "mypage" / "page_sections.py"
 FRONTEND_MYPAGE_STATE = ROOT_DIR / "frontend" / "mypage" / "state.py"
 FRONTEND_MYPAGE_TOPBAR = ROOT_DIR / "frontend" / "mypage" / "topbar.py"
+FRONTEND_MYPAGE_TOPBAR_NAVIGATION = (
+    ROOT_DIR / "frontend" / "mypage" / "topbar_navigation.py"
+)
 FRONTEND_MYPAGE_DOWNLOAD_ACTIONS = ROOT_DIR / "frontend" / "mypage" / "download_actions.py"
 FRONTEND_MYPAGE_VIEWS = ROOT_DIR / "frontend" / "mypage" / "views.py"
 FRONTEND_MYPAGE_SIDEBAR = ROOT_DIR / "frontend" / "mypage" / "sidebar.py"
+FRONTEND_MYPAGE_CACHE = ROOT_DIR / "frontend" / "mypage" / "cache.py"
 FRONTEND_STYLES = ROOT_DIR / "frontend" / "styles.py"
 STYLE_MYPAGE_FILE = ROOT_DIR / "frontend" / "css" / "mypage.py"
 STYLE_MYPAGE_LAYOUT = ROOT_DIR / "frontend" / "css" / "mypage_parts" / "layout.py"
@@ -217,10 +221,14 @@ def test_mypage_loads_generation_pages_and_uses_total_count() -> None:
     loader_source = (ROOT_DIR / "frontend" / "mypage" / "data_loader.py").read_text(
         encoding="utf-8",
     )
+    cache_source = FRONTEND_MYPAGE_CACHE.read_text(encoding="utf-8")
 
-    assert "def _load_generation_pages(access_token: str)" in page_source
+    assert "def load_recent_generation_page(" in loader_source
     assert "total_count" in loader_source
-    assert "request_fn(access_token, page=page)" in loader_source
+    assert "uncategorized" in loader_source
+    assert "@st.cache_data" in cache_source
+    assert "cached_request_my_generations" in page_source
+    assert "clear_generation_cache()" in page_source
 
 
 def test_mypage_views_render_collection_status_and_pagination() -> None:
@@ -237,6 +245,7 @@ def test_mypage_uses_requested_user_facing_copy() -> None:
             FRONTEND_MYPAGE_PAGE.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_STATE.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_TOPBAR.read_text(encoding="utf-8"),
+            FRONTEND_MYPAGE_TOPBAR_NAVIGATION.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_VIEWS.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_SIDEBAR.read_text(encoding="utf-8"),
             FRONTEND_MYPAGE_CARD.read_text(encoding="utf-8"),

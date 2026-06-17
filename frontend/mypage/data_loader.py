@@ -16,37 +16,24 @@ def _safe_page(value: int) -> int:
         return 1
 
 
-def load_generation_pages(
-    request_fn: RequestFn,
-    access_token: str,
-) -> tuple[list[dict], int]:
-    """백엔드 페이지를 전부 순회해 generation 목록과 총 개수를 모은다."""
-    generations: list[dict] = []
-    page = 1
-    total_count = 0
-    while True:
-        payload = request_fn(access_token, page=page)
-        items = list(payload.get("items", []))
-        if page == 1:
-            total_count = int(payload.get("total_count") or len(items))
-        generations.extend(items)
-        if not items or len(generations) >= total_count:
-            return generations, total_count
-        page += 1
-
-
 def _load_slice(
     request_fn: RequestFn,
     access_token: str,
     page: int,
     *,
     folder_id: int | None = None,
+    uncategorized: bool = False,
 ) -> tuple[list[dict], int]:
     page = _safe_page(page)
     start = (page - 1) * views.GENERATION_PAGE_SIZE
     end = start + views.GENERATION_PAGE_SIZE
     first_backend_page = (start // BACKEND_GENERATION_PAGE_SIZE) + 1
-    first_payload = request_fn(access_token, page=first_backend_page, folder_id=folder_id)
+    first_payload = request_fn(
+        access_token,
+        page=first_backend_page,
+        folder_id=folder_id,
+        uncategorized=uncategorized,
+    )
     first_items = list(first_payload.get("items", []))
     total_count = int(first_payload.get("total_count") or (start + len(first_items)))
     combined_items = first_items
@@ -57,7 +44,12 @@ def _load_slice(
         else first_backend_page
     )
     for backend_page in range(first_backend_page + 1, last_backend_page + 1):
-        payload = request_fn(access_token, page=backend_page, folder_id=folder_id)
+        payload = request_fn(
+            access_token,
+            page=backend_page,
+            folder_id=folder_id,
+            uncategorized=uncategorized,
+        )
         combined_items.extend(list(payload.get("items", [])))
     offset = start - (first_backend_page - 1) * BACKEND_GENERATION_PAGE_SIZE
     return combined_items[offset : offset + views.GENERATION_PAGE_SIZE], total_count
@@ -69,6 +61,7 @@ def load_recent_generation_page(
     page: int,
     *,
     folder_id: int | None = None,
+    uncategorized: bool = False,
 ) -> tuple[list[dict], int, int]:
     """요청 페이지에 해당하는 슬라이스 + 총 개수 + 보정된 현재 페이지를 반환한다."""
     requested_page = _safe_page(page)
@@ -77,6 +70,7 @@ def load_recent_generation_page(
         access_token,
         requested_page,
         folder_id=folder_id,
+        uncategorized=uncategorized,
     )
     current_page = min(requested_page, page_count(total_count, views.GENERATION_PAGE_SIZE))
     if current_page != requested_page:
@@ -85,5 +79,23 @@ def load_recent_generation_page(
             access_token,
             current_page,
             folder_id=folder_id,
+            uncategorized=uncategorized,
         )
     return generations, total_count, current_page
+
+
+def load_upload_page(
+    request_fn: RequestFn,
+    access_token: str,
+    page: int,
+) -> tuple[list[dict], int, int]:
+    requested_page = _safe_page(page)
+    payload = request_fn(access_token, page=requested_page)
+    uploads = list(payload.get("items", []))
+    total_count = int(payload.get("total_count") or len(uploads))
+    current_page = min(requested_page, page_count(total_count, views.UPLOAD_PAGE_SIZE))
+    if current_page != requested_page:
+        payload = request_fn(access_token, page=current_page)
+        uploads = list(payload.get("items", []))
+        total_count = int(payload.get("total_count") or len(uploads))
+    return uploads, total_count, current_page

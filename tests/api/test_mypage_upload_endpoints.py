@@ -25,6 +25,7 @@ def test_my_uploads_returns_unique_original_images_without_inline_data() -> None
             for request_id, preset_id, image_hash, original_path in (
                 ("upload-first", "instagram", "same-menu-hash", original_file),
                 ("upload-second", "daangn", "same-menu-hash", original_file),
+                ("upload-third", "smartstore", "other-menu-hash", original_file),
                 ("upload-missing", "instagram", "missing-menu-hash", missing_file),
             ):
                 await crud.create_pending_generation(
@@ -56,10 +57,12 @@ def test_my_uploads_returns_unique_original_images_without_inline_data() -> None
 
     assert response.status_code == 200
     body = response.json()
-    assert body["count"] == 1
-    assert body["items"][0]["upload_id"] == "same-menu-hash"
-    assert body["items"][0]["used_count"] == 2
-    assert body["items"][0]["original_image_url"] == "/uploads/original-menu.png"
+    assert body["count"] == 2
+    assert body["total_count"] == 2
+    items = {item["upload_id"]: item for item in body["items"]}
+    assert items["same-menu-hash"]["used_count"] == 2
+    assert items["same-menu-hash"]["original_image_url"] == "/uploads/original-menu.png"
+    assert items["other-menu-hash"]["used_count"] == 1
     assert "image_data_url" not in body["items"][0]
 
 
@@ -101,5 +104,49 @@ def test_my_uploads_keeps_r2_url_when_local_file_is_not_available(monkeypatch) -
     assert response.status_code == 200
     body = response.json()
     assert body["count"] == 1
+    assert body["total_count"] == 1
     assert body["items"][0]["original_image_url"] == "https://pub.example/uploads/r2-menu.png"
     assert "image_data_url" not in body["items"][0]
+
+
+def test_my_uploads_supports_page_and_total_count() -> None:
+    user = make_user("user-upload-pagination")
+    settings = get_settings()
+    original_file = settings.upload_dir / "upload-pagination.png"
+    original_file.write_bytes(base64.b64decode(TINY_PNG_B64))
+
+    async def _override_user() -> AuthUser:
+        return user
+
+    async def _seed() -> None:
+        async with async_session_scope() as db:
+            for idx in range(10):
+                await crud.create_pending_generation(
+                    db,
+                    request_id=f"upload-page-{idx:02d}",
+                    image_hash=f"upload-page-hash-{idx:02d}",
+                    preset_id="instagram",
+                    instruction_hash=f"upload-page-instruction-{idx:02d}",
+                    prompt_version="prompt-v-test",
+                    model="model-test",
+                    original_path=str(original_file),
+                    prompt=None,
+                    user_id=user.id,
+                )
+
+    asyncio.run(_seed())
+    app.dependency_overrides[get_current_user] = _override_user
+    try:
+        first = client.get("/api/auth/me/uploads")
+        second = client.get("/api/auth/me/uploads?page=2")
+        invalid = client.get("/api/auth/me/uploads?page=0")
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert first.status_code == 200
+    assert first.json()["count"] == 8
+    assert first.json()["total_count"] == 10
+    assert second.status_code == 200
+    assert second.json()["count"] == 2
+    assert second.json()["total_count"] == 10
+    assert invalid.status_code == 422

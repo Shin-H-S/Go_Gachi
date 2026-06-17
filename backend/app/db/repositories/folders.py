@@ -11,6 +11,7 @@ async def list_user_generations(
     limit: int = 10,
     offset: int = 0,
     folder_id: int | None = None,
+    uncategorized: bool = False,
 ) -> list[Generation]:
     """현재 사용자의 generation 행 목록을 최신순으로 반환한다.
 
@@ -23,7 +24,9 @@ async def list_user_generations(
         .limit(limit)
         .offset(offset)
     )
-    if folder_id is not None:
+    if uncategorized:
+        stmt = stmt.where(Generation.folder_id.is_(None))
+    elif folder_id is not None:
         stmt = stmt.where(Generation.folder_id == folder_id)
     result = await db.execute(stmt)
     return list(result.scalars().all())
@@ -34,13 +37,16 @@ async def count_user_generations(
     user_id: str,
     *,
     folder_id: int | None = None,
+    uncategorized: bool = False,
 ) -> int:
     """현재 사용자의 generation 행 총 개수를 반환한다.
 
     folder_id가 주어지면 해당 폴더에 속한 행만 센다.
     """
     stmt = select(func.count()).select_from(Generation).where(Generation.user_id == user_id)
-    if folder_id is not None:
+    if uncategorized:
+        stmt = stmt.where(Generation.folder_id.is_(None))
+    elif folder_id is not None:
         stmt = stmt.where(Generation.folder_id == folder_id)
     result = await db.execute(stmt)
     return int(result.scalar_one())
@@ -148,14 +154,46 @@ async def list_user_upload_generations(
     db: AsyncSession,
     user_id: str,
     *,
-    limit: int = 100,
-) -> list[Generation]:
-    stmt = (
-        select(Generation)
+    limit: int = 8,
+    offset: int = 0,
+) -> list[tuple[Generation, int]]:
+    ranked_uploads = (
+        select(
+            Generation.id.label("generation_id"),
+            func.count().over(partition_by=Generation.image_hash).label("used_count"),
+            func.row_number()
+            .over(
+                partition_by=Generation.image_hash,
+                order_by=(Generation.created_at.desc(), Generation.id.desc()),
+            )
+            .label("row_number"),
+        )
         .where(Generation.user_id == user_id)
         .where(Generation.original_path.is_not(None))
+        .subquery()
+    )
+    stmt = (
+        select(Generation, ranked_uploads.c.used_count)
+        .join(ranked_uploads, ranked_uploads.c.generation_id == Generation.id)
+        .where(ranked_uploads.c.row_number == 1)
         .order_by(Generation.created_at.desc(), Generation.id.desc())
         .limit(limit)
+        .offset(offset)
     )
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    return [(row[0], int(row[1])) for row in result.all()]
+
+
+async def count_user_upload_generations(
+    db: AsyncSession,
+    user_id: str,
+) -> int:
+    unique_uploads = (
+        select(Generation.image_hash)
+        .where(Generation.user_id == user_id)
+        .where(Generation.original_path.is_not(None))
+        .group_by(Generation.image_hash)
+        .subquery()
+    )
+    result = await db.execute(select(func.count()).select_from(unique_uploads))
+    return int(result.scalar_one())

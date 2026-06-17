@@ -1,6 +1,6 @@
 import httpx
 
-from frontend.mypage import download_actions, topbar, work_handoff
+from frontend.mypage import download_actions, topbar, topbar_navigation, work_handoff
 from frontend.mypage.selection import SELECTED_GENERATION_IDS_KEY
 from frontend.mypage.state import RECENT_VIEW, folder_view
 
@@ -62,6 +62,7 @@ class FakeContext:
 
 def _patch_streamlit(monkeypatch, fake_st: FakeStreamlit) -> None:
     monkeypatch.setattr(topbar, "st", fake_st)
+    monkeypatch.setattr(topbar_navigation, "st", fake_st)
     monkeypatch.setattr(download_actions, "st", fake_st)
 
 
@@ -287,7 +288,7 @@ def test_topbar_home_button_navigates_to_main_without_clearing_session(
     fake_st = FakeStreamlit({"auth_access_token": "jwt-token"})
     _patch_streamlit(monkeypatch, fake_st)
     navigated_pages: list[str] = []
-    monkeypatch.setattr(topbar, "navigate_to", navigated_pages.append)
+    monkeypatch.setattr(topbar_navigation, "navigate_to", navigated_pages.append)
 
     def click_home(label: str, **kwargs) -> bool:
         fake_st.buttons.append({"label": label, **kwargs})
@@ -306,8 +307,8 @@ def test_topbar_home_button_navigates_to_main_without_clearing_session(
     home_button = next(
         button for button in fake_st.buttons if button.get("key") == "mypage-main-link"
     )
-    assert home_button["label"] == topbar.HOME_BUTTON_LABEL
-    assert home_button["help"] == topbar.HOME_BUTTON_HELP
+    assert home_button["label"] == topbar_navigation.HOME_BUTTON_LABEL
+    assert home_button["help"] == topbar_navigation.HOME_BUTTON_HELP
     assert navigated_pages == ["main"]
     assert fake_st.session_state["auth_access_token"] == "jwt-token"
     assert fake_st.rerun_called is True
@@ -320,7 +321,7 @@ def test_topbar_work_button_navigates_to_work_page_with_icon_button(
     fake_st = FakeStreamlit({"auth_access_token": "jwt-token"})
     _patch_streamlit(monkeypatch, fake_st)
     navigated_pages: list[str] = []
-    monkeypatch.setattr(topbar, "navigate_to", navigated_pages.append)
+    monkeypatch.setattr(topbar_navigation, "navigate_to", navigated_pages.append)
 
     def click_work(label: str, **kwargs) -> bool:
         fake_st.buttons.append({"label": label, **kwargs})
@@ -357,9 +358,9 @@ def test_topbar_work_button_navigates_to_work_page_with_icon_button(
         if button.get("key") == "mypage-main-link"
     )
     assert work_button_index < home_button_index
-    assert work_button["label"] == topbar.WORK_BUTTON_LABEL
-    assert work_button["help"] == topbar.WORK_BUTTON_HELP
-    assert home_button["label"] == topbar.HOME_BUTTON_LABEL
+    assert work_button["label"] == topbar_navigation.WORK_BUTTON_LABEL
+    assert work_button["help"] == topbar_navigation.WORK_BUTTON_HELP
+    assert home_button["label"] == topbar_navigation.HOME_BUTTON_LABEL
     assert navigated_pages == ["work"]
     assert fake_st.session_state["auth_access_token"] == "jwt-token"
     assert fake_st.rerun_called is True

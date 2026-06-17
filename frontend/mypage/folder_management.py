@@ -1,6 +1,7 @@
 import httpx
 import streamlit as st
 
+from frontend.mypage.cache import clear_mypage_cache
 from frontend.mypage.state import FOLDER_NONE_VIEW, folder_view, selected_folder_id, set_view
 from frontend.services.api_client import delete_my_folder, rename_my_folder
 
@@ -35,6 +36,7 @@ def _render_folder_rename_form(access_token: str, folder_id: int, folder_name: s
             except httpx.HTTPStatusError as exc:
                 st.error(_folder_error_detail(exc, "폴더명을 변경하지 못했습니다."))
             else:
+                clear_mypage_cache()
                 st.rerun()
 
 
@@ -64,6 +66,7 @@ def _render_delete_folder_confirmation_content(access_token: str, folder_id: int
             except httpx.HTTPStatusError as exc:
                 st.error(_folder_error_detail(exc, "폴더를 삭제하지 못했습니다."))
             else:
+                clear_mypage_cache()
                 st.session_state.pop(FOLDER_DELETE_CONFIRM_KEY, None)
                 set_view(FOLDER_NONE_VIEW)
                 st.rerun()

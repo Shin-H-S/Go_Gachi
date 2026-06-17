@@ -37,8 +37,17 @@ def render_folder_view(
     )
 
 
-def render_uploads(uploads: list[dict]) -> None:
-    views.render_uploads(uploads)
+def render_uploads(
+    uploads: list[dict],
+    *,
+    total_count: int | None = None,
+    current_page: int | None = None,
+) -> None:
+    views.render_uploads(
+        uploads,
+        total_count=total_count,
+        current_page=current_page,
+    )
 
 
 def render_account_settings(profile: dict) -> None:

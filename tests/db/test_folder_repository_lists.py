@@ -99,6 +99,54 @@ async def test_folder_and_upload_lists_are_scoped_to_user(
 
     folders = await folder_repo.list_user_folders(db_session, "user-1")
     uploads = await folder_repo.list_user_upload_generations(db_session, "user-1")
+    upload_total = await folder_repo.count_user_upload_generations(db_session, "user-1")
 
     assert [folder.id for folder in folders] == [own_folder.id]
-    assert [row.request_id for row in uploads] == ["own-upload"]
+    assert [(row.request_id, used_count) for row, used_count in uploads] == [("own-upload", 1)]
+    assert upload_total == 1
+
+
+async def test_list_user_generations_supports_uncategorized_filter(
+    db_session: AsyncSession,
+) -> None:
+    spring = await folder_repo.create_folder(db_session, user_id="user-1", name="Spring")
+    await crud.create_pending_generation(
+        db_session,
+        request_id="uncategorized-1",
+        image_hash="hash-uncategorized-1",
+        preset_id="instagram",
+        instruction_hash="instruction-uncategorized-1",
+        prompt_version="prompt-v-test",
+        model="model-test",
+        original_path=None,
+        prompt=None,
+        user_id="user-1",
+    )
+    generation = await crud.create_pending_generation(
+        db_session,
+        request_id="categorized-1",
+        image_hash="hash-categorized-1",
+        preset_id="instagram",
+        instruction_hash="instruction-categorized-1",
+        prompt_version="prompt-v-test",
+        model="model-test",
+        original_path=None,
+        prompt=None,
+        user_id="user-1",
+    )
+    generation.folder_id = spring.id
+    await db_session.flush()
+
+    uncategorized = await folder_repo.list_user_generations(
+        db_session,
+        "user-1",
+        uncategorized=True,
+    )
+    total = await folder_repo.count_user_generations(
+        db_session,
+        "user-1",
+        uncategorized=True,
+    )
+
+    assert [row.request_id for row in uncategorized] == ["uncategorized-1"]
+    assert total == 1

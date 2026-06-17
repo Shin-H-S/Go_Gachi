@@ -5,8 +5,14 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 FRONTEND_APP = ROOT_DIR / "frontend" / "app.py"
 FRONTEND_IMAGE_UTILS = ROOT_DIR / "frontend" / "media" / "image_utils.py"
 FRONTEND_WORK_PAGE = ROOT_DIR / "frontend" / "pages" / "work.py"
+FRONTEND_WORK_COMPONENTS = ROOT_DIR / "frontend" / "work" / "components.py"
 FRONTEND_WORK_GENERATION = ROOT_DIR / "frontend" / "work" / "generation.py"
+FRONTEND_WORK_HEADER = ROOT_DIR / "frontend" / "work" / "header.py"
+FRONTEND_MYPAGE_TOPBAR = ROOT_DIR / "frontend" / "mypage" / "topbar.py"
+FRONTEND_MYPAGE_TOPBAR_NAVIGATION = ROOT_DIR / "frontend" / "mypage" / "topbar_navigation.py"
 FRONTEND_STYLES = ROOT_DIR / "frontend" / "styles.py"
+STYLE_WORK_HEADER = ROOT_DIR / "frontend" / "css" / "work_header.py"
+STYLE_WORK_HEADER_PARTS = ROOT_DIR / "frontend" / "css" / "work_header_parts"
 
 
 def test_app_delegates_split_module_responsibilities() -> None:
@@ -50,17 +56,42 @@ def test_app_delegates_split_module_responsibilities() -> None:
 
 
 def test_large_frontend_modules_are_split_for_review() -> None:
-    # ruff format이 인자를 여러 줄로 펼치면서 200줄 한도를 살짝 넘기는 경우가 있어
-    # 리뷰 가능성 기준은 유지하되 임계값을 220줄로 완화했다. 새 기능이 추가될 때
-    # 분리가 필요한지 다시 점검한다.
     frontend_files = list((ROOT_DIR / "frontend").rglob("*.py"))
     oversized_files = [
         path.relative_to(ROOT_DIR).as_posix()
         for path in frontend_files
-        if path.read_text(encoding="utf-8").count("\n") + 1 > 220
+        if path.read_text(encoding="utf-8").count("\n") + 1 > 200
     ]
 
     assert oversized_files == []
+
+
+def test_button_work_modules_are_split_below_two_hundred_lines() -> None:
+    review_targets = [
+        FRONTEND_WORK_COMPONENTS,
+        FRONTEND_WORK_HEADER,
+        FRONTEND_MYPAGE_TOPBAR,
+        FRONTEND_MYPAGE_TOPBAR_NAVIGATION,
+        STYLE_WORK_HEADER,
+        *(STYLE_WORK_HEADER_PARTS.glob("*.py") if STYLE_WORK_HEADER_PARTS.exists() else []),
+    ]
+    missing_targets = [
+        path.relative_to(ROOT_DIR).as_posix()
+        for path in review_targets
+        if not path.exists()
+    ]
+    oversized_targets = [
+        path.relative_to(ROOT_DIR).as_posix()
+        for path in review_targets
+        if path.exists() and path.read_text(encoding="utf-8").count("\n") + 1 > 200
+    ]
+
+    assert missing_targets == []
+    assert oversized_targets == []
+    assert "def render_header" not in FRONTEND_WORK_COMPONENTS.read_text(encoding="utf-8")
+    assert "def render_navigation_buttons" in FRONTEND_MYPAGE_TOPBAR_NAVIGATION.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_styles_are_composed_from_reviewable_modules() -> None:
@@ -77,6 +108,7 @@ def test_work_page_delegates_components_state_and_generation() -> None:
 
     assert "from frontend.work.components import" in work_source
     assert "from frontend.work.generation import handle_generation_request" in work_source
+    assert "refresh_active_generation_jobs" in work_source
     assert "from frontend.work.result_panel import render_result_panel" in work_source
     assert "from frontend.work.state import" in work_source
     assert "def build_result_context" not in work_source

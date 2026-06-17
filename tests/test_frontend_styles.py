@@ -1,9 +1,10 @@
 from pathlib import Path
 
+from frontend.css.work_header import WORK_HEADER_CSS
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 STYLE_BASE_FILE = ROOT_DIR / "frontend" / "css" / "base.py"
 STYLE_WORK_CONTROLS_FILE = ROOT_DIR / "frontend" / "css" / "work_controls.py"
-STYLE_WORK_HEADER_FILE = ROOT_DIR / "frontend" / "css" / "work_header.py"
 STYLE_WORK_PREVIEW_FILE = ROOT_DIR / "frontend" / "css" / "work_preview.py"
 STYLE_WORK_SELECTION_FILE = ROOT_DIR / "frontend" / "css" / "work_selection.py"
 STYLE_WORK_FORMS_FILE = ROOT_DIR / "frontend" / "css" / "work_forms.py"
@@ -51,7 +52,7 @@ def test_section_labels_render_at_twenty_pixels() -> None:
 
 
 def test_work_header_keeps_original_background_without_divider() -> None:
-    styles = STYLE_WORK_HEADER_FILE.read_text(encoding="utf-8")
+    styles = WORK_HEADER_CSS
 
     assert ".block-container:has(.work-profile-card)" in styles
     assert 'div[data-testid="stMainBlockContainer"]:has(.work-profile-card)' in styles
@@ -73,7 +74,7 @@ def test_work_header_keeps_original_background_without_divider() -> None:
 
 
 def test_work_mypage_profile_button_is_borderless_card_like_control() -> None:
-    styles = STYLE_WORK_HEADER_FILE.read_text(encoding="utf-8")
+    styles = WORK_HEADER_CSS
 
     assert ".work-profile-card" in styles
     assert ".work-profile-avatar" in styles
@@ -91,7 +92,7 @@ def test_work_mypage_profile_button_is_borderless_card_like_control() -> None:
 
 
 def test_work_guest_auth_links_reuse_landing_button_design_at_header_size() -> None:
-    styles = STYLE_WORK_HEADER_FILE.read_text(encoding="utf-8")
+    styles = WORK_HEADER_CSS
 
     assert ".work-auth" in styles
     assert ".work-auth .landing-login" in styles
@@ -105,7 +106,7 @@ def test_work_guest_auth_links_reuse_landing_button_design_at_header_size() -> N
 
 
 def test_header_places_single_download_top_right_and_large_history_under_preview() -> None:
-    header_styles = STYLE_WORK_HEADER_FILE.read_text(encoding="utf-8")
+    header_styles = WORK_HEADER_CSS
     preview_styles = STYLE_WORK_PREVIEW_FILE.read_text(encoding="utf-8")
     control_styles = STYLE_WORK_CONTROLS_FILE.read_text(encoding="utf-8")
 

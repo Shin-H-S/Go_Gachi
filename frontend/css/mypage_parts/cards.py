@@ -104,7 +104,7 @@ MYPAGE_CARD_LAYOUT_CSS = """
     line-height: 1.15;
 }
 
-.mypage-card-meta span {
+.mypage-card-meta > span {
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
@@ -120,6 +120,38 @@ MYPAGE_CARD_LAYOUT_CSS = """
 .mypage-card-folder {
     justify-self: end;
     text-align: right;
+}
+
+.mypage-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 20px;
+    margin-left: 6px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.mypage-status-success,
+.mypage-status-cached {
+    background: #e6faf4;
+    color: #087a5f;
+}
+
+.mypage-status-progress {
+    background: #fff4d8;
+    color: #8a5a00;
+}
+
+.mypage-status-failed,
+.mypage-status-stale {
+    background: #ffe8e5;
+    color: #a33a2d;
 }
 
 .mypage-card-select-zone {

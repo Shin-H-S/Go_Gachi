@@ -3,12 +3,7 @@ from html import escape
 import streamlit as st
 
 from frontend.core.router import navigate_to
-from frontend.home_button import (
-    HOME_BUTTON_HELP,
-    HOME_BUTTON_LABEL,
-    WORK_BUTTON_HELP,
-    WORK_BUTTON_LABEL,
-)
+from frontend.mypage.cache import clear_mypage_cache
 from frontend.mypage.download_actions import render_download_action
 from frontend.mypage.pagination import paginate_items
 from frontend.mypage.selection import (
@@ -18,7 +13,13 @@ from frontend.mypage.selection import (
     selected_generation_items,
     toggle_generation_page_selection,
 )
-from frontend.mypage.state import RECENT_VIEW, filter_generations, folder_choices, folder_name_by_id
+from frontend.mypage.state import (
+    RECENT_VIEW,
+    filter_generations,
+    folder_choices,
+    folder_name_by_id,
+)
+from frontend.mypage.topbar_navigation import render_navigation_buttons
 from frontend.mypage.work_handoff import (
     generation_work_image_url,
     prepare_generation_for_work,
@@ -93,20 +94,6 @@ def _render_work_from_image_action(selected_items: list[dict], *, enabled: bool)
     st.rerun()
 
 
-def _render_home_button() -> None:
-    with st.container(key="mypage-main-link-control"):
-        if st.button(HOME_BUTTON_LABEL, key="mypage-main-link", help=HOME_BUTTON_HELP):
-            navigate_to("main")
-            st.rerun()
-
-
-def _render_work_button() -> None:
-    with st.container(key="mypage-work-link-control"):
-        if st.button(WORK_BUTTON_LABEL, key="mypage-work-link", help=WORK_BUTTON_HELP):
-            navigate_to("work")
-            st.rerun()
-
-
 def _folder_select_value(
     *,
     folders: list[dict],
@@ -148,6 +135,7 @@ def _render_folder_action(
         request_id = str(item.get("request_id") or "")
         if request_id:
             move_generation_to_folder(access_token, request_id, mapping[selected_label])
+    clear_mypage_cache()
     st.rerun()
 
 
@@ -202,11 +190,7 @@ def render_topbar(
         st.markdown(f'<h1 class="mypage-title">{escape(title)}</h1>', unsafe_allow_html=True)
         _render_select_all_action(_current_page_items(view, generations or []))
     with action_col:
-        nav_cols = st.columns([1, 0.12, 0.12], gap="small")
-        with nav_cols[1]:
-            _render_work_button()
-        with nav_cols[2]:
-            _render_home_button()
+        render_navigation_buttons()
         _render_selection_actions(
             view=view,
             access_token=access_token,

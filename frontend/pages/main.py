@@ -6,7 +6,6 @@ import streamlit as st
 from frontend.core.router import navigate_to
 from frontend.media.image_data import bytes_to_data_url
 
-
 MAIN_SLIDE_ASSET_DIR = (
     Path(__file__).resolve().parents[1] / "assets" / "main" / "optimized"
 )
