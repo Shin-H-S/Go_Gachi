@@ -12,6 +12,7 @@ class FakeStreamlit:
         self.session_state: dict[str, object] = {}
         self.errors: list[str] = []
         self.warnings: list[str] = []
+        self.rerun_count = 0
 
     def warning(self, message: str) -> None:
         self.warnings.append(message)
@@ -20,7 +21,7 @@ class FakeStreamlit:
         self.errors.append(message)
 
     def rerun(self) -> None:
-        return None
+        self.rerun_count += 1
 
 
 def _run_generation(monkeypatch, fake_st: FakeStreamlit, fake_request_backend) -> None:
@@ -133,6 +134,44 @@ def test_generation_request_stores_image_url_without_downloading_bytes(monkeypat
 
     assert fake_st.session_state["result_image_url"] == "https://assets.example/result.png"
     assert "result_bytes" not in fake_st.session_state
+
+
+def test_logged_in_generation_starts_job_without_waiting(monkeypatch) -> None:
+    captured_kwargs: dict[str, object] = {}
+
+    def fake_request_backend_job(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
+        captured_kwargs.update(kwargs)
+        return {"requestId": "job-123", "status": "pending"}
+
+    def fail_request_backend(*args, **kwargs):  # noqa: ANN002, ANN003, ARG001
+        raise AssertionError("동기 생성 요청을 호출하면 안 됩니다.")
+
+    fake_st = FakeStreamlit()
+    fake_st.session_state["auth_access_token"] = "jwt-token"
+    monkeypatch.setattr(generation, "st", fake_st)
+    monkeypatch.setattr(generation, "request_backend", fail_request_backend)
+    monkeypatch.setattr(generation, "request_backend_job", fake_request_backend_job)
+
+    generation.handle_generation_request(
+        generate=True,
+        uploaded_file=SimpleNamespace(getvalue=lambda: b"source-image"),
+        prompt="make it bright",
+        ad_copy_prompt="Fresh coffee",
+        format_label="인스타그램",
+        detail_label="정사각형 피드",
+        current_result_context={"prompt": "make it bright", "uploadHash": "hash-1"},
+        ad_copy_enabled=True,
+        copy_mode="preserve",
+    )
+
+    assert captured_kwargs["access_token"] == "jwt-token"
+    assert fake_st.session_state["active_generation_jobs"]["job-123"]["status"] == "pending"
+    assert fake_st.session_state["active_generation_jobs"]["job-123"]["context"] == {
+        "prompt": "make it bright",
+        "uploadHash": "hash-1",
+    }
+    assert "result_bytes" not in fake_st.session_state
+    assert fake_st.rerun_count == 1
 
 
 def test_generation_request_shows_backend_string_detail(monkeypatch) -> None:
