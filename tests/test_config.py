@@ -60,7 +60,7 @@ def test_channel_detail_prompt_presets_are_specific() -> None:
     assert "nearby shop owner" in presets["daangn"].channel_prompt
     assert "layout balance" in (presets["instagram"].find_detail("story_image").prompt_hint)
     assert "limited offers" in presets["daangn"].find_detail("discount_event").prompt_hint
-    assert PROMPT_VERSION == "2026-06-17-v3-v9-layout-priority-and-crop-safe-policy"
+    assert PROMPT_VERSION == "2026-06-17-v3-v12-hotfix"
 
 
 def test_presets_do_not_conflict_with_image_copy_prompting() -> None:
