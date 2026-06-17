@@ -93,6 +93,8 @@ def test_generation_card_renders_thumbnail_and_selection_toggle_without_inline_a
     assert fake_st.images == []
     assert "mypage-image-preview" in rendered_html
     assert "mypage-image-modal" in rendered_html
+    assert "mypage-status-success" in rendered_html
+    assert "완료" in rendered_html
     assert 'src="http://127.0.0.1:8000/outputs/result.png"' in rendered_html
     assert "mypage-card-select-zone" in rendered_html
     assert fake_st.buttons[0]["label"] == "선택"
@@ -163,9 +165,11 @@ def test_generation_card_keeps_meta_on_one_line_and_removes_per_card_controls(
     )
 
     rendered_html = "".join(fake_st.markdowns)
-    assert '<span class="mypage-card-identity">daangn 2026.06.10</span>' in rendered_html
+    assert "mypage-card-identity" in rendered_html
+    assert "daangn 2026.06.10" in rendered_html
+    assert "mypage-status-failed" in rendered_html
+    assert "실패" in rendered_html
     assert '<span class="mypage-card-folder">폴더: 봄 신메뉴</span>' in rendered_html
-    assert "failed" not in rendered_html
     assert "mypage-card-date" not in rendered_html
     assert fake_st.downloads == []
     assert fake_st.links == []
@@ -195,6 +199,8 @@ def test_generation_card_shows_loading_state_for_pending_image(
     rendered_html = "".join(fake_st.markdowns)
     assert "mypage-generating-thumb" in rendered_html
     assert "mypage-generating-spinner" in rendered_html
+    assert "mypage-status-progress" in rendered_html
+    assert "생성중" in rendered_html
     assert "mypage-empty-thumb" not in rendered_html
     assert fake_st.downloads == []
 
@@ -221,6 +227,8 @@ def test_generation_card_marks_old_pending_image_as_timed_out(
 
     rendered_html = "".join(fake_st.markdowns)
     assert "mypage-stale-thumb" in rendered_html
+    assert "mypage-status-stale" in rendered_html
+    assert "시간초과" in rendered_html
     assert "mypage-generating-thumb" not in rendered_html
     assert "폴더: 미분류" in rendered_html
     assert "timeout" not in rendered_html
@@ -352,6 +360,10 @@ def test_generation_card_meta_stays_inside_fixed_card_width() -> None:
     assert "grid-template-columns" in source
     assert "mypage-card-identity" in source
     assert "mypage-card-folder" in source
+    assert "mypage-status-badge" in source
+    assert "mypage-status-success" in source
+    assert "mypage-status-progress" in source
+    assert "mypage-status-failed" in source
     assert "min-width: 0" in source
     assert "box-sizing: border-box" in source
     assert "text-align: right" in source

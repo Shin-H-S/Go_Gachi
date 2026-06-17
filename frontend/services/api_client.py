@@ -5,6 +5,7 @@ import httpx
 from frontend.core.config import (
     BACKEND_URL,
     DEFAULT_BACKEND_URL,
+    FORMAT_OPTIONS,
 )
 from frontend.services import mypage_client
 from frontend.services.assets import (
@@ -20,6 +21,7 @@ from frontend.services.prompting import build_user_prompt
 __all__ = [
     "BACKEND_URL",
     "DEFAULT_BACKEND_URL",
+    "FORMAT_OPTIONS",
     "GenerationResult",
     "build_user_prompt",
     "create_my_folder",
