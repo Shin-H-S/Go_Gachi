@@ -16,7 +16,7 @@
 
 </div>
 
-## 🔗 Project Links
+> ## 🔗 Project Links
 
 | 항목 | 링크 |
 | --- | --- |
@@ -326,7 +326,7 @@ CI(GitHub Actions)에서도 동일하게 `ruff check`와 `pytest`를 실행합�
 <tr>
 <td align="center"><b>PM</b></td>
 <td align="center">
-  <img src="docs/assets/흰%20냥이.png" alt="이건호" width="80" /><br>
+  <img src="docs/assets/흰%20냥이.png" alt="이건호" width="100" /><br>
   <b>이건호</b>
 </td>
 <td>
@@ -341,7 +341,7 @@ CI(GitHub Actions)에서도 동일하게 `ruff check`와 `pytest`를 실행합�
 <tr>
 <td align="center"><b>FE</b><br>(프론트엔드)</td>
 <td align="center">
-  <img src="docs/assets/회색%20냥이.png" alt="손승만" width="80" /><br>
+  <img src="docs/assets/회색%20냥이.png" alt="손승만" width="100" /><br>
   <b>손승만</b>
 </td>
 <td>
@@ -356,7 +356,7 @@ CI(GitHub Actions)에서도 동일하게 `ruff check`와 `pytest`를 실행합�
 <tr>
 <td align="center"><b>BE</b><br>(백엔드)</td>
 <td align="center">
-  <img src="docs/assets/크림%20냥이.png" alt="김예주" width="80" /><br>
+  <img src="docs/assets/크림%20냥이.png" alt="김예주" width="100" /><br>
   <b>김예주</b>
 </td>
 <td>
@@ -372,7 +372,7 @@ CI(GitHub Actions)에서도 동일하게 `ruff check`와 `pytest`를 실행합�
 <tr>
 <td align="center"><b>BE + 팀장</b></td>
 <td align="center">
-  <img src="docs/assets/검은%20냥이.png" alt="신현수" width="80" /><br>
+  <img src="docs/assets/검은%20냥이.png" alt="신현수" width="100" /><br>
   <b>신현수</b>
 </td>
 <td>
@@ -388,7 +388,7 @@ CI(GitHub Actions)에서도 동일하게 `ruff check`와 `pytest`를 실행합�
 <tr>
 <td align="center"><b>PE</b><br>(프롬프트 엔지니어)</td>
 <td align="center">
-  <img src="docs/assets/삼색%20냥이.png" alt="이수민" width="80" /><br>
+  <img src="docs/assets/삼색%20냥이.png" alt="이수민" width="100" /><br>
   <b>이수민</b>
 </td>
 <td>
