@@ -21,7 +21,7 @@
 | 항목 | 링크 |
 | --- | --- |
 | PPT |  |
-| 보고서 |  |
+| 보고서 | [Go Gachi 최종 보고서 PDF](docs/Go_Gachi-final-report.pdf) |
 | 협업 일지 | [Notion](https://www.notion.so/b097f345c16a82e58dff01887960931e?source=copy_link) |
 
 ---
